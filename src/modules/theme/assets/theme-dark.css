@@ -1,0 +1,300 @@
+/**
+ * Dark Mode Theme - CSS Variables Override
+ * 
+ * Overrides design tokens from _variables.css for dark mode.
+ * Applied when [data-theme="dark"] is set on <html> element.
+ */
+
+[data-theme="dark"] {
+  /* ============================================
+     Colors - Background & Surface
+     ============================================ */
+  --color-surface: #1f2937;           /* Dark gray surface */
+  --color-surface-alt: #111827;       /* Darker gray */
+  --color-background: #0f172a;        /* Very dark blue-gray */
+  
+  /* ============================================
+     Colors - Neutral (Inverted for Text)
+     ============================================ */
+  --color-neutral-50: #1f2937;        /* Dark background */
+  --color-neutral-100: #374151;
+  --color-neutral-200: #4b5563;
+  --color-neutral-300: #6b7280;
+  --color-neutral-400: #9ca3af;
+  --color-neutral-500: #d1d5db;
+  --color-neutral-600: #e5e7eb;
+  --color-neutral-700: #f3f4f6;
+  --color-neutral-800: #f9fafb;
+  --color-neutral-900: #ffffff;       /* White text */
+  
+  /* ============================================
+     Colors - Primary (Adjusted for Dark)
+     ============================================ */
+  --color-primary-50: #1e3a8a;
+  --color-primary-100: #1e40af;
+  --color-primary-200: #1d4ed8;
+  --color-primary-300: #2563eb;
+  --color-primary-400: #3b82f6;
+  --color-primary-500: #60a5fa;       /* Brighter blue for visibility */
+  --color-primary-600: #93c5fd;
+  --color-primary-700: #bfdbfe;
+  --color-primary-800: #dbeafe;
+  --color-primary-900: #eff6ff;
+  
+  /* ============================================
+     Colors - Semantic (Dark Variants)
+     ============================================ */
+  --color-success: #34d399;           /* Brighter green */
+  --color-success-light: #064e3b;     /* Dark green bg */
+  --color-success-dark: #6ee7b7;
+  
+  --color-warning: #fbbf24;           /* Brighter yellow */
+  --color-warning-light: #78350f;     /* Dark yellow bg */
+  --color-warning-dark: #fcd34d;
+  
+  --color-danger: #f87171;            /* Brighter red */
+  --color-danger-light: #7f1d1d;      /* Dark red bg */
+  --color-danger-dark: #fca5a5;
+  
+  --color-info: #60a5fa;              /* Brighter blue */
+  --color-info-light: #1e3a8a;        /* Dark blue bg */
+  --color-info-dark: #93c5fd;
+  
+  /* ============================================
+     Borders & Shadows
+     ============================================ */
+  --border-color: #374151;            /* Subtle borders */
+  --border-color-light: #4b5563;
+  
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+  --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.6), 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.6), 0 2px 4px -1px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.7), 0 4px 6px -2px rgba(0, 0, 0, 0.5);
+  
+  /* ============================================
+     Component-Specific Overrides
+     ============================================ */
+  
+  /* Inputs */
+  --input-bg: #374151;
+  --input-border: #4b5563;
+  --input-border-focus: #60a5fa;
+  --input-text: #f9fafb;
+  --input-placeholder: #9ca3af;
+  
+  /* Buttons */
+  --button-primary-bg: #2563eb;
+  --button-primary-bg-hover: #1d4ed8;
+  --button-primary-text: #ffffff;
+  
+  --button-secondary-bg: #374151;
+  --button-secondary-bg-hover: #4b5563;
+  --button-secondary-text: #f9fafb;
+  
+  --button-ghost-bg: transparent;
+  --button-ghost-bg-hover: #374151;
+  --button-ghost-text: #d1d5db;
+  
+  /* Cards */
+  --card-bg: #1f2937;
+  --card-border: #374151;
+  --card-shadow: var(--shadow-md);
+  
+  /* Header */
+  --header-bg: #111827;
+  --header-border: #374151;
+  --header-text: #f9fafb;
+  
+  /* Sidebar */
+  --sidebar-bg: #1f2937;
+  --sidebar-border: #374151;
+  --sidebar-item-hover: #374151;
+  --sidebar-item-active: #2563eb;
+  
+  /* Modals */
+  --modal-bg: #1f2937;
+  --modal-backdrop: rgba(0, 0, 0, 0.8);
+  --modal-border: #374151;
+  
+  /* Alerts */
+  --alert-success-bg: #064e3b;
+  --alert-success-border: #065f46;
+  --alert-success-text: #6ee7b7;
+  
+  --alert-warning-bg: #78350f;
+  --alert-warning-border: #92400e;
+  --alert-warning-text: #fcd34d;
+  
+  --alert-error-bg: #7f1d1d;
+  --alert-error-border: #991b1b;
+  --alert-error-text: #fca5a5;
+  
+  --alert-info-bg: #1e3a8a;
+  --alert-info-border: #1e40af;
+  --alert-info-text: #93c5fd;
+  
+  /* Tables */
+  --table-border: #374151;
+  --table-header-bg: #111827;
+  --table-row-hover: #374151;
+  --table-row-striped: #1a202e;
+  
+  /* Thread List Items */
+  --thread-item-bg: #1f2937;
+  --thread-item-hover: #374151;
+  --thread-item-selected: #1e40af;
+  --thread-item-border: #374151;
+  
+  /* Labels/Tags */
+  --label-bg: #374151;
+  --label-text: #d1d5db;
+  --label-border: #4b5563;
+  
+  /* Code Blocks */
+  --code-bg: #111827;
+  --code-text: #f9fafb;
+  --code-border: #374151;
+}
+
+/* ============================================
+   Theme Transition Animation
+   ============================================ */
+html {
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+* {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+/* Disable transitions for elements that should change immediately */
+.no-theme-transition {
+  transition: none !important;
+}
+
+/* ============================================
+   Auto Theme (System Preference)
+   ============================================ */
+@media (prefers-color-scheme: dark) {
+  [data-theme="auto"] {
+    /* Inherit all dark theme variables */
+    --color-surface: #1f2937;
+    --color-surface-alt: #111827;
+    --color-background: #0f172a;
+    
+    --color-neutral-50: #1f2937;
+    --color-neutral-100: #374151;
+    --color-neutral-200: #4b5563;
+    --color-neutral-300: #6b7280;
+    --color-neutral-400: #9ca3af;
+    --color-neutral-500: #d1d5db;
+    --color-neutral-600: #e5e7eb;
+    --color-neutral-700: #f3f4f6;
+    --color-neutral-800: #f9fafb;
+    --color-neutral-900: #ffffff;
+    
+    --color-primary-50: #1e3a8a;
+    --color-primary-100: #1e40af;
+    --color-primary-200: #1d4ed8;
+    --color-primary-300: #2563eb;
+    --color-primary-400: #3b82f6;
+    --color-primary-500: #60a5fa;
+    --color-primary-600: #93c5fd;
+    --color-primary-700: #bfdbfe;
+    --color-primary-800: #dbeafe;
+    --color-primary-900: #eff6ff;
+    
+    --color-success: #34d399;
+    --color-success-light: #064e3b;
+    --color-success-dark: #6ee7b7;
+    
+    --color-warning: #fbbf24;
+    --color-warning-light: #78350f;
+    --color-warning-dark: #fcd34d;
+    
+    --color-danger: #f87171;
+    --color-danger-light: #7f1d1d;
+    --color-danger-dark: #fca5a5;
+    
+    --color-info: #60a5fa;
+    --color-info-light: #1e3a8a;
+    --color-info-dark: #93c5fd;
+    
+    --border-color: #374151;
+    --border-color-light: #4b5563;
+    
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+    --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.6), 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.6), 0 2px 4px -1px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.7), 0 4px 6px -2px rgba(0, 0, 0, 0.5);
+    
+    --input-bg: #374151;
+    --input-border: #4b5563;
+    --input-border-focus: #60a5fa;
+    --input-text: #f9fafb;
+    --input-placeholder: #9ca3af;
+    
+    --button-primary-bg: #2563eb;
+    --button-primary-bg-hover: #1d4ed8;
+    --button-primary-text: #ffffff;
+    
+    --button-secondary-bg: #374151;
+    --button-secondary-bg-hover: #4b5563;
+    --button-secondary-text: #f9fafb;
+    
+    --button-ghost-bg: transparent;
+    --button-ghost-bg-hover: #374151;
+    --button-ghost-text: #d1d5db;
+    
+    --card-bg: #1f2937;
+    --card-border: #374151;
+    --card-shadow: var(--shadow-md);
+    
+    --header-bg: #111827;
+    --header-border: #374151;
+    --header-text: #f9fafb;
+    
+    --sidebar-bg: #1f2937;
+    --sidebar-border: #374151;
+    --sidebar-item-hover: #374151;
+    --sidebar-item-active: #2563eb;
+    
+    --modal-bg: #1f2937;
+    --modal-backdrop: rgba(0, 0, 0, 0.8);
+    --modal-border: #374151;
+    
+    --alert-success-bg: #064e3b;
+    --alert-success-border: #065f46;
+    --alert-success-text: #6ee7b7;
+    
+    --alert-warning-bg: #78350f;
+    --alert-warning-border: #92400e;
+    --alert-warning-text: #fcd34d;
+    
+    --alert-error-bg: #7f1d1d;
+    --alert-error-border: #991b1b;
+    --alert-error-text: #fca5a5;
+    
+    --alert-info-bg: #1e3a8a;
+    --alert-info-border: #1e40af;
+    --alert-info-text: #93c5fd;
+    
+    --table-border: #374151;
+    --table-header-bg: #111827;
+    --table-row-hover: #374151;
+    --table-row-striped: #1a202e;
+    
+    --thread-item-bg: #1f2937;
+    --thread-item-hover: #374151;
+    --thread-item-selected: #1e40af;
+    --thread-item-border: #374151;
+    
+    --label-bg: #374151;
+    --label-text: #d1d5db;
+    --label-border: #4b5563;
+    
+    --code-bg: #111827;
+    --code-text: #f9fafb;
+    --code-border: #374151;
+  }
+}

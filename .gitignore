@@ -1,0 +1,47 @@
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+/vendor/
+node_modules/
+
+# Runtime Data (nicht committen)
+/data/cache/*
+/data/sessions/*
+/data/uploads/*
+
+# Keep directory structure
+!data/cache/.gitkeep
+!data/sessions/.gitkeep
+!data/uploads/.gitkeep
+
+# Logs (nicht committen)
+/logs/*.log
+/logs/*.txt
+
+# Keep logs directory
+!logs/.gitkeep
+
+# Composer
+composer.lock
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Build
+/build/
+/dist/
+
+# Testing
+.phpunit.result.cache

@@ -1,0 +1,54 @@
+/**
+ * Tabs Component
+ * 
+ * Navigation tabs for switching between content sections.
+ * Used in settings and admin pages.
+ */
+
+.c-tabs {
+  display: flex;
+  gap: var(--spacing-2);
+  border-bottom: 2px solid var(--color-neutral-200);
+  margin-bottom: var(--spacing-6);
+}
+
+.c-tabs__tab {
+  padding: var(--spacing-3) var(--spacing-6);
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-neutral-600);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.c-tabs__tab:hover {
+  color: var(--color-neutral-900);
+  background-color: var(--color-neutral-50);
+}
+
+.c-tabs__tab.is-active {
+  color: var(--color-primary-600);
+  border-bottom-color: var(--color-primary-600);
+}
+
+.c-tabs__content {
+  display: none;
+}
+
+.c-tabs__content.is-active {
+  display: block;
+}
+
+/* Admin variant - for sticky navigation */
+.c-tabs--sticky {
+  position: sticky;
+  top: var(--header-height);
+  background: var(--color-background);
+  z-index: var(--z-index-sticky);
+  padding-top: var(--spacing-4);
+}

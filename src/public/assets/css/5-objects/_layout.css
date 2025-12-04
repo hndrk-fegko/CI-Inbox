@@ -1,0 +1,70 @@
+/**
+ * Layout - Grid and Flexbox Utilities
+ * 
+ * BEM: .l-app (Block) + .l-app__* (Elements)
+ * Prefix: l- (Layout)
+ * 
+ * Base layout objects for structure.
+ */
+
+/* Layout container */
+.l-container {
+  width: 100%;
+  max-width: var(--content-max-width);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--spacing-4);
+  padding-right: var(--spacing-4);
+}
+
+/* Flex utilities */
+.l-flex {
+  display: flex;
+}
+
+.l-flex--center {
+  align-items: center;
+  justify-content: center;
+}
+
+.l-flex--between {
+  justify-content: space-between;
+}
+
+.l-flex--gap {
+  gap: var(--spacing-4);
+}
+
+/* App layout */
+.l-app {
+  display: grid;
+  grid-template-areas:
+    "header header"
+    "sidebar main";
+  grid-template-columns: var(--sidebar-width) 1fr;
+  grid-template-rows: var(--header-height) 1fr;
+  min-height: 100vh;
+}
+
+.l-app__header {
+  grid-area: header;
+}
+
+.l-app__sidebar {
+  grid-area: sidebar;
+}
+
+.l-app__main {
+  grid-area: main;
+  overflow: hidden;
+  background-color: var(--color-neutral-50);
+}
+
+@media (max-width: 768px) {
+  .l-app {
+    grid-template-areas:
+      "header"
+      "main";
+    grid-template-columns: 1fr;
+  }
+}

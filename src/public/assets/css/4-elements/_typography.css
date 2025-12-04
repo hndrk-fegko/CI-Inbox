@@ -1,0 +1,117 @@
+/**
+ * Typography - Base Text Styles
+ * 
+ * Defines default styles for heading and text elements.
+ */
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  color: var(--color-neutral-900);
+}
+
+h1 {
+  font-size: var(--font-size-3xl);
+  margin-bottom: var(--spacing-4);
+}
+
+h2 {
+  font-size: var(--font-size-2xl);
+  margin-bottom: var(--spacing-3);
+}
+
+h3 {
+  font-size: var(--font-size-xl);
+  margin-bottom: var(--spacing-3);
+}
+
+h4 {
+  font-size: var(--font-size-lg);
+  margin-bottom: var(--spacing-2);
+}
+
+h5 {
+  font-size: var(--font-size-base);
+  margin-bottom: var(--spacing-2);
+}
+
+h6 {
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--spacing-2);
+}
+
+/* Paragraphs */
+p {
+  margin-bottom: var(--spacing-4);
+  line-height: var(--line-height-relaxed);
+}
+
+p:last-child {
+  margin-bottom: 0;
+}
+
+/* Links */
+a {
+  color: var(--color-primary-600);
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--color-primary-700);
+  text-decoration: underline;
+}
+
+/* Strong and emphasis */
+strong, b {
+  font-weight: var(--font-weight-semibold);
+}
+
+em, i {
+  font-style: italic;
+}
+
+/* Code */
+code {
+  font-family: var(--font-family-mono);
+  font-size: 0.9em;
+  padding: 0.125rem 0.25rem;
+  background-color: var(--color-neutral-100);
+  border-radius: var(--border-radius-sm);
+}
+
+pre {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+  padding: var(--spacing-4);
+  background-color: var(--color-neutral-100);
+  border-radius: var(--border-radius-md);
+  overflow-x: auto;
+}
+
+pre code {
+  padding: 0;
+  background: none;
+}
+
+/* Lists */
+ul, ol {
+  margin-bottom: var(--spacing-4);
+  padding-left: var(--spacing-6);
+}
+
+li {
+  margin-bottom: var(--spacing-2);
+}
+
+/* Small text */
+small {
+  font-size: var(--font-size-sm);
+  color: var(--color-neutral-600);
+}
+
+/* Time */
+time {
+  font-size: var(--font-size-sm);
+  color: var(--color-neutral-500);
+}

@@ -1,0 +1,11 @@
+# Test Output Files (Generated)
+mercury-config.json
+setup-config.json
+autosetup-result.json
+
+# Temporary test files
+test-*.eml
+test-*.txt
+
+# Logs
+*.log

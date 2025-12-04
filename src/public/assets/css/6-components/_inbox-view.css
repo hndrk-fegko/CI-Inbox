@@ -1,0 +1,129 @@
+/**
+ * Inbox View Component
+ * 
+ * BEM: .c-inbox (Block) + .c-inbox__* (Elements)
+ * Prefix: c- (Component)
+ * 
+ * Main inbox layout with toolbar and thread list.
+ * 
+ * Scroll behavior:
+ * - Outer containers (l-app__main, main-content) must NOT scroll
+ * - Only .c-inbox__thread-list and .c-inbox__thread-detail scroll independently
+ */
+
+.main-content {
+  background-color: var(--color-neutral-50);
+  padding: var(--spacing-6);
+  overflow: hidden; /* CRITICAL: Prevent outer scroll */
+  height: 100%; /* Fill available height */
+}
+
+.c-inbox {
+  display: grid;
+  grid-template-columns: 400px 1fr;
+  grid-template-rows: auto 1fr;
+  height: calc(100vh - var(--header-height) - var(--spacing-6) * 2); /* Full height minus header and padding */
+  background-color: white;
+  border-radius: var(--border-radius-lg);
+  overflow: hidden;
+}
+
+/* Toolbar: Split into List and Detail sections */
+.c-inbox__toolbar-list {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-3) var(--spacing-4);
+  background-color: white;
+  border-right: var(--border-width) solid var(--border-color);
+  border-bottom: var(--border-width) solid var(--border-color);
+  gap: var(--spacing-3);
+}
+
+.c-inbox__toolbar-detail {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-3) var(--spacing-4);
+  background-color: white;
+  border-bottom: var(--border-width) solid var(--border-color);
+  gap: var(--spacing-3);
+  min-width: 0;
+  overflow: visible;
+  position: relative;
+  z-index: 10;
+}
+
+.c-inbox__title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-neutral-900);
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.c-inbox__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+}
+
+/* Style "Nutzer zuweisen" button in detail toolbar dropdown */
+.c-inbox__toolbar-detail .c-dropdown__item[data-action="assign"] {
+  font-weight: var(--font-weight-medium);
+}
+
+/* Thread list panel (left) */
+.c-inbox__thread-list {
+  grid-column: 1;
+  grid-row: 2;
+  border-right: var(--border-width) solid var(--border-color);
+  overflow-y: auto;
+  /* Height is controlled by grid row, no max-height needed */
+}
+
+/* Thread detail panel (right) */
+.c-inbox__thread-detail {
+  grid-column: 2;
+  grid-row: 2;
+  padding: var(--spacing-6);
+  overflow-y: auto;
+  background-color: var(--color-neutral-50);
+  /* Height is controlled by grid row */
+}
+
+.c-inbox__thread-detail-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--color-neutral-400);
+  text-align: center;
+}
+
+.c-inbox__thread-detail-empty svg {
+  margin-bottom: var(--spacing-4);
+  opacity: 0.5;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .main-content {
+    padding: var(--spacing-4);
+  }
+  
+  .c-inbox__toolbar {
+    flex-wrap: wrap;
+  }
+}

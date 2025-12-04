@@ -1,0 +1,36 @@
+{
+  "name": "theme",
+  "version": "1.0.0",
+  "description": "Dark mode theme system with auto/light/dark preferences",
+  "type": "module",
+  "hooks": {
+    "onAppInit": {
+      "priority": 5
+    }
+  },
+  "dependencies": [
+    "logger",
+    "config"
+  ],
+  "autoload": {
+    "psr-4": {
+      "CiInbox\\Modules\\Theme\\": "src/"
+    }
+  },
+  "requires": {
+    "php": ">=8.1"
+  },
+  "assets": {
+    "css": [
+      "assets/theme-dark.css"
+    ],
+    "js": [
+      "assets/theme-switcher.js"
+    ]
+  },
+  "authors": [
+    {
+      "name": "CI-Inbox Team"
+    }
+  ]
+}

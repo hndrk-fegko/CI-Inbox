@@ -1,0 +1,103 @@
+/**
+ * Assigned Users Component
+ * 
+ * Displays user avatars for thread assignments.
+ * Used in thread list items and detail toolbar.
+ */
+
+/* Container for assigned user avatars */
+.c-assigned-users {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-2);
+}
+
+/* Avatar group with overlapping style */
+.c-assigned-users__avatars {
+    display: inline-flex;
+    align-items: center;
+    margin-right: var(--spacing-1);
+}
+
+.c-assigned-users__avatars .c-avatar {
+    margin-left: -6px;
+    border: 1px solid var(--color-surface);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-sizing: border-box;
+}
+
+.c-assigned-users__avatars .c-avatar:first-child {
+    margin-left: 0;
+}
+
+/* Add/Edit button */
+.c-assigned-users__add {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--color-neutral-100);
+    border: 1px dashed var(--border-color);
+    color: var(--color-neutral-600);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+}
+
+.c-assigned-users__add:hover {
+    background: var(--color-neutral-200);
+    color: var(--color-neutral-700);
+    border-color: var(--color-neutral-400);
+}
+
+.c-assigned-users__add svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* Toolbar variant - slightly larger */
+.c-inbox__toolbar-detail .c-assigned-users {
+    gap: var(--spacing-2);
+}
+
+.c-inbox__toolbar-detail .c-assigned-users__label {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-neutral-700);
+    margin-right: var(--spacing-2);
+}
+
+.c-inbox__toolbar-detail .c-assigned-users__avatars .c-avatar {
+    cursor: pointer;
+}
+
+.c-inbox__toolbar-detail .c-assigned-users__avatars .c-avatar:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Empty state */
+.c-assigned-users--empty .c-assigned-users__label {
+    color: var(--color-neutral-500);
+    font-style: italic;
+}
+
+/* Thread list item variant - compact */
+.c-thread-item__assigned {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-1);
+}
+
+.c-thread-item__assigned .c-avatar {
+    margin-left: -4px;
+    border: 1px solid var(--color-surface);
+    box-sizing: border-box;
+}
+
+.c-thread-item__assigned .c-avatar:first-child {
+    margin-left: 0;
+}

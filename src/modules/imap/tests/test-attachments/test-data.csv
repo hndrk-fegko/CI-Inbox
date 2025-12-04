@@ -1,0 +1,6 @@
+ID,Name,Email,Status,Created
+1,Alice Smith,alice@example.com,Active,2025-01-15
+2,Bob Jones,bob@example.com,Active,2025-02-20
+3,Charlie Brown,charlie@example.com,Inactive,2025-03-10
+4,Diana Prince,diana@example.com,Active,2025-04-05
+5,Ethan Hunt,ethan@example.com,Active,2025-05-12

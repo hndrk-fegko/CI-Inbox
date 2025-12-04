@@ -1,0 +1,196 @@
+/**
+ * Status Picker Component
+ * Modal for changing thread status
+ * 
+ * Updated 2025-11-28: Click-to-save, current status indicator
+ */
+
+.c-status-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 300px;
+}
+
+/* Clickable variant - items act as buttons */
+.c-status-picker--clickable .c-status-picker__item {
+    cursor: pointer;
+}
+
+.c-status-picker--clickable .c-status-picker__item:not(.is-current):hover {
+    background-color: var(--color-gray-50);
+    border-color: var(--color-primary);
+    transform: translateX(4px);
+}
+
+.c-status-picker__item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-surface, #ffffff);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: left;
+    width: 100%;
+}
+
+/* Current status indicator */
+.c-status-picker__item.is-current {
+    border-color: var(--color-primary);
+    background-color: var(--color-primary-50, rgba(59, 130, 246, 0.1));
+    cursor: default;
+    box-shadow: 0 0 0 1px var(--color-primary);
+}
+
+.c-status-picker__item.is-current:hover {
+    transform: none;
+}
+
+/* Current badge */
+.c-status-picker__current-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.5rem;
+    margin-left: 0.5rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    color: var(--color-primary);
+    background-color: var(--color-primary-100, rgba(59, 130, 246, 0.2));
+    border-radius: 9999px;
+}
+
+/* Icon container */
+.c-status-picker__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+
+.c-status-picker__icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* Badge colors for icon backgrounds */
+.c-status-picker__icon.c-badge--primary {
+    background-color: var(--color-primary-100, rgba(59, 130, 246, 0.2));
+    color: var(--color-primary);
+}
+
+.c-status-picker__icon.c-badge--warning {
+    background-color: rgba(245, 158, 11, 0.2);
+    color: #d97706;
+}
+
+.c-status-picker__icon.c-badge--success {
+    background-color: rgba(16, 185, 129, 0.2);
+    color: #059669;
+}
+
+.c-status-picker__icon.c-badge--neutral {
+    background-color: var(--color-gray-100);
+    color: var(--color-gray-600);
+}
+
+/* Info section */
+.c-status-picker__info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+}
+
+.c-status-picker__label {
+    font-weight: 500;
+    color: var(--color-text);
+    display: flex;
+    align-items: center;
+}
+
+.c-status-picker__description {
+    font-size: 0.8125rem;
+    color: var(--color-text-secondary, var(--color-neutral-500));
+}
+
+/* Arrow indicator for clickable items */
+.c-status-picker__arrow {
+    color: var(--color-gray-400);
+    transition: transform 0.15s ease, color 0.15s ease;
+    flex-shrink: 0;
+}
+
+.c-status-picker__item:hover .c-status-picker__arrow {
+    color: var(--color-primary);
+    transform: translateX(4px);
+}
+
+/* Legacy: Radio button style (if needed) */
+.c-status-picker__radio {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--color-gray-300);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.c-status-picker__radio-inner {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: var(--color-primary);
+    opacity: 0;
+    transform: scale(0);
+    transition: all 0.15s ease;
+}
+
+.c-status-picker__item.is-selected .c-status-picker__radio {
+    border-color: var(--color-primary);
+}
+
+.c-status-picker__item.is-selected .c-status-picker__radio-inner {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* Modal footer hint */
+.c-modal__footer--hint {
+    padding: 0.75rem 1.5rem;
+    background-color: var(--color-gray-50);
+    border-top: 1px solid var(--color-border);
+    text-align: center;
+}
+
+.c-modal__hint {
+    font-size: 0.8125rem;
+    color: var(--color-text-secondary);
+}
+
+/* Dark mode */
+[data-theme="dark"] .c-status-picker__item {
+    background: var(--color-surface-elevated);
+    border-color: var(--color-border);
+}
+
+[data-theme="dark"] .c-status-picker__item.is-current {
+    background-color: rgba(59, 130, 246, 0.15);
+}
+
+[data-theme="dark"] .c-status-picker__current-badge {
+    background-color: rgba(59, 130, 246, 0.3);
+}
+
+[data-theme="dark"] .c-modal__footer--hint {
+    background-color: var(--color-surface-elevated);
+}

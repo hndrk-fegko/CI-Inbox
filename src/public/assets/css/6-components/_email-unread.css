@@ -1,0 +1,15 @@
+/* ========================================
+   EMAIL MESSAGE - UNREAD STATE
+   ======================================== */
+
+/**
+ * Unread Email Indicator
+ */
+.c-email-message.is-unread {
+    background: #eff6ff; /* Light blue background */
+    border-left: 3px solid var(--color-primary);
+}
+
+.c-email-message.is-unread .c-email-message__sender strong {
+    font-weight: 700; /* Extra bold for unread */
+}

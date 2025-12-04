@@ -1,0 +1,76 @@
+/**
+ * Utility Classes
+ * 
+ * Single-purpose utility classes for quick styling.
+ */
+
+/* Display */
+.u-hidden {
+  display: none !important;
+}
+
+.u-flex {
+  display: flex !important;
+}
+
+.u-block {
+  display: block !important;
+}
+
+.u-inline {
+  display: inline !important;
+}
+
+.u-inline-block {
+  display: inline-block !important;
+}
+
+/* Text alignment */
+.u-text-left {
+  text-align: left !important;
+}
+
+.u-text-center {
+  text-align: center !important;
+}
+
+.u-text-right {
+  text-align: right !important;
+}
+
+/* Text transform */
+.u-uppercase {
+  text-transform: uppercase !important;
+}
+
+.u-lowercase {
+  text-transform: lowercase !important;
+}
+
+.u-capitalize {
+  text-transform: capitalize !important;
+}
+
+/* Font weight */
+.u-font-normal {
+  font-weight: var(--font-weight-normal) !important;
+}
+
+.u-font-medium {
+  font-weight: var(--font-weight-medium) !important;
+}
+
+.u-font-semibold {
+  font-weight: var(--font-weight-semibold) !important;
+}
+
+.u-font-bold {
+  font-weight: var(--font-weight-bold) !important;
+}
+
+/* Truncate */
+.u-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

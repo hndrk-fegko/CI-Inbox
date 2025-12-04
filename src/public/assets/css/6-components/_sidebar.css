@@ -1,0 +1,85 @@
+/**
+ * Sidebar Component
+ * 
+ * BEM: .c-sidebar (Block) + .c-sidebar__* (Elements)
+ * Prefix: c- (Component)
+ * State: .is-active
+ * 
+ * Left navigation sidebar.
+ */
+
+.c-sidebar {
+  background-color: white;
+  border-right: var(--border-width) solid var(--border-color);
+  padding: var(--spacing-4);
+  overflow-y: auto;
+}
+
+/* Navigation */
+.c-sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  margin-top: var(--spacing-4);
+}
+
+.c-sidebar__link {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-2) var(--spacing-3);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-neutral-700);
+  text-decoration: none;
+  border-radius: var(--border-radius-md);
+  transition: all var(--transition-fast);
+}
+
+.c-sidebar__link:hover {
+  background-color: var(--color-neutral-50);
+  color: var(--color-neutral-900);
+}
+
+.c-sidebar__link.is-active {
+  background-color: var(--color-primary-50);
+  color: var(--color-primary-700);
+  font-weight: var(--font-weight-semibold);
+}
+
+.c-sidebar__link svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.c-sidebar__link span:not(.c-badge) {
+  flex: 1;
+}
+
+/* Divider between sections */
+.c-sidebar__divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: var(--spacing-3) 0;
+  opacity: 0.5;
+}
+
+/* Mobile sidebar */
+@media (max-width: 768px) {
+  .c-sidebar {
+    position: fixed;
+    left: 0;
+    top: var(--header-height);
+    bottom: 0;
+    width: var(--sidebar-width);
+    transform: translateX(-100%);
+    transition: transform var(--transition-normal);
+    z-index: var(--z-index-dropdown);
+    box-shadow: var(--shadow-lg);
+  }
+  
+  .c-sidebar.is-open {
+    transform: translateX(0);
+  }
+}

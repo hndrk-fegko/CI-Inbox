@@ -1,0 +1,63 @@
+/**
+ * Label Tag Component
+ * 
+ * BEM: .c-label-tag (Block) + .c-label-tag--* (Modifiers)
+ * Prefix: c- (Component)
+ * 
+ * Colored tags for categories/labels.
+ */
+
+.c-label-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  padding: var(--spacing-1) var(--spacing-2);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--border-radius-sm);
+  line-height: 1;
+  background-color: var(--label-color, var(--color-neutral-100));
+  color: var(--color-neutral-900);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.c-label-tag:hover {
+  opacity: 0.8;
+}
+
+.c-label-tag--blue {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.c-label-tag--green {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.c-label-tag--red {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.c-label-tag--yellow {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.c-label-tag--purple {
+  background-color: #f3e8ff;
+  color: #6b21a8;
+}
+
+.c-label-tag--orange {
+  background-color: #ffedd5;
+  color: #9a3412;
+}
+
+.c-label-tag--pink {
+  background-color: #fce7f3;
+  color: #9f1239;
+}

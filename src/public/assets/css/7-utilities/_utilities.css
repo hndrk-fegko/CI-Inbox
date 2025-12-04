@@ -1,0 +1,76 @@
+/**
+ * Utility Classes
+ */
+
+/* Display */
+.u-hidden {
+  display: none !important;
+}
+
+.u-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Text */
+.u-text-center {
+  text-align: center !important;
+}
+
+.u-text-right {
+  text-align: right !important;
+}
+
+.u-text-left {
+  text-align: left !important;
+}
+
+.u-text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Spacing */
+.u-mt-0 { margin-top: 0 !important; }
+.u-mt-1 { margin-top: var(--spacing-1) !important; }
+.u-mt-2 { margin-top: var(--spacing-2) !important; }
+.u-mt-4 { margin-top: var(--spacing-4) !important; }
+.u-mt-6 { margin-top: var(--spacing-6) !important; }
+.u-mt-8 { margin-top: var(--spacing-8) !important; }
+
+.u-mb-0 { margin-bottom: 0 !important; }
+.u-mb-1 { margin-bottom: var(--spacing-1) !important; }
+.u-mb-2 { margin-bottom: var(--spacing-2) !important; }
+.u-mb-4 { margin-bottom: var(--spacing-4) !important; }
+.u-mb-6 { margin-bottom: var(--spacing-6) !important; }
+.u-mb-8 { margin-bottom: var(--spacing-8) !important; }
+
+/* Width */
+.u-w-full {
+  width: 100% !important;
+}
+
+/* Colors */
+.u-text-primary {
+  color: var(--color-primary-600) !important;
+}
+
+.u-text-success {
+  color: var(--color-success-600) !important;
+}
+
+.u-text-danger {
+  color: var(--color-danger-600) !important;
+}
+
+.u-text-muted {
+  color: var(--color-neutral-500) !important;
+}

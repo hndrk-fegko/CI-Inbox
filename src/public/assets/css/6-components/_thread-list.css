@@ -1,0 +1,165 @@
+/**
+ * Thread List Component
+ * 
+ * BEM: .c-thread-item (Block) + .c-thread-item__* (Elements)
+ * Prefix: c- (Component)
+ * State: .is-unread
+ * 
+ * List of email threads.
+ */
+
+.c-thread-list {
+  background-color: white;
+}
+
+/* Empty state */
+.c-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-12);
+  text-align: center;
+  color: var(--color-neutral-500);
+}
+
+.c-empty-state svg {
+  margin-bottom: var(--spacing-4);
+  color: var(--color-neutral-300);
+}
+
+.c-empty-state h3 {
+  margin: 0 0 var(--spacing-2);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-neutral-700);
+}
+
+.c-empty-state p {
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+
+/* Thread item */
+.c-thread-item {
+  display: flex;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3) var(--spacing-4);
+  border-bottom: var(--border-width) solid var(--border-color);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.c-thread-item:last-child {
+  border-bottom: none;
+}
+
+.c-thread-item:hover {
+  background-color: var(--color-neutral-50);
+}
+
+.c-thread-item.is-unread {
+  background-color: var(--color-primary-50);
+}
+
+.c-thread-item.is-unread:hover {
+  background-color: #bfdbfe;
+}
+
+.c-thread-item.is-selected {
+  background-color: var(--color-primary-100);
+  border-left: 3px solid var(--color-primary-600);
+  padding-left: calc(var(--spacing-4) - 3px);
+}
+
+.c-thread-item__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.c-thread-item__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-1);
+  gap: var(--spacing-3);
+}
+
+.c-thread-item__sender {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-neutral-900);
+}
+
+.c-thread-item.is-unread .c-thread-item__sender {
+  font-weight: var(--font-weight-bold);
+}
+
+.c-thread-item__time {
+  font-size: var(--font-size-xs);
+  color: var(--color-neutral-500);
+  white-space: nowrap;
+}
+
+.c-thread-item__subject {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  margin-bottom: var(--spacing-1);
+  font-size: var(--font-size-sm);
+  color: var(--color-neutral-900);
+}
+
+.c-thread-item.is-unread .c-thread-item__subject {
+  font-weight: var(--font-weight-semibold);
+}
+
+.c-thread-item__preview {
+  font-size: var(--font-size-sm);
+  color: var(--color-neutral-600);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: var(--spacing-2);
+}
+
+.c-thread-item__labels {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  flex-wrap: wrap;
+}
+
+.c-thread-item__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  flex-wrap: wrap;
+}
+
+.c-thread-item__attachment-icon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-neutral-400);
+}
+
+.c-thread-item__attachment-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .c-thread-item {
+    flex-direction: column;
+    gap: var(--spacing-2);
+  }
+  
+  .c-thread-item__checkbox {
+    position: absolute;
+    right: var(--spacing-4);
+  }
+  
+  .c-thread-item__preview {
+    display: none;
+  }
+}

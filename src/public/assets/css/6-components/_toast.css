@@ -1,0 +1,148 @@
+/**
+ * Toast Notifications Component
+ * 
+ * Floating notification messages for success/error feedback.
+ * Used by UiComponents.showSuccessMessage() and showErrorMessage()
+ * 
+ * @since 2025-11-28
+ */
+
+/* ==========================================================================
+   TOAST CONTAINER
+   ========================================================================== */
+
+.c-toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2, 8px);
+    pointer-events: none;
+}
+
+/* ==========================================================================
+   TOAST BASE
+   ========================================================================== */
+
+.c-toast {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2, 8px);
+    padding: var(--spacing-3, 12px) var(--spacing-4, 16px);
+    border-radius: var(--radius-md, 8px);
+    box-shadow: var(--shadow-lg, 0 4px 12px rgba(0, 0, 0, 0.15));
+    font-size: var(--font-size-sm, 14px);
+    font-weight: 500;
+    color: white;
+    pointer-events: auto;
+    animation: toastSlideIn 0.3s ease-out forwards;
+    max-width: 400px;
+}
+
+.c-toast svg {
+    flex-shrink: 0;
+}
+
+/* ==========================================================================
+   TOAST VARIANTS
+   ========================================================================== */
+
+.c-toast--success {
+    background-color: var(--color-success, #10b981);
+}
+
+.c-toast--error {
+    background-color: var(--color-danger, #ef4444);
+}
+
+.c-toast--warning {
+    background-color: var(--color-warning, #f59e0b);
+}
+
+.c-toast--info {
+    background-color: var(--color-primary, #3b82f6);
+}
+
+/* ==========================================================================
+   ANIMATIONS
+   Firefox & Chrome compatible (no -webkit prefix needed for modern versions)
+   ========================================================================== */
+
+@keyframes toastSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes toastSlideOut {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+}
+
+/* Legacy animation names for backwards compatibility */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideOut {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+}
+
+/* ==========================================================================
+   TOAST FADE OUT STATE
+   ========================================================================== */
+
+.c-toast--hiding {
+    animation: toastSlideOut 0.3s ease-in forwards;
+}
+
+/* ==========================================================================
+   DARK MODE
+   ========================================================================== */
+
+[data-theme="dark"] .c-toast {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* ==========================================================================
+   RESPONSIVE
+   ========================================================================== */
+
+@media (max-width: 480px) {
+    .c-toast-container {
+        left: 16px;
+        right: 16px;
+        bottom: 16px;
+    }
+    
+    .c-toast {
+        max-width: none;
+    }
+}

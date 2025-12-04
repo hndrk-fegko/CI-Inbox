@@ -1,0 +1,171 @@
+/**
+ * Label Picker Component
+ * Modal for selecting/managing thread labels
+ */
+
+.c-label-picker {
+    max-width: 500px;
+}
+
+.c-label-picker__search {
+    position: sticky;
+    top: -1px;
+    z-index: 10;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    font-size: 0.9375rem;
+    margin-bottom: 0.75rem;
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+/* Padding-Wrapper für sauberes Sticky-Verhalten */
+.c-label-picker__search::before {
+    content: '';
+    position: absolute;
+    top: -12px;
+    left: -12px;
+    right: -12px;
+    height: 12px;
+    background: #ffffff;
+}
+
+.c-label-picker__search::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: -12px;
+    right: -12px;
+    height: 8px;
+    background: linear-gradient(to bottom, #ffffff 0%, rgba(255,255,255,0.95) 50%, rgba(255,255,255,0) 100%);
+    pointer-events: none;
+}
+
+.c-label-picker__search:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.c-label-picker__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.c-label-picker__item {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.5rem 0.625rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.c-label-picker__item:hover {
+    background-color: var(--color-gray-50);
+}
+
+.c-label-picker__item.is-selected {
+    background-color: var(--color-primary-50);
+}
+
+.c-label-picker__checkbox {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--color-border);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+}
+
+.c-label-picker__item.is-selected .c-label-picker__checkbox {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.c-label-picker__checkbox-icon {
+    display: none;
+    color: white;
+}
+
+.c-label-picker__item.is-selected .c-label-picker__checkbox-icon {
+    display: block;
+}
+
+.c-label-picker__color {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+}
+
+.c-label-picker__name {
+    flex: 1;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--color-neutral-900);
+}
+
+.c-label-picker__count {
+    font-size: 0.8125rem;
+    color: var(--color-neutral-500);
+}
+
+/* User picker variant */
+.c-label-picker__item--user {
+    gap: 0.75rem;
+}
+
+.c-label-picker__user-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+}
+
+.c-label-picker__item--user .c-label-picker__name {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--color-neutral-900);
+}
+
+.c-label-picker__email {
+    font-size: 0.8125rem;
+    color: var(--color-neutral-500);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.c-label-picker__empty {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--color-neutral-500);
+}
+
+.c-label-picker__empty-icon {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 1rem;
+    opacity: 0.5;
+}
+
+.c-label-picker__actions {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    gap: 0.625rem;
+    justify-content: flex-end;
+}

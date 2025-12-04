@@ -1,0 +1,275 @@
+/* ============================================================================
+   EMAIL COMPOSER MODAL
+   Wiederverwendbarer Email-Compose Dialog für Reply/Forward/New Email
+   Nutzt c-modal Base-Klassen, erweitert um Composer-spezifische Styles
+   ========================================================================== */
+
+/* Override modal dialog width for composer */
+.c-modal--composer .c-modal__dialog {
+    max-width: 900px;
+    width: 90%;
+}
+
+.c-modal--composer .c-modal__body {
+    padding: 1.5rem 2rem;
+}
+
+.c-modal--composer .c-modal__header {
+    padding: 1.5rem 2rem 1rem;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.c-modal--composer .c-modal__footer {
+    padding: 1rem 2rem 1.5rem;
+    border-top: 1px solid var(--color-border);
+}
+
+/* Sender info in header */
+.c-email-composer__sender {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    font-weight: normal;
+    margin-top: 0.25rem;
+}
+
+/* Form Groups - kompakter für mehr Textarea-Platz */
+.c-email-composer__field {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 1rem;
+}
+
+.c-email-composer__field:last-child {
+    margin-bottom: 0;
+}
+
+.c-email-composer__label {
+    display: block;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.c-email-composer__label--required::after {
+    content: '*';
+    color: var(--color-danger);
+    margin-left: 0.25rem;
+}
+
+/* Input Fields */
+.c-email-composer__input,
+.c-email-composer__select,
+.c-email-composer__textarea {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    font-size: var(--font-size-base);
+    color: var(--color-text-primary);
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    transition: all 0.15s ease;
+    font-family: inherit;
+}
+
+.c-email-composer__input:focus,
+.c-email-composer__select:focus,
+.c-email-composer__textarea:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-alpha);
+}
+
+.c-email-composer__input::placeholder,
+.c-email-composer__textarea::placeholder {
+    color: var(--color-text-tertiary);
+}
+
+/* Textarea */
+.c-email-composer__textarea {
+    min-height: 320px;
+    resize: vertical;
+    font-family: inherit;
+    font-size: var(--font-size-base);
+    line-height: 1.6;
+}
+
+/* Select Dropdown */
+.c-email-composer__select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 20 20' fill='%236B7280'%3E%3Cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z' clip-rule='evenodd'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 16px;
+    padding-right: 2.5rem;
+}
+
+/* Recipient Tags (for multiple recipients) */
+.c-email-composer__recipients {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    min-height: 2.5rem;
+    background: var(--color-bg-primary);
+}
+
+.c-email-composer__recipient-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.625rem;
+    background: var(--color-bg-secondary);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    color: var(--color-text-primary);
+}
+
+.c-email-composer__recipient-remove {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    color: var(--color-text-tertiary);
+    display: flex;
+    align-items: center;
+    transition: color 0.15s ease;
+}
+
+.c-email-composer__recipient-remove:hover {
+    color: var(--color-danger);
+}
+
+.c-email-composer__recipient-input {
+    flex: 1;
+    min-width: 150px;
+    border: none;
+    outline: none;
+    padding: 0.25rem;
+    font-size: var(--font-size-base);
+    background: transparent;
+    color: var(--color-text-primary);
+}
+
+/* Button Loading State */
+.c-button--loading {
+    position: relative;
+    color: transparent !important;
+}
+
+.c-button--loading::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 50%;
+    left: 50%;
+    margin-left: -8px;
+    margin-top: -8px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Error State */
+.c-email-composer__error {
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    background: var(--color-danger-light);
+    border: 1px solid var(--color-danger);
+    border-radius: var(--radius-md);
+    color: var(--color-danger-dark);
+    font-size: var(--font-size-sm);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.c-email-composer__error-icon {
+    flex-shrink: 0;
+}
+
+/* Success State */
+.c-email-composer__success {
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    background: var(--color-success-light);
+    border: 1px solid var(--color-success);
+    border-radius: var(--radius-md);
+    color: var(--color-success-dark);
+    font-size: var(--font-size-sm);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Account Selector (for Private Reply) */
+.c-email-composer__account-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: var(--color-bg-secondary);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    margin-bottom: 0.75rem;
+}
+
+.c-email-composer__account-icon {
+    color: var(--color-primary);
+}
+
+/* Signature Checkbox */
+.c-email-composer__signature-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding: 0.5rem;
+    background: var(--color-bg-secondary);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.c-email-composer__signature-option:hover {
+    background: var(--color-bg-tertiary);
+}
+
+.c-email-composer__signature-checkbox {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .c-modal--composer .c-modal__dialog {
+        max-width: 100%;
+        max-height: 100vh;
+        border-radius: 0;
+        width: 100%;
+    }
+    
+    .c-modal__footer {
+        flex-direction: column-reverse;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+    
+    .c-modal__footer .c-button {
+        width: 100%;
+        justify-content: center;
+    }
+}
+

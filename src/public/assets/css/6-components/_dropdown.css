@@ -1,0 +1,123 @@
+/**
+ * Dropdown Component
+ * 
+ * BEM: .c-dropdown (Block) + .c-dropdown__* (Elements) + .c-dropdown--* (Modifiers)
+ *
+ * Usage: Action overflow menu
+ */
+
+/* Block: Dropdown container */
+.c-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+/* Element: Trigger button */
+.c-dropdown__trigger {
+    cursor: pointer;
+}
+
+/* Element: Dropdown menu (hidden by default) */
+.c-dropdown__menu {
+    /* Positioning */
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    
+    /* Layout */
+    min-width: 200px;
+    padding: var(--spacing-1) 0;
+    
+    /* Appearance */
+    background-color: white;
+    border: var(--border-width) solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    
+    /* Visibility */
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    
+    /* Z-index */
+    z-index: 1000;
+    
+    /* Transition */
+    transition: opacity 0.15s ease, visibility 0.15s ease;
+}
+
+/* Modifier: Open state - shows the menu */
+.c-dropdown--open .c-dropdown__menu {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+/* Element: Menu item button */
+.c-dropdown__item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    width: 100%;
+    padding: var(--spacing-2) var(--spacing-3);
+    background: none;
+    border: none;
+    text-align: left;
+    font-size: var(--font-size-sm);
+    color: var(--color-neutral-700);
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.c-dropdown__item:hover {
+    background-color: var(--color-neutral-100);
+}
+
+.c-dropdown__item:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.c-dropdown__item:disabled:hover {
+    background-color: transparent;
+}
+
+.c-dropdown__item svg {
+    flex-shrink: 0;
+    color: var(--color-neutral-500);
+}
+
+.c-dropdown__item:hover svg {
+    color: var(--color-neutral-700);
+}
+
+/* Modifier: Danger item (e.g., delete) */
+.c-dropdown__item--danger {
+    color: var(--color-danger);
+}
+
+.c-dropdown__item--danger:hover {
+    background-color: var(--color-danger-light);
+}
+
+.c-dropdown__item--danger svg {
+    color: var(--color-danger);
+}
+
+/* Modifier: Disabled item */
+.c-dropdown__item--disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.c-dropdown__item--disabled:hover {
+    background-color: transparent;
+}
+
+/* Element: Separator line between menu sections */
+.c-dropdown__separator {
+    height: 1px;
+    background-color: var(--border-color);
+    margin: var(--spacing-1) 0;
+}

@@ -1,0 +1,99 @@
+/**
+ * User Picker Component
+ * Modal for assigning threads to users
+ */
+
+.c-user-picker {
+    max-width: 500px;
+}
+
+.c-user-picker__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.c-user-picker__item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.c-user-picker__item:hover {
+    background-color: var(--color-gray-50);
+}
+
+.c-user-picker__item.is-selected {
+    background-color: var(--color-primary-50);
+}
+
+.c-user-picker__checkbox {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--color-border);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+}
+
+.c-user-picker__item.is-selected .c-user-picker__checkbox {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.c-user-picker__checkbox-icon {
+    display: none;
+    width: 14px;
+    height: 14px;
+    color: #1e40af;
+}
+
+.c-user-picker__item.is-selected .c-user-picker__checkbox-icon {
+    display: block;
+}
+
+.c-user-picker__avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.c-user-picker__info {
+    flex: 1;
+    min-width: 0;
+}
+
+.c-user-picker__name {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--color-neutral-800);
+    margin-bottom: 2px;
+}
+
+.c-user-picker__email {
+    font-size: 0.8125rem;
+    color: var(--color-neutral-500);
+}
+
+.c-user-picker__empty {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--color-text-secondary);
+}

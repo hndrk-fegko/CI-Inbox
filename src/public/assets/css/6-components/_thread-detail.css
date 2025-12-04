@@ -1,0 +1,417 @@
+/**
+ * Thread Detail Component
+ * 
+ * BEM: .c-thread-detail (Block) + .c-thread-detail__* (Elements)
+ * Prefix: c- (Component)
+ * 
+ * Detailed view of email thread with messages and notes.
+ */
+
+.c-thread-detail {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Labels in Toolbar */
+.c-thread-detail__labels {
+  display: inline-flex;
+  gap: var(--spacing-2);
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Messages Container */
+.c-thread-detail__messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-6);
+}
+
+/* Email Message */
+.c-email-message {
+  background-color: white;
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-lg);
+  margin-bottom: var(--spacing-2);
+  overflow: hidden;
+}
+
+.c-email-message__header {
+  display: flex;
+  gap: var(--spacing-3);
+  padding: var(--spacing-4);
+  border-bottom: var(--border-width) solid var(--border-color);
+  background-color: var(--color-neutral-50);
+}
+
+.c-email-message__avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--border-radius-full);
+  background-color: var(--color-primary-500);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-lg);
+  flex-shrink: 0;
+}
+
+.c-email-message__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.c-email-message__sender {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-2);
+  margin-bottom: var(--spacing-1);
+}
+
+.c-email-message__sender strong {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-neutral-900);
+}
+
+.c-email-message__email {
+  font-size: var(--font-size-sm);
+  color: var(--color-neutral-500);
+}
+
+.c-email-message__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-neutral-600);
+}
+
+.c-email-message__separator {
+  color: var(--color-neutral-300);
+}
+
+.c-email-message__toggle {
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.c-email-message.is-collapsed .c-email-message__toggle svg {
+  transform: rotate(-90deg);
+}
+
+/* Message Body */
+.c-email-message__body {
+  padding: var(--spacing-4);
+  max-height: 1000px;
+  overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+}
+
+.c-email-message.is-collapsed .c-email-message__body {
+  max-height: 0;
+  padding: 0 var(--spacing-4);
+}
+
+.c-email-message.is-collapsed .c-email-message__header {
+  cursor: pointer;
+  background-color: white;
+}
+
+.c-email-message.is-collapsed .c-email-message__header:hover {
+  background-color: var(--color-neutral-50);
+}
+
+.c-email-message__iframe {
+  width: 100%;
+  min-height: 200px;
+  border: none;
+  background-color: white;
+}
+
+.c-email-message__text {
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-neutral-900);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.c-email-message__show-more {
+  margin-top: var(--spacing-3);
+  padding-top: var(--spacing-3);
+  border-top: var(--border-width) solid var(--border-color);
+}
+
+.c-email-message__full-content {
+  margin-top: var(--spacing-3);
+}
+
+/* Attachments */
+.c-email-message__attachments {
+  padding: var(--spacing-4);
+  background-color: var(--color-neutral-50);
+  border-top: var(--border-width) solid var(--border-color);
+}
+
+.c-email-message__attachments-title {
+  margin: 0 0 var(--spacing-3);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-neutral-700);
+}
+
+.c-email-message__attachments-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+/* Attachment Item */
+.c-attachment {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-2) var(--spacing-3);
+  background-color: white;
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  transition: all var(--transition-fast);
+}
+
+.c-attachment:hover {
+  border-color: var(--color-primary-300);
+  background-color: var(--color-primary-50);
+}
+
+.c-attachment__icon {
+  color: var(--color-neutral-400);
+  flex-shrink: 0;
+}
+
+.c-attachment__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.c-attachment__name {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-neutral-900);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.c-attachment__size {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--color-neutral-500);
+}
+
+.c-attachment__download {
+  flex-shrink: 0;
+}
+
+/* Internal Notes */
+.c-thread-detail__notes {
+  padding: var(--spacing-6);
+  background-color: #fffbeb;
+  border-top: var(--border-width) solid #fcd34d;
+}
+
+.c-thread-detail__notes-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  margin: 0 0 var(--spacing-4);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-neutral-900);
+}
+
+.c-thread-detail__notes-title svg {
+  color: #f59e0b;
+}
+
+.c-thread-detail__notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-4);
+}
+
+/* Note Item */
+.c-note {
+  padding: var(--spacing-3);
+  background-color: white;
+  border: var(--border-width) solid #fcd34d;
+  border-radius: var(--border-radius-md);
+}
+
+/* Inline note styling (mixed with emails) */
+.c-note--inline {
+  background-color: #fffbeb;
+  border-left: 4px solid #fcd34d;
+  border-right: var(--border-width) solid #fcd34d;
+  border-top: var(--border-width) solid #fcd34d;
+  border-bottom: var(--border-width) solid #fcd34d;
+  margin-bottom: var(--spacing-2);
+}
+
+.c-note__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-2);
+  padding-bottom: var(--spacing-2);
+  border-bottom: var(--border-width) solid var(--border-color);
+}
+
+.c-note__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.c-note__meta svg {
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+
+.c-note__header strong {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-neutral-900);
+}
+
+.c-note__header time {
+  font-size: var(--font-size-xs);
+  color: var(--color-neutral-500);
+}
+
+.c-note__edited {
+  font-size: var(--font-size-xs);
+  color: var(--color-neutral-400);
+  font-style: italic;
+  cursor: help;
+}
+
+.c-note__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+}
+
+.c-note__edit,
+.c-note__delete {
+  background: none;
+  border: none;
+  padding: var(--spacing-1);
+  cursor: pointer;
+  color: var(--color-neutral-400);
+  border-radius: var(--border-radius-sm);
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.c-note__edit:hover {
+  color: var(--color-primary);
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+.c-note__delete:hover {
+  color: var(--color-danger);
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+.c-note__edit svg,
+.c-note__delete svg {
+  width: 16px;
+  height: 16px;
+}
+
+.c-note__content {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  color: var(--color-neutral-700);
+}
+
+/* Note Form */
+.c-note-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.c-note-form__input {
+  width: 100%;
+  padding: var(--spacing-3);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family-base);
+  line-height: var(--line-height-normal);
+  color: var(--color-neutral-900);
+  background-color: white;
+  border: var(--border-width) solid #fcd34d;
+  border-radius: var(--border-radius-md);
+  resize: vertical;
+  transition: border-color var(--transition-fast);
+}
+
+.c-note-form__input:focus {
+  outline: none;
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+}
+
+.c-note-form .c-button {
+  align-self: flex-start;
+}
+
+/* Note Dropzone */
+.c-note-dropzone {
+  margin: var(--spacing-1) 0;
+  padding: var(--spacing-1) 0;
+  text-align: center;
+  opacity: 0;
+  transform: scaleY(0);
+  max-height: 0;
+  overflow: hidden;
+  transition: opacity 0.2s ease, transform 0.2s ease, max-height 0.2s ease;
+}
+
+.c-thread-detail.note-mode-active .c-note-dropzone {
+  opacity: 1;
+  transform: scaleY(1);
+  max-height: 100px;
+}
+
+.c-note-dropzone__button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2) var(--spacing-4);
+  background-color: var(--color-primary-50);
+  border: 2px dashed var(--color-primary-300);
+  border-radius: var(--border-radius-md);
+  color: var(--color-primary-700);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.c-note-dropzone__button:hover {
+  background-color: var(--color-primary-100);
+  border-color: var(--color-primary-500);
+  color: var(--color-primary-800);
+}
+
+.c-note-dropzone__button svg {
+  flex-shrink: 0;
+}

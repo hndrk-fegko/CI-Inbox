@@ -1,0 +1,97 @@
+/**
+ * Input Component
+ * 
+ * Form input fields with variants.
+ */
+
+.c-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.c-input-group__label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-neutral-700);
+}
+
+.c-input,
+.c-textarea,
+.c-select {
+  padding: var(--spacing-2) var(--spacing-3);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  color: var(--color-neutral-900);
+  background-color: white;
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  transition: all var(--transition-fast);
+}
+
+.c-input:focus,
+.c-textarea:focus,
+.c-select:focus {
+  outline: none;
+  border-color: var(--color-primary-500);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.c-input:disabled,
+.c-textarea:disabled,
+.c-select:disabled {
+  background-color: var(--color-neutral-50);
+  cursor: not-allowed;
+}
+
+.c-input-group.has-error .c-input,
+.c-input-group.has-error .c-textarea,
+.c-input-group.has-error .c-select {
+  border-color: var(--color-danger);
+}
+
+.c-input-group__hint {
+  font-size: var(--font-size-xs);
+  color: var(--color-neutral-500);
+}
+
+.c-input-group__error {
+  font-size: var(--font-size-xs);
+  color: var(--color-danger);
+  font-weight: var(--font-weight-medium);
+}
+
+/* Textarea */
+.c-textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+/* Checkbox */
+.c-checkbox {
+  width: 18px;
+  height: 18px;
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  appearance: none;
+  position: relative;
+  transition: all var(--transition-fast);
+}
+
+.c-checkbox:checked {
+  background-color: var(--color-primary-600);
+  border-color: var(--color-primary-600);
+}
+
+.c-checkbox:checked::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  width: 4px;
+  height: 8px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}

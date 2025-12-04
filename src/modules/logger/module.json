@@ -1,0 +1,26 @@
+{
+  "name": "logger",
+  "version": "1.0.0",
+  "description": "Central logging system with PSR-3 compatibility",
+  "type": "module",
+  "hooks": [
+    "onAppInit",
+    "onError",
+    "onShutdown"
+  ],
+  "dependencies": [],
+  "autoload": {
+    "psr-4": {
+      "CiInbox\\Modules\\Logger\\": "src/"
+    }
+  },
+  "requires": {
+    "php": ">=8.1",
+    "monolog/monolog": "^3.5"
+  },
+  "authors": [
+    {
+      "name": "CI-Inbox Team"
+    }
+  ]
+}

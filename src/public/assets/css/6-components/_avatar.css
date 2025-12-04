@@ -1,0 +1,151 @@
+/**
+ * Avatar Component
+ * 
+ * BEM: .c-avatar (Block) + .c-avatar--* (Modifiers)
+ *
+ * Usage: Display user initials in circular badges
+ */
+
+/* Base Avatar */
+.c-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: white;
+    flex-shrink: 0;
+    white-space: nowrap;
+    box-sizing: border-box;
+    
+    /* Default size (medium) - force square aspect ratio */
+    min-width: 36px;
+    min-height: 36px;
+    height: 36px;
+    font-size: 14px;
+    aspect-ratio: 1 / 1;
+}
+
+/* Size Variants */
+.c-avatar--xs {
+    min-width: 24px;
+    min-height: 24px;
+    height: 24px;
+    font-size: 10px;
+}
+
+.c-avatar--sm {
+    min-width: 28px;
+    min-height: 28px;
+    height: 28px;
+    font-size: 12px;
+}
+
+.c-avatar--md {
+    min-width: 36px;
+    min-height: 36px;
+    height: 36px;
+    font-size: 14px;
+}
+
+.c-avatar--lg {
+    min-width: 44px;
+    min-height: 44px;
+    height: 44px;
+    font-size: 17px;
+}
+
+.c-avatar--xl {
+    min-width: 64px;
+    min-height: 64px;
+    height: 64px;
+    font-size: 22px;
+}
+
+/* Color Variants - High specificity to override header.css */
+.c-avatar.c-avatar--color-1 {
+    background: #667eea !important;
+    background-color: #667eea !important;
+    border: none !important;
+}
+
+.c-avatar.c-avatar--color-2 {
+    background: #e879f9 !important;
+    background-color: #e879f9 !important;
+    border: none !important;
+}
+
+.c-avatar.c-avatar--color-3 {
+    background: #4facfe !important;
+    background-color: #4facfe !important;
+    border: none !important;
+}
+
+.c-avatar.c-avatar--color-4 {
+    background: #43e97b !important;
+    background-color: #43e97b !important;
+    border: none !important;
+}
+
+.c-avatar.c-avatar--color-5 {
+    background: #fa709a !important;
+    background-color: #fa709a !important;
+    border: none !important;
+}
+
+.c-avatar.c-avatar--color-6 {
+    background: #fccb90 !important;
+    background-color: #fccb90 !important;
+    border: none !important;
+}
+
+.c-avatar.c-avatar--color-7 {
+    background: #a8edea !important;
+    background-color: #a8edea !important;
+    border: none !important;
+}
+
+.c-avatar.c-avatar--color-8 {
+    background: #d299c2 !important;
+    background-color: #d299c2 !important;
+    border: none !important;
+}
+
+/* Avatar Stack Container */
+.c-thread-item__avatars {
+    display: flex;
+    align-items: center;
+    margin-right: 8px;
+    position: relative;
+}
+
+.c-thread-item__avatars .c-avatar {
+    border: 2px solid white;
+    margin-right: -8px;
+}
+
+.c-thread-item__avatars .c-avatar:last-child {
+    margin-right: 0;
+}
+
+/* Assigned Users Container */
+.c-thread-item__assigned {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 8px;
+}
+
+.c-thread-item__assigned .c-avatar {
+    border: 1px solid var(--color-border-light);
+}
+
+/* Meta Container with Badges */
+.c-thread-item__meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+}

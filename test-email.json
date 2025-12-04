@@ -1,0 +1,7 @@
+{
+  "subject": "UTF-8 Test Email",
+  "to": "hendrik.dreis@outlook.de",
+  "body_text": "Test mit Umlauten: ä ö ü ß Ä Ö Ü",
+  "imap_account_id": 4,
+  "user_id": 1
+}

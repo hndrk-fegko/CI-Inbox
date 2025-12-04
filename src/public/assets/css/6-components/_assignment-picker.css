@@ -1,0 +1,143 @@
+/**
+ * Assignment Picker Component
+ * 
+ * Modal for assigning users to threads (analog to label picker).
+ */
+
+.c-assignment-picker {
+    max-width: 500px;
+}
+
+.c-assignment-picker__search {
+    position: sticky;
+    top: -1px;
+    z-index: 10;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 0.9375rem;
+    margin-bottom: 0.75rem;
+    background: var(--color-surface);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+/* Padding-Wrapper für sauberes Sticky-Verhalten */
+.c-assignment-picker__search::before {
+    content: '';
+    position: absolute;
+    top: -12px;
+    left: -12px;
+    right: -12px;
+    height: 12px;
+    background: var(--color-surface);
+}
+
+.c-assignment-picker__search::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: -12px;
+    right: -12px;
+    height: 8px;
+    background: linear-gradient(to bottom, var(--color-surface) 0%, rgba(255,255,255,0.95) 50%, rgba(255,255,255,0) 100%);
+    pointer-events: none;
+}
+
+.c-assignment-picker__search:focus {
+    outline: none;
+    border-color: var(--color-primary-500);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.c-assignment-picker__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.c-assignment-picker__item {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.5rem 0.625rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.c-assignment-picker__item:hover {
+    background-color: var(--color-neutral-50);
+}
+
+.c-assignment-picker__item.is-selected {
+    background-color: var(--color-primary-50);
+}
+
+.c-assignment-picker__checkbox {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border-color);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+}
+
+.c-assignment-picker__item.is-selected .c-assignment-picker__checkbox {
+    background-color: var(--color-primary-600);
+    border-color: var(--color-primary-600);
+}
+
+.c-assignment-picker__checkbox-icon {
+    display: none;
+    color: white;
+}
+
+.c-assignment-picker__item.is-selected .c-assignment-picker__checkbox-icon {
+    display: block;
+}
+
+.c-assignment-picker__user-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.c-assignment-picker__name {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--color-neutral-900);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.c-assignment-picker__email {
+    font-size: 0.8125rem;
+    color: var(--color-neutral-500);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.c-assignment-picker__empty {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--color-neutral-500);
+}
+
+.c-assignment-picker__empty-icon {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 1rem;
+    opacity: 0.5;
+}
+
+.c-assignment-picker__empty p {
+    margin: 0;
+    font-size: var(--font-size-sm);
+}

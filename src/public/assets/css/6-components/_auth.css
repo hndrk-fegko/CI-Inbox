@@ -1,0 +1,281 @@
+/* ============================================
+   Auth Layout Styles
+   ============================================ */
+
+.l-auth {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--color-primary-50) 0%, var(--color-primary-100) 100%);
+  padding: var(--spacing-4);
+}
+
+.l-auth__container {
+  width: 100%;
+  max-width: 420px;
+}
+
+.l-auth__footer {
+  margin-top: var(--spacing-6);
+  text-align: center;
+}
+
+.l-auth__footer-text {
+  font-size: var(--font-size-sm);
+  color: var(--color-neutral-600);
+}
+
+/* ============================================
+   Auth Card Component
+   ============================================ */
+
+.c-auth-card {
+  background: white;
+  border-radius: var(--border-radius-xl);
+  box-shadow: var(--shadow-xl);
+  padding: var(--spacing-8);
+}
+
+.c-auth-card__header {
+  text-align: center;
+  margin-bottom: var(--spacing-8);
+}
+
+.c-auth-card__logo {
+  color: var(--color-primary-600);
+  margin: 0 auto var(--spacing-4);
+  display: block;
+}
+
+.c-auth-card__title {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-neutral-900);
+  margin: 0 0 var(--spacing-2);
+}
+
+.c-auth-card__subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-neutral-600);
+  margin: 0;
+}
+
+.c-auth-card__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-5);
+}
+
+.c-auth-card__footer {
+  text-align: center;
+  margin-top: var(--spacing-2);
+}
+
+/* ============================================
+   Alert Component
+   ============================================ */
+
+.c-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-3);
+  padding: var(--spacing-4);
+  border-radius: var(--border-radius-md);
+  border: 1px solid;
+  font-size: var(--font-size-sm);
+}
+
+.c-alert.is-visible {
+  display: flex !important;
+}
+
+.c-alert--danger {
+  background-color: var(--color-danger-light);
+  border-color: var(--color-danger);
+  color: var(--color-danger-dark);
+}
+
+.c-alert--success {
+  background-color: var(--color-success-light);
+  border-color: var(--color-success);
+  color: var(--color-success-dark);
+}
+
+.c-alert--warning {
+  background-color: var(--color-warning-light);
+  border-color: var(--color-warning);
+  color: var(--color-warning-dark);
+}
+
+.c-alert--info {
+  background-color: var(--color-info-light);
+  border-color: var(--color-info);
+  color: var(--color-info-dark);
+}
+
+.c-alert__icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* ============================================
+   Checkbox Component
+   ============================================ */
+
+.c-checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.c-checkbox__input {
+  width: 18px;
+  height: 18px;
+  border-radius: var(--border-radius-sm);
+  border: var(--border-width) solid var(--border-color-dark);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  appearance: none;
+  position: relative;
+  flex-shrink: 0;
+  margin: 0;
+}
+
+.c-checkbox__input:checked {
+  background-color: var(--color-primary-600);
+  border-color: var(--color-primary-600);
+}
+
+.c-checkbox__input:checked::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  width: 4px;
+  height: 8px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.c-checkbox__input:focus {
+  outline: 2px solid var(--color-primary-300);
+  outline-offset: 2px;
+}
+
+.c-checkbox__label {
+  font-size: var(--font-size-sm);
+  color: var(--color-neutral-700);
+  cursor: pointer;
+  user-select: none;
+}
+
+/* ============================================
+   Link Component
+   ============================================ */
+
+.c-link {
+  color: var(--color-primary-600);
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+  transition: color var(--transition-fast);
+}
+
+.c-link:hover {
+  color: var(--color-primary-700);
+  text-decoration: underline;
+}
+
+.c-link:focus {
+  outline: 2px solid var(--color-primary-300);
+  outline-offset: 2px;
+  border-radius: var(--border-radius-sm);
+}
+
+.c-link--muted {
+  color: var(--color-neutral-600);
+}
+
+.c-link--muted:hover {
+  color: var(--color-neutral-800);
+}
+
+/* ============================================
+   Input Group Component
+   ============================================ */
+
+.c-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.c-input-group__label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-neutral-700);
+}
+
+/* Input Field (specific for auth forms) */
+.c-input {
+  width: 100%;
+  padding: var(--spacing-3) var(--spacing-4);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  color: var(--color-neutral-900);
+  background-color: white;
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  transition: all var(--transition-fast);
+}
+
+.c-input:focus {
+  outline: none;
+  border-color: var(--color-primary-500);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.c-input::placeholder {
+  color: var(--color-neutral-400);
+}
+
+.c-input:disabled {
+  background-color: var(--color-neutral-50);
+  cursor: not-allowed;
+}
+
+.c-input-group__hint {
+  font-size: var(--font-size-xs);
+  color: var(--color-neutral-600);
+}
+
+.c-input-group__error {
+  font-size: var(--font-size-xs);
+  color: var(--color-danger);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+}
+
+.c-input-group--error .c-input {
+  border-color: var(--color-danger);
+}
+
+.c-input-group--error .c-input:focus {
+  outline-color: var(--color-danger);
+}
+
+/* ============================================
+   Responsive
+   ============================================ */
+
+@media (max-width: 640px) {
+  .c-auth-card {
+    padding: var(--spacing-6);
+  }
+  
+  .c-auth-card__title {
+    font-size: var(--font-size-2xl);
+  }
+}

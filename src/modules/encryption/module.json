@@ -1,0 +1,23 @@
+{
+  "name": "encryption",
+  "version": "1.0.0",
+  "description": "Encryption service for sensitive data (IMAP passwords)",
+  "type": "core",
+  "author": "CI-Inbox Team",
+  "dependencies": {
+    "php": ">=8.2",
+    "extensions": ["openssl"],
+    "modules": ["config"]
+  },
+  "provides": {
+    "services": [
+      "EncryptionService"
+    ]
+  },
+  "hooks": {
+    "onAppInit": {
+      "priority": 20,
+      "description": "Initialize encryption service after config"
+    }
+  }
+}

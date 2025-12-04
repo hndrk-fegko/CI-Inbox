@@ -1,0 +1,26 @@
+{
+  "name": "config",
+  "version": "1.0.0",
+  "description": "Central configuration management with ENV and PHP config files",
+  "type": "module",
+  "hooks": [
+    "onAppInit"
+  ],
+  "dependencies": [
+    "logger"
+  ],
+  "autoload": {
+    "psr-4": {
+      "CiInbox\\Modules\\Config\\": "src/"
+    }
+  },
+  "requires": {
+    "php": ">=8.1",
+    "vlucas/phpdotenv": "^5.5"
+  },
+  "authors": [
+    {
+      "name": "CI-Inbox Team"
+    }
+  ]
+}

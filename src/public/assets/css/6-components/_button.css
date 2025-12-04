@@ -1,0 +1,180 @@
+/**
+ * Button Component
+ * 
+ * BEM: .c-button (Block) + .c-button--* (Modifiers)
+ * Prefix: c- (Component)
+ * State: .is-disabled, .is-loading
+ * 
+ * Reusable button styles with variants.
+ */
+
+.c-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2) var(--spacing-4);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  border: var(--border-width) solid transparent;
+  border-radius: var(--border-radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.c-button:hover {
+  opacity: 0.9;
+}
+
+.c-button:active {
+  transform: translateY(1px);
+}
+
+.c-button:disabled,
+.c-button.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.c-button:disabled:hover,
+.c-button.is-disabled:hover {
+  opacity: 0.5;
+}
+
+/* Active state */
+.c-button.is-active {
+  background-color: var(--color-primary-600);
+  color: white;
+  border-color: var(--color-primary-600);
+}
+
+/* Primary variant */
+.c-button--primary {
+  background-color: var(--color-primary-600);
+  color: white;
+}
+
+.c-button--primary:hover {
+  background-color: var(--color-primary-700);
+}
+
+/* Secondary variant */
+.c-button--secondary {
+  background-color: white;
+  color: var(--color-neutral-700);
+  border-color: var(--border-color);
+}
+
+.c-button--secondary:hover {
+  background-color: var(--color-neutral-50);
+}
+
+/* Success variant */
+.c-button--success {
+  background-color: var(--color-success);
+  color: white;
+}
+
+.c-button--success:hover {
+  background-color: #16a34a;
+}
+
+/* Danger variant */
+.c-button--danger {
+  background-color: var(--color-danger);
+  color: white;
+}
+
+.c-button--danger:hover {
+  background-color: #dc2626;
+}
+
+/* Ghost variant */
+.c-button--ghost {
+  background-color: transparent;
+  color: var(--color-neutral-700);
+}
+
+.c-button--ghost:hover {
+  background-color: var(--color-neutral-50);
+}
+
+/* Icon button */
+.c-button--icon {
+  padding: var(--spacing-2);
+  width: 36px;
+  height: 36px;
+}
+
+.c-button__icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* Size variants */
+.c-button--sm {
+  padding: var(--spacing-1) var(--spacing-3);
+  font-size: var(--font-size-xs);
+}
+
+/* Full width */
+.c-button--full-width,
+.c-button--block {
+  width: 100%;
+}
+
+/* Loading state */
+.c-button.is-loading {
+  position: relative;
+  pointer-events: none;
+}
+
+.c-button.is-loading svg {
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Button Group: Connected buttons */
+.c-button-group {
+  display: inline-flex;
+  gap: 0;
+  border-radius: var(--border-radius-sm);
+  overflow: hidden;
+}
+
+.c-button-group .c-button {
+  border-radius: 0;
+  margin: 0;
+}
+
+.c-button-group .c-button:first-child {
+  border-top-left-radius: var(--border-radius-sm);
+  border-bottom-left-radius: var(--border-radius-sm);
+}
+
+.c-button-group .c-button:last-child {
+  border-top-right-radius: var(--border-radius-sm);
+  border-bottom-right-radius: var(--border-radius-sm);
+}
+
+.c-button-group .c-button + .c-button,
+.c-button-group .c-button + .c-dropdown {
+  border-left: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.c-button-group .c-dropdown {
+  display: inline-flex;
+}
+
+.c-button-group .c-dropdown .c-button {
+  padding-left: var(--spacing-2);
+  padding-right: var(--spacing-2);
+}
