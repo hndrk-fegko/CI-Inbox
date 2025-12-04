@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Repositories;
+namespace CiInbox\App\Repositories;
 
 use CiInbox\App\Models\Signature;
 use Illuminate\Database\Eloquent\Collection;

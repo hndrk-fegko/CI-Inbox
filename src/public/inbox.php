@@ -98,10 +98,9 @@ foreach ($threads as $thread) {
     <link rel="stylesheet" href="/assets/css/6-components/_thread-list.css<?= asset_version() ?>">
     <link rel="stylesheet" href="/assets/css/6-components/_thread-detail.css<?= asset_version() ?>">
     <link rel="stylesheet" href="/assets/css/6-components/_email-unread.css<?= asset_version() ?>">
-    <link rel="stylesheet" href="/assets/css/6-components/_status-picker.css<?= asset_version() ?>">
     <link rel="stylesheet" href="/assets/css/6-components/_email-composer.css<?= asset_version() ?>">
     <link rel="stylesheet" href="/assets/css/6-components/_inbox-view.css<?= asset_version() ?>">
-    <link rel="stylesheet" href="/assets/css/7-utilities/_utilities.css<?= asset_version() ?>">
+    <link rel="stylesheet" href="/assets/css/7-utilities/_utilities.css<?= asset_version() ?>"">
     
     <!-- Theme Module -->
     <script src="/modules/theme/assets/theme-switcher.js<?= asset_version() ?>"></script>
@@ -996,6 +995,11 @@ function createThreadItem(thread) {
     `;
     
     return div;
+}
+
+// Alias for createThreadItem (backward compatibility)
+function createThreadElement(thread) {
+    return createThreadItem(thread);
 }
 
 // Helper: Escape HTML

@@ -245,7 +245,7 @@ const ApiClient = (function() {
      * @returns {Promise<object>} Result
      */
     async function bulkAddLabels(threadIds, labelIds) {
-        return request(`${API_BASE}/threads/bulk/labels`, {
+        return request(`${API_BASE}/threads/bulk/labels/add`, {
             method: 'POST',
             body: JSON.stringify({
                 thread_ids: threadIds,
