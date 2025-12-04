@@ -45,3 +45,12 @@ desktop.ini
 
 # Testing
 .phpunit.result.cache
+
+# Test artifacts (keep .gitkeep)
+/tests/manual/artifacts/*
+!/tests/manual/artifacts/.gitkeep
+
+# Temporary files
+*.tmp
+*.bak
+~*
