@@ -23,7 +23,7 @@ composer --version   # Should show 2.5+
 ### 1. Clone & Install Dependencies
 
 ```bash
-git clone <repository-url> ci-inbox
+git clone https://github.com/hndrk-fegko/C-IMAP.git ci-inbox
 cd ci-inbox
 composer install
 ```
