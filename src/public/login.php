@@ -1,49 +1,147 @@
 <?php
 /**
- * Simple Login Page (Static)
- * Test without Slim routing
+ * Login Page
+ * 
+ * Security features:
+ * - Session-based authentication
+ * - Rate limiting (configurable)
+ * - Honeypot field (anti-bot)
+ * - CSRF protection
+ * - Secure password verification
  */
 
 require_once __DIR__ . '/../../vendor/autoload.php';
+require_once __DIR__ . '/../config/version.php';
+
+use CiInbox\App\Middleware\CsrfMiddleware;
 
 session_start();
 
-// Simple authentication
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = $_POST['email'] ?? '';
-    $password = $_POST['password'] ?? '';
-    
-    try {
-        // Database connection
-        $pdo = new PDO(
-            'mysql:host=localhost;dbname=ci_inbox;charset=utf8mb4',
-            'root',
-            '',
-            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
-        );
-        
-        // Get user from database
-        $stmt = $pdo->prepare('SELECT id, email, name, password_hash, role, is_active FROM users WHERE email = ? AND is_active = 1');
-        $stmt->execute([$email]);
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if ($user && password_verify($password, $user['password_hash'])) {
-            // Authentication successful
-            session_regenerate_id(true);
-            $_SESSION['user_email'] = $user['email'];
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['user_name'] = $user['name'];
-            $_SESSION['user_role'] = $user['role'];
-            $_SESSION['logged_in_at'] = time();
-            
-            header('Location: /inbox.php');
-            exit;
-        } else {
-            $error = 'Ungültige E-Mail-Adresse oder Passwort.';
+// ============================================================================
+// RATE LIMITING
+// ============================================================================
+
+$rateLimitFile = sys_get_temp_dir() . '/ci-inbox-login-limits/' . md5($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+$maxAttempts = 5;           // Max login attempts
+$lockoutSeconds = 300;      // 5 minutes lockout
+$isLocked = false;
+
+// Check rate limit
+if (file_exists($rateLimitFile)) {
+    $data = json_decode(file_get_contents($rateLimitFile), true);
+    if ($data && isset($data['attempts']) && isset($data['first_attempt'])) {
+        // Check if still in lockout period
+        if ($data['attempts'] >= $maxAttempts) {
+            $lockoutEnd = $data['first_attempt'] + $lockoutSeconds;
+            if (time() < $lockoutEnd) {
+                $isLocked = true;
+                $lockoutRemaining = $lockoutEnd - time();
+            } else {
+                // Lockout expired, reset
+                @unlink($rateLimitFile);
+            }
         }
-    } catch (Exception $e) {
+    }
+}
+
+// ============================================================================
+// CSRF TOKEN
+// ============================================================================
+
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+$csrfToken = $_SESSION['csrf_token'];
+
+// ============================================================================
+// HONEYPOT TRACKING
+// ============================================================================
+
+$honeypotTriggered = false;
+
+// ============================================================================
+// AUTHENTICATION
+// ============================================================================
+
+$error = null;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isLocked) {
+    // Verify CSRF token
+    $submittedToken = $_POST['csrf_token'] ?? '';
+    if (!hash_equals($csrfToken, $submittedToken)) {
+        $error = 'Sicherheitstoken ungültig. Bitte versuchen Sie es erneut.';
+    }
+    // Check honeypot (should be empty)
+    elseif (!empty($_POST['website'] ?? '')) {
+        // Silently reject - don't reveal honeypot detection
+        $honeypotTriggered = true;
         $error = 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.';
-        error_log('Login error: ' . $e->getMessage());
+        // Log honeypot trigger for security monitoring
+        error_log('Honeypot triggered from IP: ' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown'));
+    }
+    else {
+        $email = filter_var($_POST['email'] ?? '', FILTER_SANITIZE_EMAIL);
+        $password = $_POST['password'] ?? '';
+        
+        try {
+            // Database connection
+            $pdo = new PDO(
+                'mysql:host=localhost;dbname=ci_inbox;charset=utf8mb4',
+                'root',
+                '',
+                [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+            );
+            
+            // Get user from database
+            $stmt = $pdo->prepare('SELECT id, email, name, password_hash, role, is_active FROM users WHERE email = ? AND is_active = 1');
+            $stmt->execute([$email]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($user && password_verify($password, $user['password_hash'])) {
+                // Authentication successful
+                session_regenerate_id(true);
+                $_SESSION['user_email'] = $user['email'];
+                $_SESSION['user_id'] = $user['id'];
+                $_SESSION['user_name'] = $user['name'];
+                $_SESSION['user_role'] = $user['role'];
+                $_SESSION['logged_in_at'] = time();
+                
+                // Regenerate CSRF token after login
+                $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+                
+                // Clear rate limit on successful login
+                @unlink($rateLimitFile);
+                
+                header('Location: /inbox.php');
+                exit;
+            } else {
+                $error = 'Ungültige E-Mail-Adresse oder Passwort.';
+                
+                // Track failed attempt for rate limiting
+                $rateLimitDir = dirname($rateLimitFile);
+                if (!is_dir($rateLimitDir)) {
+                    mkdir($rateLimitDir, 0755, true);
+                }
+                
+                $data = file_exists($rateLimitFile) 
+                    ? json_decode(file_get_contents($rateLimitFile), true) 
+                    : ['attempts' => 0, 'first_attempt' => time()];
+                
+                $data['attempts']++;
+                $data['last_attempt'] = time();
+                
+                file_put_contents($rateLimitFile, json_encode($data));
+                
+                // Check if now locked out
+                if ($data['attempts'] >= $maxAttempts) {
+                    $isLocked = true;
+                    $lockoutRemaining = $lockoutSeconds;
+                }
+            }
+        } catch (Exception $e) {
+            $error = 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.';
+            error_log('Login error: ' . $e->getMessage());
+        }
     }
 }
 
@@ -59,7 +157,11 @@ if (isset($_SESSION['user_email'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - C-IMAP</title>
-    <link rel="stylesheet" href="/assets/css/main.css">
+    <link rel="stylesheet" href="/assets/css/main.css<?= asset_version() ?>">
+    <!-- Honeypot CSS - hide field from users but keep it accessible to bots -->
+    <style>
+        .hp-field { opacity: 0; position: absolute; top: 0; left: 0; height: 0; width: 0; z-index: -1; }
+    </style>
 </head>
 <body class="l-auth">
     <div class="l-auth__container">
@@ -76,7 +178,23 @@ if (isset($_SESSION['user_email'])) {
 
             <!-- Login Form -->
             <form class="c-auth-card__form" method="POST" action="/login.php">
-                <?php if (isset($error)): ?>
+                <!-- CSRF Token -->
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
+                
+                <!-- Honeypot Field (hidden from users, visible to bots) -->
+                <div class="hp-field" aria-hidden="true">
+                    <label for="website">Website (leave empty)</label>
+                    <input type="text" name="website" id="website" tabindex="-1" autocomplete="off">
+                </div>
+                
+                <?php if ($isLocked): ?>
+                    <div class="c-alert c-alert--danger" role="alert">
+                        <svg class="c-alert__icon" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                        </svg>
+                        <span>Zu viele Anmeldeversuche. Bitte warten Sie <?= ceil($lockoutRemaining / 60) ?> Minute(n).</span>
+                    </div>
+                <?php elseif (isset($error)): ?>
                     <div class="c-alert c-alert--danger" role="alert">
                         <svg class="c-alert__icon" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
@@ -100,6 +218,7 @@ if (isset($_SESSION['user_email'])) {
                         autofocus
                         autocomplete="email"
                         value="<?= htmlspecialchars($_POST['email'] ?? '') ?>"
+                        <?= $isLocked ? 'disabled' : '' ?>
                     >
                 </div>
 
@@ -116,6 +235,7 @@ if (isset($_SESSION['user_email'])) {
                         placeholder="••••••••"
                         required
                         autocomplete="current-password"
+                        <?= $isLocked ? 'disabled' : '' ?>
                     >
                 </div>
 
@@ -126,6 +246,7 @@ if (isset($_SESSION['user_email'])) {
                         id="remember" 
                         name="remember" 
                         class="c-checkbox__input"
+                        <?= $isLocked ? 'disabled' : '' ?>
                     >
                     <label for="remember" class="c-checkbox__label">
                         Angemeldet bleiben
@@ -133,7 +254,7 @@ if (isset($_SESSION['user_email'])) {
                 </div>
 
                 <!-- Submit Button -->
-                <button type="submit" class="c-button c-button--primary c-button--block">
+                <button type="submit" class="c-button c-button--primary c-button--block" <?= $isLocked ? 'disabled' : '' ?>>
                     Anmelden
                 </button>
 
