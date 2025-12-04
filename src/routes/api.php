@@ -1052,6 +1052,50 @@ return function (App $app) {
         });
     });
     
+    // ========== OAUTH ROUTES ==========
+    
+    // Public: List OAuth providers (for login page)
+    $app->get('/api/oauth/providers', function (Request $request, Response $response) {
+        $container = Container::getInstance();
+        $controller = $container->get(\CiInbox\App\Controllers\OAuthController::class);
+        return $controller->listProviders($request, $response);
+    });
+    
+    // Public: Initiate OAuth flow
+    $app->get('/oauth/authorize/{provider}', function (Request $request, Response $response, array $args) {
+        $container = Container::getInstance();
+        $controller = $container->get(\CiInbox\App\Controllers\OAuthController::class);
+        return $controller->authorize($request, $response, $args);
+    });
+    
+    // Public: OAuth callback
+    $app->get('/oauth/callback/{provider}', function (Request $request, Response $response, array $args) {
+        $container = Container::getInstance();
+        $controller = $container->get(\CiInbox\App\Controllers\OAuthController::class);
+        return $controller->callback($request, $response, $args);
+    });
+    
+    // Admin: OAuth provider management
+    $app->group('/api/admin/oauth', function ($app) {
+        $app->post('/providers', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\OAuthController::class);
+            return $controller->createProvider($request, $response);
+        });
+        
+        $app->put('/providers/{id}', function (Request $request, Response $response, array $args) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\OAuthController::class);
+            return $controller->updateProvider($request, $response, $args);
+        });
+        
+        $app->delete('/providers/{id}', function (Request $request, Response $response, array $args) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\OAuthController::class);
+            return $controller->deleteProvider($request, $response, $args);
+        });
+    })->add($adminMiddleware)->add($authMiddleware);
+    
     // API info endpoint
     $app->get('/api', function (Request $request, Response $response) {
         $apiInfo = [

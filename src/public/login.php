@@ -239,24 +239,32 @@ if (isset($_SESSION['user_email'])) {
                     >
                 </div>
 
-                <!-- Remember Me -->
-                <div class="c-checkbox">
-                    <input 
-                        type="checkbox" 
-                        id="remember" 
-                        name="remember" 
-                        class="c-checkbox__input"
-                        <?= $isLocked ? 'disabled' : '' ?>
-                    >
-                    <label for="remember" class="c-checkbox__label">
-                        Angemeldet bleiben
-                    </label>
+                <!-- Remember Me & Forgot Password -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <div class="c-checkbox">
+                        <input 
+                            type="checkbox" 
+                            id="remember" 
+                            name="remember" 
+                            class="c-checkbox__input"
+                            <?= $isLocked ? 'disabled' : '' ?>
+                        >
+                        <label for="remember" class="c-checkbox__label">
+                            Angemeldet bleiben
+                        </label>
+                    </div>
+                    <a href="/forgot-password.php" class="c-link" style="font-size: 14px;">
+                        Passwort vergessen?
+                    </a>
                 </div>
 
                 <!-- Submit Button -->
                 <button type="submit" class="c-button c-button--primary c-button--block" <?= $isLocked ? 'disabled' : '' ?>>
                     Anmelden
                 </button>
+
+                <!-- OAuth Providers (loaded dynamically) -->
+                <div id="oauth-providers" style="margin-top: 20px;"></div>
 
                 <!-- Demo Credentials -->
                 <div class="c-auth-card__footer">
@@ -277,5 +285,41 @@ if (isset($_SESSION['user_email'])) {
             </p>
         </footer>
     </div>
+    
+    <!-- Load OAuth Providers -->
+    <script>
+    (async function() {
+        try {
+            const response = await fetch('/api/oauth/providers');
+            const data = await response.json();
+            
+            if (data.success && data.providers && data.providers.length > 0) {
+                const container = document.getElementById('oauth-providers');
+                
+                // Add divider
+                container.innerHTML = `
+                    <div style="display: flex; align-items: center; margin: 20px 0; color: #9ca3af;">
+                        <div style="flex: 1; height: 1px; background: #e5e7eb;"></div>
+                        <span style="padding: 0 16px; font-size: 13px;">oder anmelden mit</span>
+                        <div style="flex: 1; height: 1px; background: #e5e7eb;"></div>
+                    </div>
+                `;
+                
+                // Add provider buttons
+                const buttonsHtml = data.providers.map(provider => `
+                    <a href="/oauth/authorize/${encodeURIComponent(provider.name)}" 
+                       class="c-button c-button--block" 
+                       style="background: ${provider.button_color}; color: white; margin-bottom: 8px;">
+                        ${provider.display_name}
+                    </a>
+                `).join('');
+                
+                container.innerHTML += buttonsHtml;
+            }
+        } catch (error) {
+            console.error('Failed to load OAuth providers:', error);
+        }
+    })();
+    </script>
 </body>
 </html>

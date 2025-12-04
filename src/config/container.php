@@ -547,4 +547,31 @@ return [
     \CiInbox\App\Middleware\SecurityHeadersMiddleware::class => function($container) {
         return new \CiInbox\App\Middleware\SecurityHeadersMiddleware();
     },
+    
+    // ========== OAUTH & PASSWORD RESET ==========
+    
+    // OAuth Service
+    \CiInbox\App\Services\OAuthService::class => function($container) {
+        return new \CiInbox\App\Services\OAuthService(
+            $container->get(LoggerService::class),
+            $container->get(EncryptionInterface::class)
+        );
+    },
+    
+    // OAuth Controller
+    \CiInbox\App\Controllers\OAuthController::class => function($container) {
+        return new \CiInbox\App\Controllers\OAuthController(
+            $container->get(\CiInbox\App\Services\OAuthService::class),
+            $container->get(LoggerService::class)
+        );
+    },
+    
+    // Password Reset Service
+    \CiInbox\App\Services\PasswordResetService::class => function($container) {
+        return new \CiInbox\App\Services\PasswordResetService(
+            $container->get(LoggerService::class),
+            $container->get(SmtpClientInterface::class),
+            $container->get('smtp.config')
+        );
+    },
 ];
