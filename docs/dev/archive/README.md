@@ -4,6 +4,36 @@ Dieser Ordner enthält **archivierte Dokumente**, die durch neuere ersetzt wurde
 
 ---
 
+## Abgeschlossene Sprint-Dokumentationen
+
+Die folgenden Sprint-Dokumente wurden archiviert, da ihre Implementierungen abgeschlossen sind und die relevanten Informationen in die Hauptdokumentation integriert wurden:
+
+### M0 Foundation (Completed)
+- `[COMPLETED] M0-Sprint-0.1-Logger-Modul.md`
+- `[COMPLETED] M0-Sprint-0.2-Config-Modul.md`
+- `[COMPLETED] M0-Sprint-0.3-Encryption-Service.md`
+- `[COMPLETED] M0-Sprint-0.4-Database-Setup.md`
+- `[COMPLETED] M0-Sprint-0.5-Core-Infrastruktur.md`
+
+### M1 IMAP Core (Completed)
+- `[COMPLETED] M1-Sprint-1.1-IMAP-Client-Modul.md`
+- `[COMPLETED] M1-Sprint-1.2-Email-Parser.md`
+- `[COMPLETED] M1-Sprint-1.3-Thread-Manager.md`
+- `[COMPLETED] M1-Sprint-1.4-Label-Manager.md`
+- `[COMPLETED] M1-Sprint-1.5-Webcron-Polling-Dienst.md`
+
+### M2 Thread & Email API (Completed)
+- `[COMPLETED] M2-Sprint-2.1-Thread-Management-API.md`
+
+### M3 Features (Completed)
+- `[COMPLETED] M3-Admin-Features.md`
+- `[COMPLETED] Batch-3.3-Cron-Monitor.md`
+
+### Bugfix Sessions
+- `BUGFIX-2025-11-18.md` - API 500 Fehler, Ctrl+Click Multi-Select, Cache-Busting
+
+---
+
 ## workflow-v1.0-2025-11-17.md
 
 **Erstellt:** 17. November 2025  
@@ -48,4 +78,4 @@ Dieser Ordner enthält **archivierte Dokumente**, die durch neuere ersetzt wurde
 
 ---
 
-**Letzte Aktualisierung:** 17. November 2025
+**Letzte Aktualisierung:** 4. Dezember 2025
