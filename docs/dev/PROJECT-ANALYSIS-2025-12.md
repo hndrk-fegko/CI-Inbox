@@ -43,8 +43,9 @@ Diese Analyse identifiziert systematisch alle Inkonsistenzen, Probleme und Verbe
 
 | Attribut | Details |
 |----------|---------|
-| **Datei** | `src/routes/api.php:312-397` |
-| **Beschreibung** | Temporäre Hardcoded User-ID `$request = $request->withAttribute('user_id', 1);` in mehreren API-Routen für Personal IMAP Accounts und User Profile |
+| **Datei** | `src/routes/api.php` |
+| **Betroffene Stellen** | `/api/user/imap-accounts/*` (ca. 6 Routen), `/api/user/profile/*` (ca. 5 Routen), `/api/user/theme` (2 Routen) |
+| **Beschreibung** | Temporäre Hardcoded User-ID `$request = $request->withAttribute('user_id', 1);` in mehreren API-Routen für Personal IMAP Accounts, User Profile und Theme |
 | **Auswirkung** | **HIGH** - Sicherheitslücke: Alle Benutzer agieren als User 1, keine echte Authentifizierung |
 | **Empfohlene Lösung** | Authentication Middleware implementieren, die den User aus der Session/Token extrahiert |
 
@@ -203,8 +204,8 @@ Diese Analyse identifiziert systematisch alle Inkonsistenzen, Probleme und Verbe
 
 | Attribut | Details |
 |----------|---------|
-| **Dateien** | `src/routes/api.php:312,321,331,339,348,357,369,379,388,397,419` |
-| **Beschreibung** | `// TODO: Add authentication middleware to set user_id` an 11+ Stellen |
+| **Dateien** | `src/routes/api.php` |
+| **Beschreibung** | TODO-Kommentar `// TODO: Add authentication middleware to set user_id` erscheint an 11+ Stellen. Suche mit: `grep -r "TODO: Add authentication" src/routes/` |
 | **Auswirkung** | **MEDIUM** - Zeigt unfertige Features |
 | **Empfohlene Lösung** | Authentication Middleware implementieren und TODOs auflösen |
 
@@ -450,7 +451,7 @@ Diese Analyse identifiziert systematisch alle Inkonsistenzen, Probleme und Verbe
 
 ---
 
-*Analyse durchgeführt: Dezember 2025*
+*Analyse durchgeführt: 2025-12-04*
 *Branch: unified-cleanup*
 *PHP Version: 8.1+*
 *Framework: Slim 4 + Eloquent ORM*
