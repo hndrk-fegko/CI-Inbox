@@ -112,8 +112,8 @@ class RateLimitMiddleware implements MiddlewareInterface
             $ip = trim(explode(',', $ip)[0]);
         }
         
-        // Hash for privacy
-        return hash('sha256', $ip . ($_SESSION['user_id'] ?? ''));
+        // Hash for privacy - use delimiter to prevent collisions
+        return hash('sha256', $ip . '|' . ($_SESSION['user_id'] ?? ''));
     }
     
     /**

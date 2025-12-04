@@ -21,7 +21,7 @@ session_start();
 // RATE LIMITING
 // ============================================================================
 
-$rateLimitFile = sys_get_temp_dir() . '/ci-inbox-login-limits/' . md5($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+$rateLimitFile = sys_get_temp_dir() . '/ci-inbox-login-limits/' . hash('sha256', $_SERVER['REMOTE_ADDR'] ?? 'unknown');
 $maxAttempts = 5;           // Max login attempts
 $lockoutSeconds = 300;      // 5 minutes lockout
 $isLocked = false;

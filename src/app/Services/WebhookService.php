@@ -296,6 +296,8 @@ class WebhookService
      * This method validates that an incoming webhook payload matches its signature.
      * Use this when CI-Inbox receives webhooks from external services.
      * 
+     * Supports signatures with or without algorithm prefix (e.g., 'sha256=...' or raw hash)
+     * 
      * @param string $payload Raw request body
      * @param string $signature Signature from X-Webhook-Signature header
      * @param string $secret Shared secret for this webhook
@@ -303,8 +305,19 @@ class WebhookService
      */
     public static function verifySignature(string $payload, string $signature, string $secret): bool
     {
+        // Handle signatures with algorithm prefix (e.g., 'sha256=...')
+        $signatureToVerify = $signature;
+        if (str_starts_with($signature, 'sha256=')) {
+            $signatureToVerify = substr($signature, 7);
+        }
+        
+        // Validate signature format (should be 64 hex characters for SHA-256)
+        if (strlen($signatureToVerify) !== 64 || !ctype_xdigit($signatureToVerify)) {
+            return false;
+        }
+        
         $expectedSignature = hash_hmac('sha256', $payload, $secret);
-        return hash_equals($expectedSignature, $signature);
+        return hash_equals($expectedSignature, $signatureToVerify);
     }
     
     /**

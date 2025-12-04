@@ -1,0 +1,200 @@
+/**
+ * Skeleton Loading Component
+ * 
+ * Provides loading placeholder animations for improved perceived performance.
+ * Use while content is being fetched from the server.
+ */
+
+/* Base skeleton styles */
+.c-skeleton {
+    background: var(--color-skeleton-base, #e5e7eb);
+    border-radius: var(--radius-sm, 4px);
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+/* Dark mode skeleton */
+[data-theme="dark"] .c-skeleton,
+.dark-mode .c-skeleton {
+    background: var(--color-skeleton-base-dark, #374151);
+}
+
+/* Pulse animation */
+@keyframes skeleton-pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* Wave animation (alternative) */
+@keyframes skeleton-wave {
+    0% {
+        background-position: -200px 0;
+    }
+    100% {
+        background-position: calc(200px + 100%) 0;
+    }
+}
+
+.c-skeleton--wave {
+    background: linear-gradient(
+        90deg,
+        var(--color-skeleton-base, #e5e7eb) 0px,
+        var(--color-skeleton-highlight, #f3f4f6) 40px,
+        var(--color-skeleton-base, #e5e7eb) 80px
+    );
+    background-size: 200px 100%;
+    animation: skeleton-wave 1.5s infinite linear;
+}
+
+/* Skeleton variants */
+.c-skeleton--text {
+    height: 1em;
+    margin-bottom: 0.5em;
+}
+
+.c-skeleton--text-sm {
+    height: 0.875em;
+}
+
+.c-skeleton--text-lg {
+    height: 1.25em;
+}
+
+.c-skeleton--circle {
+    border-radius: 50%;
+}
+
+.c-skeleton--rounded {
+    border-radius: var(--radius-md, 8px);
+}
+
+/* Thread list skeleton */
+.c-skeleton-thread {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm, 8px);
+    padding: var(--space-md, 16px);
+    border-bottom: 1px solid var(--color-border, #e5e7eb);
+}
+
+.c-skeleton-thread__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.c-skeleton-thread__sender {
+    width: 40%;
+    height: 1.1em;
+}
+
+.c-skeleton-thread__time {
+    width: 60px;
+    height: 0.875em;
+}
+
+.c-skeleton-thread__subject {
+    width: 80%;
+    height: 1em;
+}
+
+.c-skeleton-thread__meta {
+    display: flex;
+    gap: var(--space-sm, 8px);
+}
+
+.c-skeleton-thread__badge {
+    width: 60px;
+    height: 1.5em;
+    border-radius: var(--radius-full, 9999px);
+}
+
+/* Thread detail skeleton */
+.c-skeleton-detail {
+    padding: var(--space-lg, 24px);
+}
+
+.c-skeleton-detail__header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md, 16px);
+    margin-bottom: var(--space-lg, 24px);
+}
+
+.c-skeleton-detail__title {
+    width: 70%;
+    height: 1.5em;
+}
+
+.c-skeleton-detail__meta {
+    display: flex;
+    gap: var(--space-md, 16px);
+}
+
+.c-skeleton-email {
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: var(--radius-md, 8px);
+    padding: var(--space-md, 16px);
+    margin-bottom: var(--space-md, 16px);
+}
+
+.c-skeleton-email__header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm, 8px);
+    margin-bottom: var(--space-md, 16px);
+}
+
+.c-skeleton-email__avatar {
+    width: 40px;
+    height: 40px;
+}
+
+.c-skeleton-email__from {
+    flex: 1;
+}
+
+.c-skeleton-email__name {
+    width: 150px;
+    height: 1em;
+    margin-bottom: 4px;
+}
+
+.c-skeleton-email__date {
+    width: 100px;
+    height: 0.875em;
+}
+
+.c-skeleton-email__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs, 4px);
+}
+
+.c-skeleton-email__line {
+    height: 1em;
+}
+
+.c-skeleton-email__line:nth-child(1) { width: 100%; }
+.c-skeleton-email__line:nth-child(2) { width: 95%; }
+.c-skeleton-email__line:nth-child(3) { width: 90%; }
+.c-skeleton-email__line:nth-child(4) { width: 85%; }
+.c-skeleton-email__line:nth-child(5) { width: 60%; }
+
+/* Staggered animation for multiple items */
+.c-skeleton-thread:nth-child(1) { animation-delay: 0s; }
+.c-skeleton-thread:nth-child(2) { animation-delay: 0.1s; }
+.c-skeleton-thread:nth-child(3) { animation-delay: 0.2s; }
+.c-skeleton-thread:nth-child(4) { animation-delay: 0.3s; }
+.c-skeleton-thread:nth-child(5) { animation-delay: 0.4s; }
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+    .c-skeleton,
+    .c-skeleton--wave {
+        animation: none;
+    }
+}

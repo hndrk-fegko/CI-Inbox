@@ -1,0 +1,18 @@
+# CI-Inbox Robots.txt
+# Disallow crawlers from accessing sensitive areas
+
+User-agent: *
+Disallow: /api/
+Disallow: /login.php
+Disallow: /logout.php
+Disallow: /inbox.php
+Disallow: /settings/
+Disallow: /admin/
+Disallow: /assets/
+Disallow: /modules/
+
+# Allow only public pages
+Allow: /
+
+# Sitemap (if public pages exist)
+# Sitemap: https://your-domain.com/sitemap.xml

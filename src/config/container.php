@@ -542,4 +542,9 @@ return [
             $container->get(LoggerService::class)
         );
     },
+    
+    // Security Headers Middleware
+    \CiInbox\App\Middleware\SecurityHeadersMiddleware::class => function($container) {
+        return new \CiInbox\App\Middleware\SecurityHeadersMiddleware();
+    },
 ];

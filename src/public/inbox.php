@@ -100,7 +100,7 @@ foreach ($threads as $thread) {
     <link rel="stylesheet" href="/assets/css/6-components/_email-unread.css<?= asset_version() ?>">
     <link rel="stylesheet" href="/assets/css/6-components/_email-composer.css<?= asset_version() ?>">
     <link rel="stylesheet" href="/assets/css/6-components/_inbox-view.css<?= asset_version() ?>">
-    <link rel="stylesheet" href="/assets/css/7-utilities/_utilities.css<?= asset_version() ?>"">
+    <link rel="stylesheet" href="/assets/css/7-utilities/_utilities.css<?= asset_version() ?>">>
     
     <!-- Theme Module -->
     <script src="/modules/theme/assets/theme-switcher.js<?= asset_version() ?>"></script>
