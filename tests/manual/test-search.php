@@ -6,7 +6,7 @@
  * Usage: php tests/manual/test-search.php
  */
 
-require __DIR__ . '/../../vendor/autoload.php';
+require_once __DIR__ . '/../../vendor/autoload.php';
 
 use CiInbox\Core\Container;
 
