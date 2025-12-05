@@ -100,7 +100,10 @@ foreach ($threads as $thread) {
     <link rel="stylesheet" href="/assets/css/6-components/_email-unread.css<?= asset_version() ?>">
     <link rel="stylesheet" href="/assets/css/6-components/_email-composer.css<?= asset_version() ?>">
     <link rel="stylesheet" href="/assets/css/6-components/_inbox-view.css<?= asset_version() ?>">
-    <link rel="stylesheet" href="/assets/css/7-utilities/_utilities.css<?= asset_version() ?>">>
+    <link rel="stylesheet" href="/assets/css/6-components/_skeleton.css<?= asset_version() ?>">
+    <link rel="stylesheet" href="/assets/css/6-components/_keyboard-shortcuts.css<?= asset_version() ?>">
+    <link rel="stylesheet" href="/assets/css/6-components/_onboarding.css<?= asset_version() ?>">
+    <link rel="stylesheet" href="/assets/css/7-utilities/_utilities.css<?= asset_version() ?>">
     
     <!-- Theme Module -->
     <script src="/modules/theme/assets/theme-switcher.js<?= asset_version() ?>"></script>
@@ -112,15 +115,15 @@ foreach ($threads as $thread) {
         window.userHasPersonalImap = <?= json_encode($hasPersonalImap ?? false) ?>;
     </script>
     
-    <!-- Modular JavaScript Architecture (refactored 2025-11-28) -->
-    <!-- Load order: ApiClient → UiComponents → ThreadRenderer → InboxManager -->
+    <!-- Modular JavaScript Architecture -->
+    <!-- Load order: ApiClient → UiComponents → ThreadRenderer → InboxManager → Keyboard → Onboarding -->
     <script src="/assets/js/modules/api-client.js<?= asset_version() ?>"></script>
     <script src="/assets/js/modules/ui-components.js<?= asset_version() ?>"></script>
     <script src="/assets/js/modules/thread-renderer.js<?= asset_version() ?>"></script>
     <script src="/assets/js/modules/inbox-manager.js<?= asset_version() ?>"></script>
-    
-    <!-- Legacy support - will be removed after testing -->
-    <!-- <script src="/assets/js/thread-detail-renderer.js<?= asset_version() ?>"></script> -->
+    <script src="/assets/js/modules/skeleton-loader.js<?= asset_version() ?>"></script>
+    <script src="/assets/js/modules/keyboard-shortcuts.js<?= asset_version() ?>"></script>
+    <script src="/assets/js/modules/user-onboarding.js<?= asset_version() ?>"></script>
     
     <script src="/assets/js/email-composer.js<?= asset_version() ?>"></script>
 </head>

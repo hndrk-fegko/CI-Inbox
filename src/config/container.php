@@ -574,4 +574,22 @@ return [
             $container->get('smtp.config')
         );
     },
+    
+    // ========== TWO-FACTOR AUTHENTICATION ==========
+    
+    // 2FA Service
+    \CiInbox\App\Services\TwoFactorAuthService::class => function($container) {
+        return new \CiInbox\App\Services\TwoFactorAuthService(
+            $container->get(LoggerService::class),
+            $container->get(EncryptionInterface::class)
+        );
+    },
+    
+    // 2FA Controller
+    \CiInbox\App\Controllers\TwoFactorController::class => function($container) {
+        return new \CiInbox\App\Controllers\TwoFactorController(
+            $container->get(\CiInbox\App\Services\TwoFactorAuthService::class),
+            $container->get(LoggerService::class)
+        );
+    },
 ];

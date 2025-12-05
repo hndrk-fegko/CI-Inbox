@@ -509,6 +509,134 @@ return function (App $app) {
         });
     })->add($authMiddleware);
     
+    // ========== TWO-FACTOR AUTHENTICATION ROUTES ==========
+    
+    $app->group('/api/user/2fa', function ($app) {
+        // Check 2FA status
+        $app->get('/status', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\TwoFactorController::class);
+            return $controller->status($request, $response);
+        });
+        
+        // Start 2FA setup
+        $app->post('/setup', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\TwoFactorController::class);
+            return $controller->setup($request, $response);
+        });
+        
+        // Enable 2FA
+        $app->post('/enable', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\TwoFactorController::class);
+            return $controller->enable($request, $response);
+        });
+        
+        // Disable 2FA
+        $app->post('/disable', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\TwoFactorController::class);
+            return $controller->disable($request, $response);
+        });
+        
+        // Verify 2FA code
+        $app->post('/verify', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\TwoFactorController::class);
+            return $controller->verify($request, $response);
+        });
+        
+        // Regenerate backup codes
+        $app->post('/backup-codes/regenerate', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\TwoFactorController::class);
+            return $controller->regenerateBackupCodes($request, $response);
+        });
+    })->add($authMiddleware);
+    
+    // ========== ONBOARDING ROUTES ==========
+    
+    $app->group('/api/user/onboarding', function ($app) {
+        // Save onboarding progress
+        $app->post('/progress', function (Request $request, Response $response) {
+            $userId = $_SESSION['user_id'] ?? null;
+            
+            if (!$userId) {
+                $response->getBody()->write(json_encode([
+                    'success' => false,
+                    'error' => 'Not authenticated'
+                ]));
+                return $response
+                    ->withHeader('Content-Type', 'application/json')
+                    ->withStatus(401);
+            }
+            
+            $body = json_decode($request->getBody()->getContents(), true);
+            $tourId = $body['tour_id'] ?? '';
+            $completed = $body['completed'] ?? false;
+            $currentStep = $body['current_step'] ?? 0;
+            
+            // Store in database (simple implementation)
+            try {
+                \Illuminate\Database\Capsule\Manager::table('onboarding_progress')
+                    ->updateOrInsert(
+                        ['user_id' => $userId, 'tour_id' => $tourId],
+                        [
+                            'completed' => $completed,
+                            'current_step' => $currentStep,
+                            'completed_at' => $completed ? \Carbon\Carbon::now() : null,
+                            'updated_at' => \Carbon\Carbon::now()
+                        ]
+                    );
+                    
+                $response->getBody()->write(json_encode(['success' => true]));
+                return $response->withHeader('Content-Type', 'application/json');
+                
+            } catch (\Exception $e) {
+                $response->getBody()->write(json_encode([
+                    'success' => true // Silent fail - onboarding is not critical
+                ]));
+                return $response->withHeader('Content-Type', 'application/json');
+            }
+        });
+        
+        // Get onboarding status
+        $app->get('/status', function (Request $request, Response $response) {
+            $userId = $_SESSION['user_id'] ?? null;
+            
+            if (!$userId) {
+                $response->getBody()->write(json_encode([
+                    'success' => false,
+                    'error' => 'Not authenticated'
+                ]));
+                return $response
+                    ->withHeader('Content-Type', 'application/json')
+                    ->withStatus(401);
+            }
+            
+            try {
+                $progress = \Illuminate\Database\Capsule\Manager::table('onboarding_progress')
+                    ->where('user_id', $userId)
+                    ->get()
+                    ->keyBy('tour_id');
+                    
+                $response->getBody()->write(json_encode([
+                    'success' => true,
+                    'data' => $progress
+                ]));
+                return $response->withHeader('Content-Type', 'application/json');
+                
+            } catch (\Exception $e) {
+                $response->getBody()->write(json_encode([
+                    'success' => true,
+                    'data' => []
+                ]));
+                return $response->withHeader('Content-Type', 'application/json');
+            }
+        });
+    })->add($authMiddleware);
+    
     // System Health API Routes
     $app->group('/api/system', function ($app) {
         // Basic health check (public)

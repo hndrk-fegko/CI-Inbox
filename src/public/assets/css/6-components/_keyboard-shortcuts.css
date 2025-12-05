@@ -1,0 +1,199 @@
+/**
+ * Keyboard Shortcuts Help Modal
+ * 
+ * Styles for the keyboard shortcuts help overlay.
+ */
+
+/* Modal Container */
+.c-shortcuts-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.c-shortcuts-modal.is-open {
+    display: flex;
+}
+
+/* Overlay */
+.c-shortcuts-modal__overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+}
+
+/* Content */
+.c-shortcuts-modal__content {
+    position: relative;
+    width: 90%;
+    max-width: 800px;
+    max-height: 80vh;
+    background: var(--surface-color, #fff);
+    border-radius: 16px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header */
+.c-shortcuts-modal__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+.c-shortcuts-modal__header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.c-shortcuts-modal__close {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-muted, #6b7280);
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background 0.15s, color 0.15s;
+}
+
+.c-shortcuts-modal__close:hover {
+    background: var(--hover-bg, #f3f4f6);
+    color: var(--text-color, #111827);
+}
+
+/* Body */
+.c-shortcuts-modal__body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.5rem;
+}
+
+/* Shortcut Groups */
+.c-shortcuts-group h3 {
+    margin: 0 0 0.75rem 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted, #6b7280);
+}
+
+.c-shortcuts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.c-shortcut-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+}
+
+.c-shortcut-keys {
+    display: flex;
+    gap: 0.375rem;
+    flex-shrink: 0;
+}
+
+.c-shortcut-keys kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 0.5rem;
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 500;
+    background: var(--kbd-bg, #f3f4f6);
+    border: 1px solid var(--kbd-border, #d1d5db);
+    border-radius: 4px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.c-shortcut-desc {
+    font-size: 0.875rem;
+    color: var(--text-color, #374151);
+}
+
+/* Footer */
+.c-shortcuts-modal__footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border-color, #e5e7eb);
+    text-align: center;
+    font-size: 0.875rem;
+    color: var(--text-muted, #6b7280);
+}
+
+.c-shortcuts-modal__footer kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 0.375rem;
+    font-family: inherit;
+    font-size: 0.75rem;
+    background: var(--kbd-bg, #f3f4f6);
+    border: 1px solid var(--kbd-border, #d1d5db);
+    border-radius: 4px;
+    margin: 0 0.25rem;
+}
+
+/* Keyboard Focus State for Thread Items */
+.c-thread-item.is-keyboard-focused {
+    outline: 2px solid var(--primary-color, #3b82f6);
+    outline-offset: -2px;
+}
+
+/* Dark Mode */
+[data-theme="dark"] .c-shortcuts-modal__content,
+.dark .c-shortcuts-modal__content {
+    background: var(--surface-color-dark, #1f2937);
+}
+
+[data-theme="dark"] .c-shortcuts-modal__close:hover,
+.dark .c-shortcuts-modal__close:hover {
+    background: var(--hover-bg-dark, #374151);
+}
+
+[data-theme="dark"] kbd,
+.dark kbd {
+    background: var(--kbd-bg-dark, #374151);
+    border-color: var(--kbd-border-dark, #4b5563);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    .c-shortcuts-modal__body {
+        grid-template-columns: 1fr;
+    }
+    
+    .c-shortcut-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+    
+    .c-shortcut-keys {
+        order: -1;
+    }
+}
