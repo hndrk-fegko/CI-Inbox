@@ -1,6 +1,6 @@
 # Admin Settings Migration Guide
 
-**Version:** 1.0  
+**Version:** 1.1  
 **Date:** December 2025  
 **Status:** Production Ready
 
@@ -12,6 +12,19 @@ This guide documents the migration from the monolithic `admin-settings.php` to t
 
 ---
 
+## Pre-Migration Checklist
+
+Before starting the migration:
+
+- [ ] Create a full database backup
+- [ ] Create a file system backup
+- [ ] Notify all admin users about the change
+- [ ] Schedule downtime (estimated: 2-5 minutes)
+- [ ] Test on staging environment first (recommended)
+- [ ] Verify all existing settings are documented
+
+---
+
 ## Quick Start
 
 ### For Users
@@ -19,6 +32,7 @@ This guide documents the migration from the monolithic `admin-settings.php` to t
 1. Navigate to `/admin-settings-new.php` instead of `/admin-settings.php`
 2. The interface is largely the same, with additional modules available
 3. Click any card on the Overview tab to access that module's settings
+4. **NEW:** Click the blue **?** button (bottom right) for context-sensitive help
 
 ### For Developers
 
@@ -39,6 +53,159 @@ return [
     'content' => function() { /* full page content HTML */ },
     'script' => function() { /* JavaScript code */ }
 ];
+```
+
+---
+
+## What's New in This Version
+
+### New Modules
+
+| Module | Priority | Description |
+|--------|----------|-------------|
+| 010-imap.php | 10 | IMAP server configuration with autodiscover |
+| 020-smtp.php | 20 | SMTP server configuration with test email |
+| 030-cron.php | 30 | Webcron status with health thresholds |
+| 040-backup.php | 40 | Backup with external storage (FTP/WebDAV) |
+| 050-database.php | 50 | Database tools and maintenance |
+| 060-users.php | 60 | User management with CRUD modals |
+| **065-oauth.php** | 65 | **NEW:** OAuth2/SSO providers |
+| 070-signatures.php | 70 | Email signatures (shared + personal) |
+| 080-logger.php | 80 | HomeAssistant-style log viewer |
+
+### New Features
+
+- **Help System:** FAB button (?) with context-sensitive help
+- **External Backup Storage:** FTP and WebDAV support
+- **Auto-Backup Scheduling:** Automatic backups with retention
+- **Keep Monthly Backups:** Protect monthly backups from cleanup
+- **OAuth2/SSO:** Google, Microsoft, GitHub, Custom OIDC
+- **Signature Types:** Shared inbox vs. personal signatures
+- **Cron Health Thresholds:** >55 healthy, <30 delayed, <1 stale
+
+---
+
+## Migration Steps
+
+### Step 1: Create Backup
+
+```bash
+# Create full database backup
+php database/backup.php
+
+# Or using mysqldump:
+mysqldump -u root -p ci_inbox > backup_$(date +%Y%m%d_%H%M%S).sql
+
+# Backup the old file
+cp src/public/admin-settings.php src/public/admin-settings-old.php
+```
+
+### Step 2: Verify New Files Exist
+
+```bash
+ls -la src/views/admin/modules/
+
+# Should show:
+# 010-imap.php
+# 020-smtp.php
+# 030-cron.php
+# 040-backup.php
+# 050-database.php
+# 060-users.php
+# 065-oauth.php
+# 070-signatures.php
+# 080-logger.php
+# README.md
+```
+
+### Step 3: Activate New Interface
+
+**Option A: Replace existing file (recommended)**
+```bash
+mv src/public/admin-settings.php src/public/admin-settings-legacy.php.bak
+mv src/public/admin-settings-new.php src/public/admin-settings.php
+```
+
+**Option B: Gradual rollout**
+```bash
+# Keep both accessible temporarily
+# Update navigation links when ready
+```
+
+### Step 4: Clear Caches
+
+```bash
+# Clear PHP OPcache (if enabled)
+php -r "if (function_exists('opcache_reset')) { opcache_reset(); echo 'Cache cleared'; }"
+
+# Or restart PHP-FPM
+sudo systemctl restart php8.1-fpm
+```
+
+### Step 5: Verify Functionality
+
+Test each module:
+
+| Module | Test |
+|--------|------|
+| Dashboard | All cards load, click navigation works |
+| IMAP | Config loads, test connection works |
+| SMTP | Config loads, test email sends |
+| Cron | Status displays, history loads |
+| Backup | List loads, create/download works |
+| Database | Status displays, tables list loads |
+| Users | List loads, CRUD operations work |
+| OAuth | Form displays (new feature) |
+| Signatures | List loads, edit works |
+| Logger | Logs display, filters work |
+
+### Step 6: Inform Users
+
+```
+Subject: Admin Settings Interface Updated
+
+The admin settings interface has been updated with a new design.
+
+What's changed:
+- New modular layout with sidebar navigation
+- Improved mobile responsiveness
+- New features: OAuth2/SSO, External Backup Storage
+- Context-sensitive help (click the ? button)
+
+Access at: /admin-settings.php
+```
+
+---
+
+## Rollback Plan
+
+If issues occur:
+
+### Quick Rollback
+```bash
+# Restore old interface
+mv src/public/admin-settings.php src/public/admin-settings-new-failed.php
+mv src/public/admin-settings-legacy.php.bak src/public/admin-settings.php
+
+# Clear caches
+php -r "if (function_exists('opcache_reset')) { opcache_reset(); }"
+```
+
+### Database Rollback (if needed)
+```bash
+mysql -u root -p ci_inbox < backup_YYYYMMDD_HHMMSS.sql
+```
+
+---
+
+## Post-Migration Cleanup
+
+After 1 week of successful operation:
+
+```bash
+# Remove backup files
+rm src/public/admin-settings-legacy.php.bak
+rm backup_*.sql
 ```
 
 ---

@@ -618,6 +618,411 @@ $logger->debug('Admin settings loaded', [
         </div>
     </div>
     
+    <!-- Help FAB Button & Modal -->
+    <button type="button" id="help-fab" class="c-help-fab" title="Help">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/>
+        </svg>
+    </button>
+    
+    <div class="c-modal" id="help-modal">
+        <div class="c-modal__content" style="max-width: 700px; max-height: 80vh;">
+            <div class="c-modal__header">
+                <h2 id="help-modal-title">Help</h2>
+                <button class="c-modal__close" id="help-modal-close">&times;</button>
+            </div>
+            <div class="c-modal__body" style="overflow-y: auto; max-height: calc(80vh - 120px);">
+                <div id="help-content">
+                    <!-- Help content loaded dynamically based on active tab -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <style>
+        .c-help-fab {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: #2196F3;
+            color: white;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        .c-help-fab:hover {
+            background: #1976D2;
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(33, 150, 243, 0.5);
+        }
+        .c-help-fab:active {
+            transform: scale(0.95);
+        }
+        
+        .help-section {
+            margin-bottom: 1.5rem;
+        }
+        .help-section__title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #333;
+            margin: 0 0 0.5rem 0;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #2196F3;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .help-section__title:hover {
+            color: #2196F3;
+        }
+        .help-section__title::after {
+            content: '▼';
+            font-size: 0.75rem;
+            transition: transform 0.2s;
+        }
+        .help-section.collapsed .help-section__title::after {
+            transform: rotate(-90deg);
+        }
+        .help-section__content {
+            padding: 0.75rem 0;
+            color: #555;
+            font-size: 0.9375rem;
+            line-height: 1.6;
+        }
+        .help-section.collapsed .help-section__content {
+            display: none;
+        }
+        .help-section ul {
+            margin: 0.5rem 0;
+            padding-left: 1.5rem;
+        }
+        .help-section li {
+            margin-bottom: 0.25rem;
+        }
+        .help-tip {
+            background: #E3F2FD;
+            border-left: 4px solid #2196F3;
+            padding: 0.75rem;
+            margin: 0.75rem 0;
+            border-radius: 4px;
+        }
+        .help-warning {
+            background: #FFF3E0;
+            border-left: 4px solid #FF9800;
+            padding: 0.75rem;
+            margin: 0.75rem 0;
+            border-radius: 4px;
+        }
+    </style>
+    
+    <script>
+        // Help System
+        const HelpSystem = {
+            content: {
+                overview: {
+                    title: 'Dashboard Overview - Help',
+                    sections: [
+                        {
+                            title: 'About the Dashboard',
+                            content: `The dashboard provides a quick overview of all system components. Each card shows the current status and key metrics for that module.
+                            <div class="help-tip"><strong>Tip:</strong> Click on any card to navigate directly to its configuration page.</div>`
+                        },
+                        {
+                            title: 'Status Indicators',
+                            content: `<ul>
+                                <li><strong>🟢 Green/Success:</strong> Component is configured and working correctly</li>
+                                <li><strong>🟡 Yellow/Warning:</strong> Component needs attention or is partially configured</li>
+                                <li><strong>🔴 Red/Error:</strong> Component has errors or is not configured</li>
+                            </ul>`
+                        }
+                    ]
+                },
+                imap: {
+                    title: 'IMAP Configuration - Help',
+                    sections: [
+                        {
+                            title: 'Overview',
+                            content: 'Configure the IMAP server connection for receiving emails. This is required for the shared inbox functionality to work.'
+                        },
+                        {
+                            title: 'Auto-Discover',
+                            content: `Enter your email address and click "Auto-Discover" to automatically detect server settings.
+                            <div class="help-tip"><strong>Tip:</strong> Auto-discover works with most major email providers (Gmail, Outlook, Yahoo, etc.)</div>`
+                        },
+                        {
+                            title: 'Manual Configuration',
+                            content: `<ul>
+                                <li><strong>Host:</strong> Your IMAP server address (e.g., imap.gmail.com)</li>
+                                <li><strong>Port:</strong> Usually 993 for SSL or 143 for TLS/None</li>
+                                <li><strong>Encryption:</strong> SSL (recommended), TLS, or None</li>
+                                <li><strong>Username:</strong> Usually your full email address</li>
+                                <li><strong>Password:</strong> Your email password or app-specific password</li>
+                            </ul>`
+                        },
+                        {
+                            title: 'Troubleshooting',
+                            content: `<div class="help-warning"><strong>Connection Failed?</strong>
+                            <ul>
+                                <li>Check if your email provider requires app-specific passwords (Gmail, Microsoft)</li>
+                                <li>Verify that IMAP is enabled in your email settings</li>
+                                <li>Try different encryption methods (SSL vs TLS)</li>
+                            </ul></div>`
+                        }
+                    ]
+                },
+                smtp: {
+                    title: 'SMTP Configuration - Help',
+                    sections: [
+                        {
+                            title: 'Overview',
+                            content: 'Configure the SMTP server for sending emails. This is required to reply to emails from the shared inbox.'
+                        },
+                        {
+                            title: 'Sender Identity',
+                            content: `<ul>
+                                <li><strong>From Name:</strong> Display name for outgoing emails (e.g., "Support Team")</li>
+                                <li><strong>From Email:</strong> The email address shown as sender</li>
+                            </ul>
+                            <div class="help-tip"><strong>Tip:</strong> Use a recognizable sender name for better email deliverability.</div>`
+                        },
+                        {
+                            title: 'Test Email',
+                            content: 'Always test your configuration by sending a test email before relying on the system for production use.'
+                        }
+                    ]
+                },
+                cron: {
+                    title: 'Webcron / Polling - Help',
+                    sections: [
+                        {
+                            title: 'Overview',
+                            content: 'The webcron service periodically checks for new emails in your IMAP inbox. It runs automatically based on external cron triggers.'
+                        },
+                        {
+                            title: 'Health Status',
+                            content: `<ul>
+                                <li><strong>Healthy (>55/hour):</strong> Cron is running correctly</li>
+                                <li><strong>Degraded (30-55/hour):</strong> Some executions may be delayed</li>
+                                <li><strong>Delayed (<30/hour):</strong> Significant delays in polling</li>
+                                <li><strong>Stale (<1/hour):</strong> Cron is not running</li>
+                            </ul>`
+                        },
+                        {
+                            title: 'Webhook Configuration',
+                            content: `<div class="help-warning"><strong>Security:</strong> Keep your webhook token secret! Anyone with the token can trigger the cron job.</div>
+                            Use the webhook URL in your external cron service (e.g., cron-job.org, EasyCron) to trigger polling.`
+                        }
+                    ]
+                },
+                backup: {
+                    title: 'Backup Management - Help',
+                    sections: [
+                        {
+                            title: 'Overview',
+                            content: 'Create and manage database backups to protect your data. Backups include all users, threads, emails, and configuration.'
+                        },
+                        {
+                            title: 'Storage Locations',
+                            content: `<ul>
+                                <li><strong>💾 Local:</strong> Stored on the server in the data/backups folder</li>
+                                <li><strong>☁️ External:</strong> Uploaded to FTP/WebDAV storage</li>
+                                <li><strong>📌 Monthly:</strong> Protected from automatic cleanup</li>
+                            </ul>`
+                        },
+                        {
+                            title: 'External Storage',
+                            content: `Configure FTP or WebDAV (Nextcloud) for off-site backups.
+                            <div class="help-tip"><strong>Recommended:</strong> Store backups externally for disaster recovery.</div>`
+                        },
+                        {
+                            title: 'Keep Monthly Backups',
+                            content: 'Enable this option to automatically preserve the last backup of each month. These backups are excluded from cleanup and must be deleted manually.'
+                        }
+                    ]
+                },
+                database: {
+                    title: 'Database Management - Help',
+                    sections: [
+                        {
+                            title: 'Overview',
+                            content: 'Monitor database health and perform maintenance operations.'
+                        },
+                        {
+                            title: 'Maintenance Operations',
+                            content: `<ul>
+                                <li><strong>Optimize:</strong> Reclaims unused space and defragments tables</li>
+                                <li><strong>Analyze:</strong> Updates table statistics for better query performance</li>
+                            </ul>
+                            <div class="help-tip"><strong>Tip:</strong> Run optimization monthly or after deleting large amounts of data.</div>`
+                        }
+                    ]
+                },
+                users: {
+                    title: 'User Management - Help',
+                    sections: [
+                        {
+                            title: 'Overview',
+                            content: 'Manage user accounts, roles, and access permissions.'
+                        },
+                        {
+                            title: 'User Roles',
+                            content: `<ul>
+                                <li><strong>Admin:</strong> Full access to all settings and system configuration</li>
+                                <li><strong>User:</strong> Access to shared inbox and assigned threads only</li>
+                            </ul>`
+                        },
+                        {
+                            title: 'Creating Users',
+                            content: `<div class="help-tip"><strong>Password Requirements:</strong> Minimum 8 characters. Use strong passwords!</div>`
+                        }
+                    ]
+                },
+                oauth: {
+                    title: 'OAuth2 / SSO - Help',
+                    sections: [
+                        {
+                            title: 'Overview',
+                            content: 'Enable Single Sign-On (SSO) to allow users to log in with their existing accounts from Google, Microsoft, or other OAuth2 providers.'
+                        },
+                        {
+                            title: 'Setting Up a Provider',
+                            content: `<ol>
+                                <li>Register your application with the provider (e.g., Google Cloud Console)</li>
+                                <li>Copy the Callback URL from this page to the provider</li>
+                                <li>Enter the Client ID and Client Secret from the provider</li>
+                                <li>Enable the provider toggle</li>
+                                <li>Save the configuration</li>
+                            </ol>`
+                        },
+                        {
+                            title: 'Auto-Registration',
+                            content: 'When enabled, new users who sign in via OAuth will automatically get an account created. Set the default role for these users.'
+                        }
+                    ]
+                },
+                signatures: {
+                    title: 'Email Signatures - Help',
+                    sections: [
+                        {
+                            title: 'Overview',
+                            content: 'Manage email signatures for team responses and personal emails.'
+                        },
+                        {
+                            title: 'Signature Types',
+                            content: `<ul>
+                                <li><strong>Shared Inbox:</strong> Used when replying from the team inbox. Ensures consistent branding.</li>
+                                <li><strong>Personal:</strong> Used when users take personal ownership of threads. Admin can edit for support.</li>
+                            </ul>`
+                        },
+                        {
+                            title: 'Variables',
+                            content: `Use these placeholders in your signatures:
+                            <ul>
+                                <li><code>{{user.name}}</code> - User's full name</li>
+                                <li><code>{{user.email}}</code> - User's email address</li>
+                                <li><code>{{date}}</code> - Current date</li>
+                            </ul>`
+                        }
+                    ]
+                },
+                logger: {
+                    title: 'System Logs - Help',
+                    sections: [
+                        {
+                            title: 'Overview',
+                            content: 'View and manage system logs for debugging and monitoring.'
+                        },
+                        {
+                            title: 'Log Levels',
+                            content: `<ul>
+                                <li><strong>DEBUG:</strong> Detailed information for debugging</li>
+                                <li><strong>INFO:</strong> General operational messages</li>
+                                <li><strong>WARNING:</strong> Potential issues that should be reviewed</li>
+                                <li><strong>ERROR:</strong> Errors that need immediate attention</li>
+                            </ul>
+                            <div class="help-warning"><strong>Note:</strong> DEBUG level generates a lot of data. Use INFO or higher in production.</div>`
+                        },
+                        {
+                            title: 'Filtering Logs',
+                            content: 'Use the filters to narrow down logs by level, module, or time range. Click on a log entry to see full details.'
+                        }
+                    ]
+                }
+            },
+            
+            currentTab: 'overview',
+            
+            init() {
+                const fab = document.getElementById('help-fab');
+                const modal = document.getElementById('help-modal');
+                const closeBtn = document.getElementById('help-modal-close');
+                
+                if (fab) {
+                    fab.addEventListener('click', () => this.openHelp());
+                }
+                
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', () => this.closeHelp());
+                }
+                
+                if (modal) {
+                    modal.addEventListener('click', (e) => {
+                        if (e.target === modal) this.closeHelp();
+                    });
+                }
+                
+                // Update current tab when switching
+                const originalSwitchToTab = window.switchToTab;
+                window.switchToTab = (tabId) => {
+                    this.currentTab = tabId;
+                    originalSwitchToTab(tabId);
+                };
+            },
+            
+            openHelp() {
+                const content = this.content[this.currentTab] || this.content.overview;
+                const container = document.getElementById('help-content');
+                const title = document.getElementById('help-modal-title');
+                
+                if (title) title.textContent = content.title;
+                
+                if (container) {
+                    container.innerHTML = content.sections.map(section => `
+                        <div class="help-section">
+                            <div class="help-section__title" onclick="this.parentElement.classList.toggle('collapsed')">
+                                ${section.title}
+                            </div>
+                            <div class="help-section__content">${section.content}</div>
+                        </div>
+                    `).join('');
+                }
+                
+                document.getElementById('help-modal').classList.add('show');
+            },
+            
+            closeHelp() {
+                document.getElementById('help-modal').classList.remove('show');
+            }
+        };
+        
+        // Initialize help system when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => HelpSystem.init());
+        } else {
+            HelpSystem.init();
+        }
+    </script>
+    
     <!-- Admin Settings JavaScript (User/Signature Management) -->
     <script src="/assets/js/admin-settings.js"></script>
 </body>

@@ -470,16 +470,21 @@ return [
                 let status = 'warning';
                 let statusText = 'Unknown';
                 
+                // Health thresholds for minutely cron (configurable)
+                const THRESHOLD_HEALTHY = 55;   // >55 executions/hour = healthy
+                const THRESHOLD_DELAYED = 30;   // <30 executions/hour = delayed
+                const THRESHOLD_STALE = 1;      // <1 execution/hour = stale
+                
                 const execsLastHour = data.executions_last_hour ?? null;
                 
                 if (execsLastHour !== null) {
-                    if (execsLastHour > 55) {
+                    if (execsLastHour > THRESHOLD_HEALTHY) {
                         status = 'success';
                         statusText = 'Healthy';
-                    } else if (execsLastHour >= 1 && execsLastHour < 30) {
+                    } else if (execsLastHour >= THRESHOLD_STALE && execsLastHour < THRESHOLD_DELAYED) {
                         status = 'warning';
                         statusText = 'Delayed';
-                    } else if (execsLastHour < 1) {
+                    } else if (execsLastHour < THRESHOLD_STALE) {
                         status = 'error';
                         statusText = 'Stale';
                     } else {
