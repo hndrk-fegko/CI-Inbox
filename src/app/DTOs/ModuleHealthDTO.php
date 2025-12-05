@@ -1,6 +1,6 @@
 <?php
 
-namespace App\DTOs;
+namespace CiInbox\App\DTOs;
 
 /**
  * Data Transfer Object für Module Health Status

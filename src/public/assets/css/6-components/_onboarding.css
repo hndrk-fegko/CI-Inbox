@@ -1,0 +1,330 @@
+/**
+ * User Onboarding Component
+ * 
+ * Styles for the interactive onboarding tour overlay.
+ */
+
+/* ==========================================================================
+   OVERLAY
+   ========================================================================== */
+
+.c-onboarding-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    background: rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.c-onboarding-overlay.is-active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* ==========================================================================
+   HIGHLIGHT TARGET
+   ========================================================================== */
+
+.c-onboarding-highlight {
+    position: relative;
+    z-index: 9999 !important;
+    box-shadow: 0 0 0 4px var(--primary-color, #3b82f6),
+                0 0 0 8px rgba(59, 130, 246, 0.2);
+    border-radius: 8px;
+    animation: onboardingPulse 2s infinite;
+}
+
+@keyframes onboardingPulse {
+    0%, 100% {
+        box-shadow: 0 0 0 4px var(--primary-color, #3b82f6),
+                    0 0 0 8px rgba(59, 130, 246, 0.2);
+    }
+    50% {
+        box-shadow: 0 0 0 4px var(--primary-color, #3b82f6),
+                    0 0 0 16px rgba(59, 130, 246, 0.1);
+    }
+}
+
+/* ==========================================================================
+   TOOLTIP
+   ========================================================================== */
+
+.c-onboarding-tooltip {
+    position: fixed;
+    z-index: 10000;
+    width: 360px;
+    max-width: calc(100vw - 32px);
+    background: var(--surface-color, #fff);
+    border-radius: 12px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    
+    /* Hidden by default */
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.95);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.c-onboarding-tooltip.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: scale(1);
+}
+
+/* Center variant */
+.c-onboarding-tooltip--center {
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+}
+
+.c-onboarding-tooltip--center.is-visible {
+    transform: translate(-50%, -50%) !important;
+}
+
+/* Arrow indicators */
+.c-onboarding-tooltip::before {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    background: var(--surface-color, #fff);
+    transform: rotate(45deg);
+}
+
+.c-onboarding-tooltip--top::before {
+    bottom: -8px;
+    left: 50%;
+    margin-left: -8px;
+    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.c-onboarding-tooltip--bottom::before {
+    top: -8px;
+    left: 50%;
+    margin-left: -8px;
+    box-shadow: -4px -4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.c-onboarding-tooltip--left::before {
+    right: -8px;
+    top: 50%;
+    margin-top: -8px;
+    box-shadow: 4px -4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.c-onboarding-tooltip--right::before {
+    left: -8px;
+    top: 50%;
+    margin-top: -8px;
+    box-shadow: -4px 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.c-onboarding-tooltip--center::before {
+    display: none;
+}
+
+/* ==========================================================================
+   TOOLTIP HEADER
+   ========================================================================== */
+
+.c-onboarding-tooltip__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem 0.5rem;
+}
+
+.c-onboarding-tooltip__step {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-muted, #6b7280);
+    background: var(--bg-subtle, #f3f4f6);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+}
+
+.c-onboarding-tooltip__close {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    color: var(--text-muted, #6b7280);
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.15s, color 0.15s;
+}
+
+.c-onboarding-tooltip__close:hover {
+    background: var(--hover-bg, #f3f4f6);
+    color: var(--text-color, #111827);
+}
+
+/* ==========================================================================
+   TOOLTIP CONTENT
+   ========================================================================== */
+
+.c-onboarding-tooltip__title {
+    margin: 0;
+    padding: 0 1.25rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-color, #111827);
+}
+
+.c-onboarding-tooltip__content {
+    margin: 0.5rem 0 0;
+    padding: 0 1.25rem 1rem;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--text-secondary, #4b5563);
+}
+
+.c-onboarding-tooltip__content kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 0.375rem;
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 500;
+    background: var(--kbd-bg, #f3f4f6);
+    border: 1px solid var(--kbd-border, #d1d5db);
+    border-radius: 4px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    margin: 0 0.125rem;
+}
+
+/* ==========================================================================
+   TOOLTIP FOOTER
+   ========================================================================== */
+
+.c-onboarding-tooltip__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1.25rem;
+    border-top: 1px solid var(--border-color, #e5e7eb);
+    background: var(--bg-subtle, #f9fafb);
+    border-radius: 0 0 12px 12px;
+}
+
+.c-onboarding-tooltip__skip {
+    padding: 0.5rem 1rem;
+    background: none;
+    border: none;
+    font-size: 0.875rem;
+    color: var(--text-muted, #6b7280);
+    cursor: pointer;
+    border-radius: 6px;
+    transition: color 0.15s, background 0.15s;
+}
+
+.c-onboarding-tooltip__skip:hover {
+    color: var(--text-color, #111827);
+    background: var(--hover-bg, #f3f4f6);
+}
+
+.c-onboarding-tooltip__nav {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.c-onboarding-tooltip__prev,
+.c-onboarding-tooltip__next {
+    padding: 0.5rem 1rem;
+    border: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background 0.15s;
+}
+
+.c-onboarding-tooltip__prev {
+    background: var(--button-secondary-bg, #e5e7eb);
+    color: var(--text-color, #374151);
+}
+
+.c-onboarding-tooltip__prev:hover {
+    background: var(--button-secondary-hover, #d1d5db);
+}
+
+.c-onboarding-tooltip__next {
+    background: var(--primary-color, #3b82f6);
+    color: #fff;
+}
+
+.c-onboarding-tooltip__next:hover {
+    background: var(--primary-color-hover, #2563eb);
+}
+
+/* ==========================================================================
+   DARK MODE
+   ========================================================================== */
+
+[data-theme="dark"] .c-onboarding-tooltip,
+.dark .c-onboarding-tooltip {
+    background: var(--surface-color-dark, #1f2937);
+}
+
+[data-theme="dark"] .c-onboarding-tooltip::before,
+.dark .c-onboarding-tooltip::before {
+    background: var(--surface-color-dark, #1f2937);
+}
+
+[data-theme="dark"] .c-onboarding-tooltip__step,
+.dark .c-onboarding-tooltip__step {
+    background: var(--bg-subtle-dark, #374151);
+}
+
+[data-theme="dark"] .c-onboarding-tooltip__footer,
+.dark .c-onboarding-tooltip__footer {
+    background: var(--bg-subtle-dark, #111827);
+    border-color: var(--border-color-dark, #374151);
+}
+
+[data-theme="dark"] .c-onboarding-tooltip__content kbd,
+.dark .c-onboarding-tooltip__content kbd {
+    background: var(--kbd-bg-dark, #374151);
+    border-color: var(--kbd-border-dark, #4b5563);
+}
+
+/* ==========================================================================
+   RESPONSIVE
+   ========================================================================== */
+
+@media (max-width: 480px) {
+    .c-onboarding-tooltip {
+        width: calc(100vw - 32px);
+        max-width: none;
+    }
+    
+    .c-onboarding-tooltip__footer {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .c-onboarding-tooltip__skip {
+        order: 1;
+        width: 100%;
+        text-align: center;
+    }
+    
+    .c-onboarding-tooltip__nav {
+        width: 100%;
+    }
+    
+    .c-onboarding-tooltip__prev,
+    .c-onboarding-tooltip__next {
+        flex: 1;
+    }
+}

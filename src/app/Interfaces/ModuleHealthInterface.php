@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Interfaces;
+namespace CiInbox\App\Interfaces;
 
-use App\DTOs\ModuleHealthDTO;
+use CiInbox\App\DTOs\ModuleHealthDTO;
 
 /**
  * Interface für Module Health Checks

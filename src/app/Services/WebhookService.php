@@ -291,6 +291,73 @@ class WebhookService
     }
     
     /**
+     * Verify incoming webhook signature (for receiving webhooks)
+     * 
+     * This method validates that an incoming webhook payload matches its signature.
+     * Use this when CI-Inbox receives webhooks from external services.
+     * 
+     * Supports signatures with or without algorithm prefix (e.g., 'sha256=...' or raw hash)
+     * 
+     * @param string $payload Raw request body
+     * @param string $signature Signature from X-Webhook-Signature header
+     * @param string $secret Shared secret for this webhook
+     * @return bool True if signature is valid
+     */
+    public static function verifySignature(string $payload, string $signature, string $secret): bool
+    {
+        // Handle signatures with algorithm prefix (e.g., 'sha256=...')
+        $signatureToVerify = $signature;
+        if (str_starts_with($signature, 'sha256=')) {
+            $signatureToVerify = substr($signature, 7);
+        }
+        
+        // Validate signature format (should be 64 hex characters for SHA-256)
+        if (strlen($signatureToVerify) !== 64 || !ctype_xdigit($signatureToVerify)) {
+            return false;
+        }
+        
+        $expectedSignature = hash_hmac('sha256', $payload, $secret);
+        return hash_equals($expectedSignature, $signatureToVerify);
+    }
+    
+    /**
+     * Verify incoming webhook with timing-safe comparison
+     * Returns detailed error information for debugging
+     * 
+     * @param string $payload Raw request body  
+     * @param string $signature Signature from header
+     * @param string $secret Shared secret
+     * @return array ['valid' => bool, 'error' => string|null]
+     */
+    public function validateIncomingWebhook(string $payload, string $signature, string $secret): array
+    {
+        if (empty($payload)) {
+            return ['valid' => false, 'error' => 'Empty payload'];
+        }
+        
+        if (empty($signature)) {
+            return ['valid' => false, 'error' => 'Missing signature'];
+        }
+        
+        if (empty($secret)) {
+            return ['valid' => false, 'error' => 'Missing secret configuration'];
+        }
+        
+        $expectedSignature = hash_hmac('sha256', $payload, $secret);
+        
+        if (!hash_equals($expectedSignature, $signature)) {
+            $this->logger->warning('Webhook signature validation failed', [
+                'payload_length' => strlen($payload),
+                'signature_length' => strlen($signature)
+            ]);
+            return ['valid' => false, 'error' => 'Invalid signature'];
+        }
+        
+        $this->logger->debug('Webhook signature validated successfully');
+        return ['valid' => true, 'error' => null];
+    }
+    
+    /**
      * Get all webhooks (with pagination support)
      * 
      * @param int $page Page number

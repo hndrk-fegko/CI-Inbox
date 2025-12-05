@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Services;
+namespace CiInbox\App\Services;
 
-use App\DTOs\ModuleHealthDTO;
-use App\DTOs\HealthAnalysisDTO;
-use App\Interfaces\ModuleHealthInterface;
+use CiInbox\App\DTOs\ModuleHealthDTO;
+use CiInbox\App\DTOs\HealthAnalysisDTO;
+use CiInbox\App\Interfaces\ModuleHealthInterface;
 use Psr\Log\LoggerInterface;
 use Illuminate\Database\Capsule\Manager as DB;
 

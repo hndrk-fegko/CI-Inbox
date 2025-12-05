@@ -55,8 +55,8 @@ use CiInbox\App\Services\PersonalImapAccountService;
 use CiInbox\App\Controllers\PersonalImapAccountController;
 use CiInbox\App\Services\UserProfileService;
 use CiInbox\App\Controllers\UserProfileController;
-use App\Services\SystemHealthService;
-use App\Controllers\SystemHealthController;
+use CiInbox\App\Services\SystemHealthService;
+use CiInbox\App\Controllers\SystemHealthController;
 use CiInbox\Modules\Theme\ThemeServiceInterface;
 use CiInbox\Modules\Theme\ThemeService;
 
@@ -430,24 +430,24 @@ return [
     // ========== SIGNATURE MODULE ==========
     
     // Signature Repository
-    \App\Repositories\SignatureRepository::class => function($container) {
-        return new \App\Repositories\SignatureRepository(
+    \CiInbox\App\Repositories\SignatureRepository::class => function($container) {
+        return new \CiInbox\App\Repositories\SignatureRepository(
             $container->get(LoggerService::class)
         );
     },
     
     // Signature Service
-    \App\Services\SignatureService::class => function($container) {
-        return new \App\Services\SignatureService(
-            $container->get(\App\Repositories\SignatureRepository::class),
+    \CiInbox\App\Services\SignatureService::class => function($container) {
+        return new \CiInbox\App\Services\SignatureService(
+            $container->get(\CiInbox\App\Repositories\SignatureRepository::class),
             $container->get(LoggerService::class)
         );
     },
     
     // Signature Controller
-    \App\Controllers\SignatureController::class => function($container) {
-        return new \App\Controllers\SignatureController(
-            $container->get(\App\Services\SignatureService::class)
+    \CiInbox\App\Controllers\SignatureController::class => function($container) {
+        return new \CiInbox\App\Controllers\SignatureController(
+            $container->get(\CiInbox\App\Services\SignatureService::class)
         );
     },
     
@@ -509,5 +509,87 @@ return [
     
     ThemeService::class => function($container) {
         return $container->get(ThemeServiceInterface::class);
+    },
+    
+    // ========== MIDDLEWARE ==========
+    
+    // Auth Middleware
+    \CiInbox\App\Middleware\AuthMiddleware::class => function($container) {
+        return new \CiInbox\App\Middleware\AuthMiddleware(
+            $container->get(LoggerService::class)
+        );
+    },
+    
+    // Admin Middleware
+    \CiInbox\App\Middleware\AdminMiddleware::class => function($container) {
+        return new \CiInbox\App\Middleware\AdminMiddleware(
+            $container->get(LoggerService::class)
+        );
+    },
+    
+    // Rate Limit Middleware
+    \CiInbox\App\Middleware\RateLimitMiddleware::class => function($container) {
+        return new \CiInbox\App\Middleware\RateLimitMiddleware(
+            $container->get(LoggerService::class),
+            100,  // 100 requests per minute
+            60    // 60 second window
+        );
+    },
+    
+    // CSRF Middleware
+    \CiInbox\App\Middleware\CsrfMiddleware::class => function($container) {
+        return new \CiInbox\App\Middleware\CsrfMiddleware(
+            $container->get(LoggerService::class)
+        );
+    },
+    
+    // Security Headers Middleware
+    \CiInbox\App\Middleware\SecurityHeadersMiddleware::class => function($container) {
+        return new \CiInbox\App\Middleware\SecurityHeadersMiddleware();
+    },
+    
+    // ========== OAUTH & PASSWORD RESET ==========
+    
+    // OAuth Service
+    \CiInbox\App\Services\OAuthService::class => function($container) {
+        return new \CiInbox\App\Services\OAuthService(
+            $container->get(LoggerService::class),
+            $container->get(EncryptionInterface::class)
+        );
+    },
+    
+    // OAuth Controller
+    \CiInbox\App\Controllers\OAuthController::class => function($container) {
+        return new \CiInbox\App\Controllers\OAuthController(
+            $container->get(\CiInbox\App\Services\OAuthService::class),
+            $container->get(LoggerService::class)
+        );
+    },
+    
+    // Password Reset Service
+    \CiInbox\App\Services\PasswordResetService::class => function($container) {
+        return new \CiInbox\App\Services\PasswordResetService(
+            $container->get(LoggerService::class),
+            $container->get(SmtpClientInterface::class),
+            $container->get('smtp.config')
+        );
+    },
+    
+    // ========== TWO-FACTOR AUTHENTICATION ==========
+    
+    // 2FA Service
+    \CiInbox\App\Services\TwoFactorAuthService::class => function($container) {
+        return new \CiInbox\App\Services\TwoFactorAuthService(
+            $container->get(LoggerService::class),
+            $container->get(EncryptionInterface::class)
+        );
+    },
+    
+    // 2FA Controller
+    \CiInbox\App\Controllers\TwoFactorController::class => function($container) {
+        return new \CiInbox\App\Controllers\TwoFactorController(
+            $container->get(\CiInbox\App\Services\TwoFactorAuthService::class),
+            $container->get(LoggerService::class)
+        );
     },
 ];

@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Controllers;
+namespace CiInbox\App\Controllers;
 
-use App\Services\SignatureService;
+use CiInbox\App\Services\SignatureService;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 

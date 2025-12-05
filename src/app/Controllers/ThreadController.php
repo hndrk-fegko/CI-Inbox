@@ -741,30 +741,42 @@ class ThreadController
                 ], 400);
             }
             
-            // Load thread
-            $thread = \CiInbox\App\Models\Thread::find($id);
-            if (!$thread) {
+            // Sanitize user IDs - ensure all are integers to prevent SQL injection
+            $userIds = array_map('intval', $data['user_ids']);
+            $userIds = array_filter($userIds, function($id) { return $id > 0; });
+            
+            // Load thread via repository (avoiding direct model access)
+            $thread = $this->threadApiService->getThread($id);
+            if (!$thread || !isset($thread['thread'])) {
+                return $this->jsonResponse($response, [
+                    'error' => 'Thread not found'
+                ], 404);
+            }
+            
+            // Get the actual thread model for assignment
+            $threadModel = \CiInbox\App\Models\Thread::find($id);
+            if (!$threadModel) {
                 return $this->jsonResponse($response, [
                     'error' => 'Thread not found'
                 ], 404);
             }
             
             // Sync assignments (replaces all existing with new list)
-            $thread->assignedUsers()->sync($data['user_ids']);
+            $threadModel->assignedUsers()->sync($userIds);
             
-            // Trigger status update via service
+            // Trigger status update via service (injected via constructor in future)
             $statusService = \CiInbox\Core\Container::getInstance()->get(\CiInbox\App\Services\ThreadStatusService::class);
-            $statusService->updateStatusOnAssignment($thread);
+            $statusService->updateStatusOnAssignment($threadModel);
             
             $this->logger->info("Thread #{$id} assigned to users", [
                 'thread_id' => $id,
-                'user_ids' => $data['user_ids']
+                'user_ids' => $userIds
             ]);
             
             return $this->jsonResponse($response, [
                 'success' => true,
                 'message' => 'Thread assignments updated',
-                'assigned_users' => $thread->fresh()->assignedUsers
+                'assigned_users' => $threadModel->fresh()->assignedUsers
             ]);
             
         } catch (\Exception $e) {

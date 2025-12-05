@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Services;
+namespace CiInbox\App\Services;
 
-use App\Repositories\SignatureRepository;
+use CiInbox\App\Repositories\SignatureRepository;
 use CiInbox\App\Models\Signature;
 use Psr\Log\LoggerInterface;
 
@@ -134,7 +134,7 @@ class SignatureService
     {
         try {
             // Get all signatures from database
-            $allSignatures = \App\Models\Signature::orderBy('type')
+            $allSignatures = Signature::orderBy('type')
                 ->orderBy('is_default', 'desc')
                 ->orderBy('name')
                 ->get();

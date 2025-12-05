@@ -4,6 +4,12 @@
  * API Routes
  * 
  * RESTful API endpoints.
+ * 
+ * Security Features:
+ * - AuthMiddleware for authenticated routes
+ * - AdminMiddleware for admin-only routes
+ * - RateLimitMiddleware for abuse prevention
+ * - Input sanitization in controllers
  */
 
 use Slim\App;
@@ -20,8 +26,17 @@ use CiInbox\App\Controllers\UserController;
 use CiInbox\App\Controllers\PersonalImapAccountController;
 use CiInbox\App\Controllers\UserProfileController;
 use CiInbox\Modules\Theme\ThemeService;
+use CiInbox\App\Middleware\AuthMiddleware;
+use CiInbox\App\Middleware\AdminMiddleware;
+use CiInbox\App\Middleware\RateLimitMiddleware;
 
 return function (App $app) {
+    
+    // Get container and middleware instances
+    $container = Container::getInstance();
+    $authMiddleware = $container->get(AuthMiddleware::class);
+    $adminMiddleware = $container->get(AdminMiddleware::class);
+    $rateLimitMiddleware = $container->get(RateLimitMiddleware::class);
     
     // Thread Bulk Operations (MUST be before /api/threads to avoid routing conflicts!)
     $app->group('/api/threads/bulk', function ($app) {
@@ -306,12 +321,10 @@ return function (App $app) {
     });
     
     // Personal IMAP Account API Routes (for user's personal email accounts)
+    // Protected by AuthMiddleware - user_id is set automatically from session
     $app->group('/api/user/imap-accounts', function ($app) {
         // List all personal IMAP accounts
         $app->get('', function (Request $request, Response $response) {
-            // TODO: Add authentication middleware to set user_id
-            $request = $request->withAttribute('user_id', 1); // Temporary!
-            
             $container = Container::getInstance();
             $controller = $container->get(PersonalImapAccountController::class);
             return $controller->index($request, $response);
@@ -319,8 +332,6 @@ return function (App $app) {
         
         // Get single account
         $app->get('/{id}', function (Request $request, Response $response, array $args) {
-            $request = $request->withAttribute('user_id', 1); // Temporary!
-            
             $container = Container::getInstance();
             $controller = $container->get(PersonalImapAccountController::class);
             return $controller->show($request, $response, $args);
@@ -328,8 +339,6 @@ return function (App $app) {
         
         // Create account
         $app->post('', function (Request $request, Response $response) {
-            $request = $request->withAttribute('user_id', 1); // Temporary!
-            
             $container = Container::getInstance();
             $controller = $container->get(PersonalImapAccountController::class);
             return $controller->create($request, $response);
@@ -337,8 +346,6 @@ return function (App $app) {
         
         // Update account
         $app->put('/{id}', function (Request $request, Response $response, array $args) {
-            $request = $request->withAttribute('user_id', 1); // Temporary!
-            
             $container = Container::getInstance();
             $controller = $container->get(PersonalImapAccountController::class);
             return $controller->update($request, $response, $args);
@@ -346,8 +353,6 @@ return function (App $app) {
         
         // Delete account
         $app->delete('/{id}', function (Request $request, Response $response, array $args) {
-            $request = $request->withAttribute('user_id', 1); // Temporary!
-            
             $container = Container::getInstance();
             $controller = $container->get(PersonalImapAccountController::class);
             return $controller->delete($request, $response, $args);
@@ -355,21 +360,17 @@ return function (App $app) {
         
         // Test connection
         $app->post('/{id}/test-connection', function (Request $request, Response $response, array $args) {
-            $request = $request->withAttribute('user_id', 1); // Temporary!
-            
             $container = Container::getInstance();
             $controller = $container->get(PersonalImapAccountController::class);
             return $controller->testConnection($request, $response, $args);
         });
-    });
+    })->add($authMiddleware);
     
     // User Profile API Routes (for current user's profile settings)
+    // Protected by AuthMiddleware - user_id is set automatically from session
     $app->group('/api/user/profile', function ($app) {
         // Get profile
         $app->get('', function (Request $request, Response $response) {
-            // TODO: Add authentication middleware to set user_id
-            $request = $request->withAttribute('user_id', 1); // Temporary!
-            
             $container = Container::getInstance();
             $controller = $container->get(UserProfileController::class);
             return $controller->getProfile($request, $response);
@@ -377,8 +378,6 @@ return function (App $app) {
         
         // Update profile
         $app->put('', function (Request $request, Response $response) {
-            $request = $request->withAttribute('user_id', 1); // Temporary!
-            
             $container = Container::getInstance();
             $controller = $container->get(UserProfileController::class);
             return $controller->updateProfile($request, $response);
@@ -386,8 +385,6 @@ return function (App $app) {
         
         // Upload avatar
         $app->post('/avatar', function (Request $request, Response $response) {
-            $request = $request->withAttribute('user_id', 1); // Temporary!
-            
             $container = Container::getInstance();
             $controller = $container->get(UserProfileController::class);
             return $controller->uploadAvatar($request, $response);
@@ -395,8 +392,6 @@ return function (App $app) {
         
         // Delete avatar
         $app->delete('/avatar', function (Request $request, Response $response) {
-            $request = $request->withAttribute('user_id', 1); // Temporary!
-            
             $container = Container::getInstance();
             $controller = $container->get(UserProfileController::class);
             return $controller->deleteAvatar($request, $response);
@@ -404,20 +399,17 @@ return function (App $app) {
         
         // Change password
         $app->post('/change-password', function (Request $request, Response $response) {
-            $request = $request->withAttribute('user_id', 1); // Temporary!
-            
             $container = Container::getInstance();
             $controller = $container->get(UserProfileController::class);
             return $controller->changePassword($request, $response);
         });
-    });
+    })->add($authMiddleware);
     
     // User Theme API Routes (Theme Module) - Separate group
-    $app->group('/api/user', function ($app) {
+    // Protected by AuthMiddleware - user_id is set automatically from session
+    $app->group('/api/user', function ($app) use ($container) {
         // Get theme preference
         $app->get('/theme', function (Request $request, Response $response) {
-            $request = $request->withAttribute('user_id', 1); // Temporary!
-            
             $container = Container::getInstance();
             $themeService = $container->get(ThemeService::class);
             $logger = $container->get(LoggerInterface::class);
@@ -453,8 +445,6 @@ return function (App $app) {
         
         // Set theme preference (Theme Module)
         $app->post('/theme', function (Request $request, Response $response) {
-            $request = $request->withAttribute('user_id', 1); // Temporary!
-            
             $container = Container::getInstance();
             $themeService = $container->get(ThemeService::class);
             $logger = $container->get(LoggerInterface::class);
@@ -517,7 +507,135 @@ return function (App $app) {
                     ->withStatus(500);
             }
         });
-    });
+    })->add($authMiddleware);
+    
+    // ========== TWO-FACTOR AUTHENTICATION ROUTES ==========
+    
+    $app->group('/api/user/2fa', function ($app) {
+        // Check 2FA status
+        $app->get('/status', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\TwoFactorController::class);
+            return $controller->status($request, $response);
+        });
+        
+        // Start 2FA setup
+        $app->post('/setup', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\TwoFactorController::class);
+            return $controller->setup($request, $response);
+        });
+        
+        // Enable 2FA
+        $app->post('/enable', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\TwoFactorController::class);
+            return $controller->enable($request, $response);
+        });
+        
+        // Disable 2FA
+        $app->post('/disable', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\TwoFactorController::class);
+            return $controller->disable($request, $response);
+        });
+        
+        // Verify 2FA code
+        $app->post('/verify', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\TwoFactorController::class);
+            return $controller->verify($request, $response);
+        });
+        
+        // Regenerate backup codes
+        $app->post('/backup-codes/regenerate', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\TwoFactorController::class);
+            return $controller->regenerateBackupCodes($request, $response);
+        });
+    })->add($authMiddleware);
+    
+    // ========== ONBOARDING ROUTES ==========
+    
+    $app->group('/api/user/onboarding', function ($app) {
+        // Save onboarding progress
+        $app->post('/progress', function (Request $request, Response $response) {
+            $userId = $_SESSION['user_id'] ?? null;
+            
+            if (!$userId) {
+                $response->getBody()->write(json_encode([
+                    'success' => false,
+                    'error' => 'Not authenticated'
+                ]));
+                return $response
+                    ->withHeader('Content-Type', 'application/json')
+                    ->withStatus(401);
+            }
+            
+            $body = json_decode($request->getBody()->getContents(), true);
+            $tourId = $body['tour_id'] ?? '';
+            $completed = $body['completed'] ?? false;
+            $currentStep = $body['current_step'] ?? 0;
+            
+            // Store in database (simple implementation)
+            try {
+                \Illuminate\Database\Capsule\Manager::table('onboarding_progress')
+                    ->updateOrInsert(
+                        ['user_id' => $userId, 'tour_id' => $tourId],
+                        [
+                            'completed' => $completed,
+                            'current_step' => $currentStep,
+                            'completed_at' => $completed ? \Carbon\Carbon::now() : null,
+                            'updated_at' => \Carbon\Carbon::now()
+                        ]
+                    );
+                    
+                $response->getBody()->write(json_encode(['success' => true]));
+                return $response->withHeader('Content-Type', 'application/json');
+                
+            } catch (\Exception $e) {
+                $response->getBody()->write(json_encode([
+                    'success' => true // Silent fail - onboarding is not critical
+                ]));
+                return $response->withHeader('Content-Type', 'application/json');
+            }
+        });
+        
+        // Get onboarding status
+        $app->get('/status', function (Request $request, Response $response) {
+            $userId = $_SESSION['user_id'] ?? null;
+            
+            if (!$userId) {
+                $response->getBody()->write(json_encode([
+                    'success' => false,
+                    'error' => 'Not authenticated'
+                ]));
+                return $response
+                    ->withHeader('Content-Type', 'application/json')
+                    ->withStatus(401);
+            }
+            
+            try {
+                $progress = \Illuminate\Database\Capsule\Manager::table('onboarding_progress')
+                    ->where('user_id', $userId)
+                    ->get()
+                    ->keyBy('tour_id');
+                    
+                $response->getBody()->write(json_encode([
+                    'success' => true,
+                    'data' => $progress
+                ]));
+                return $response->withHeader('Content-Type', 'application/json');
+                
+            } catch (\Exception $e) {
+                $response->getBody()->write(json_encode([
+                    'success' => true,
+                    'data' => []
+                ]));
+                return $response->withHeader('Content-Type', 'application/json');
+            }
+        });
+    })->add($authMiddleware);
     
     // System Health API Routes
     $app->group('/api/system', function ($app) {
@@ -988,43 +1106,43 @@ return function (App $app) {
     $app->group('/api/user/signatures', function ($app) {
         $app->get('/smtp-status', function (Request $request, Response $response) {
             $container = Container::getInstance();
-            $controller = $container->get(\App\Controllers\SignatureController::class);
+            $controller = $container->get(\CiInbox\App\Controllers\SignatureController::class);
             return $controller->getSmtpStatus($request, $response);
         });
         
         $app->get('', function (Request $request, Response $response) {
             $container = Container::getInstance();
-            $controller = $container->get(\App\Controllers\SignatureController::class);
+            $controller = $container->get(\CiInbox\App\Controllers\SignatureController::class);
             return $controller->getPersonalSignatures($request, $response);
         });
         
         $app->post('', function (Request $request, Response $response) {
             $container = Container::getInstance();
-            $controller = $container->get(\App\Controllers\SignatureController::class);
+            $controller = $container->get(\CiInbox\App\Controllers\SignatureController::class);
             return $controller->createPersonalSignature($request, $response);
         });
         
         $app->get('/{id}', function (Request $request, Response $response, array $args) {
             $container = Container::getInstance();
-            $controller = $container->get(\App\Controllers\SignatureController::class);
+            $controller = $container->get(\CiInbox\App\Controllers\SignatureController::class);
             return $controller->getSignature($request, $response, $args);
         });
         
         $app->put('/{id}', function (Request $request, Response $response, array $args) {
             $container = Container::getInstance();
-            $controller = $container->get(\App\Controllers\SignatureController::class);
+            $controller = $container->get(\CiInbox\App\Controllers\SignatureController::class);
             return $controller->updateSignature($request, $response, $args);
         });
         
         $app->delete('/{id}', function (Request $request, Response $response, array $args) {
             $container = Container::getInstance();
-            $controller = $container->get(\App\Controllers\SignatureController::class);
+            $controller = $container->get(\CiInbox\App\Controllers\SignatureController::class);
             return $controller->deleteSignature($request, $response, $args);
         });
         
         $app->post('/{id}/set-default', function (Request $request, Response $response, array $args) {
             $container = Container::getInstance();
-            $controller = $container->get(\App\Controllers\SignatureController::class);
+            $controller = $container->get(\CiInbox\App\Controllers\SignatureController::class);
             return $controller->setAsDefault($request, $response, $args);
         });
     });
@@ -1033,34 +1151,78 @@ return function (App $app) {
     $app->group('/api/admin/signatures', function ($app) {
         $app->get('', function (Request $request, Response $response) {
             $container = Container::getInstance();
-            $controller = $container->get(\App\Controllers\SignatureController::class);
+            $controller = $container->get(\CiInbox\App\Controllers\SignatureController::class);
             return $controller->getGlobalSignatures($request, $response);
         });
         
         $app->post('', function (Request $request, Response $response) {
             $container = Container::getInstance();
-            $controller = $container->get(\App\Controllers\SignatureController::class);
+            $controller = $container->get(\CiInbox\App\Controllers\SignatureController::class);
             return $controller->createGlobalSignature($request, $response);
         });
         
         $app->put('/{id}', function (Request $request, Response $response, array $args) {
             $container = Container::getInstance();
-            $controller = $container->get(\App\Controllers\SignatureController::class);
+            $controller = $container->get(\CiInbox\App\Controllers\SignatureController::class);
             return $controller->updateGlobalSignature($request, $response, $args);
         });
         
         $app->delete('/{id}', function (Request $request, Response $response, array $args) {
             $container = Container::getInstance();
-            $controller = $container->get(\App\Controllers\SignatureController::class);
+            $controller = $container->get(\CiInbox\App\Controllers\SignatureController::class);
             return $controller->deleteGlobalSignature($request, $response, $args);
         });
         
         $app->post('/{id}/set-default', function (Request $request, Response $response, array $args) {
             $container = Container::getInstance();
-            $controller = $container->get(\App\Controllers\SignatureController::class);
+            $controller = $container->get(\CiInbox\App\Controllers\SignatureController::class);
             return $controller->setGlobalAsDefault($request, $response, $args);
         });
     });
+    
+    // ========== OAUTH ROUTES ==========
+    
+    // Public: List OAuth providers (for login page)
+    $app->get('/api/oauth/providers', function (Request $request, Response $response) {
+        $container = Container::getInstance();
+        $controller = $container->get(\CiInbox\App\Controllers\OAuthController::class);
+        return $controller->listProviders($request, $response);
+    });
+    
+    // Public: Initiate OAuth flow
+    $app->get('/oauth/authorize/{provider}', function (Request $request, Response $response, array $args) {
+        $container = Container::getInstance();
+        $controller = $container->get(\CiInbox\App\Controllers\OAuthController::class);
+        return $controller->authorize($request, $response, $args);
+    });
+    
+    // Public: OAuth callback
+    $app->get('/oauth/callback/{provider}', function (Request $request, Response $response, array $args) {
+        $container = Container::getInstance();
+        $controller = $container->get(\CiInbox\App\Controllers\OAuthController::class);
+        return $controller->callback($request, $response, $args);
+    });
+    
+    // Admin: OAuth provider management
+    $app->group('/api/admin/oauth', function ($app) {
+        $app->post('/providers', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\OAuthController::class);
+            return $controller->createProvider($request, $response);
+        });
+        
+        $app->put('/providers/{id}', function (Request $request, Response $response, array $args) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\OAuthController::class);
+            return $controller->updateProvider($request, $response, $args);
+        });
+        
+        $app->delete('/providers/{id}', function (Request $request, Response $response, array $args) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\OAuthController::class);
+            return $controller->deleteProvider($request, $response, $args);
+        });
+    })->add($adminMiddleware)->add($authMiddleware);
     
     // API info endpoint
     $app->get('/api', function (Request $request, Response $response) {

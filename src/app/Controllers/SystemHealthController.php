@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Controllers;
+namespace CiInbox\App\Controllers;
 
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
-use App\Services\SystemHealthService;
+use CiInbox\App\Services\SystemHealthService;
 use Psr\Log\LoggerInterface;
 
 /**
