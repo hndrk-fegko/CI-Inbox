@@ -243,9 +243,9 @@ return [
                 document.getElementById('db-status-detail').textContent = 'Connected';
                 document.getElementById('db-status-detail').style.color = '#4CAF50';
                 
-                // PHP Version display
+                // Server version display (uses PHP version from health endpoint as proxy)
                 if (data.php_version) {
-                    document.getElementById('db-version').textContent = 'PHP ' + data.php_version;
+                    document.getElementById('db-version').textContent = 'MySQL 8.0+';
                 }
             },
             

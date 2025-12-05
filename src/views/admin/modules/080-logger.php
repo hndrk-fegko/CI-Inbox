@@ -333,9 +333,15 @@ return [
                     const data = await response.json();
                     
                     if (data.success && data.data) {
-                        document.getElementById('logger-latest').textContent = 
-                            data.data.errors.length > 0 ? 'Recent' : 'No recent errors';
-                        document.getElementById('log-entry-count').textContent = data.data.total || 0;
+                        const loggerLatest = document.getElementById('logger-latest');
+                        const logEntryCount = document.getElementById('log-entry-count');
+                        
+                        if (loggerLatest) {
+                            loggerLatest.textContent = data.data.errors.length > 0 ? 'Recent' : 'No recent errors';
+                        }
+                        if (logEntryCount) {
+                            logEntryCount.textContent = data.data.total || 0;
+                        }
                     }
                 } catch (error) {
                     console.error('[Logger] Failed to load info:', error);
@@ -428,7 +434,10 @@ return [
                     // For now, we just update the UI
                     await new Promise(resolve => setTimeout(resolve, 500));
                     
-                    document.getElementById('logger-level-badge').textContent = level.toUpperCase();
+                    const levelBadge = document.getElementById('logger-level-badge');
+                    if (levelBadge) {
+                        levelBadge.textContent = level.toUpperCase();
+                    }
                     this.showAlert('logger-alert', `Log level set to ${level.toUpperCase()}`, 'success');
                     
                 } catch (error) {
