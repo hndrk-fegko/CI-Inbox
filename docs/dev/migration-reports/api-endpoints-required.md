@@ -1,7 +1,7 @@
 # API Endpoints: Admin Settings Module
 
 **Date:** December 2025  
-**Status:** ✅ All endpoints implemented and connected
+**Status:** 🔄 In Progress - Frontend complete, some backend endpoints pending
 
 ---
 
@@ -116,6 +116,14 @@ This document lists all API endpoints used by the admin settings modules.
 | GET | `/api/system/cron-status` | Get cron service status | ✅ |
 | GET | `/api/admin/cron/history` | Get execution history | ✅ |
 | GET | `/api/admin/cron/statistics` | Get performance stats | ✅ |
+| GET | `/api/admin/cron/webhook` | Get webhook URL/token | 🆕 Pending |
+| POST | `/api/admin/cron/webhook/regenerate` | Regenerate webhook token | 🆕 Pending |
+
+### Health Thresholds (Minutely Cron)
+- **Healthy:** >55 executions/hour
+- **Degraded:** 30-55 executions/hour
+- **Delayed:** <30 executions/hour
+- **Stale:** <1 execution/hour
 
 ### Request/Response Examples
 
@@ -127,29 +135,19 @@ This document lists all API endpoints used by the admin settings modules.
     "status": "healthy",
     "last_poll_at": "2025-12-05 14:30:00",
     "minutes_ago": 5,
-    "emails_today": 42,
-    "success_rate": 98
+    "executions_last_hour": 58,
+    "emails_today": 42
   }
 }
 ```
 
-**GET /api/admin/cron/history?page=1&per_page=10**
+**GET /api/admin/cron/webhook**
 ```json
 {
   "success": true,
-  "data": [
-    {
-      "started_at": "2025-12-05 14:30:00",
-      "accounts_polled": 3,
-      "emails_fetched": 5,
-      "duration_ms": 1234,
-      "status": "success"
-    }
-  ],
-  "meta": {
-    "total": 150,
-    "page": 1,
-    "per_page": 10
+  "data": {
+    "token": "abc123...",
+    "url": "https://example.com/api/webcron/poll?token=abc123..."
   }
 }
 ```
@@ -165,6 +163,13 @@ This document lists all API endpoints used by the admin settings modules.
 | GET | `/api/admin/backup/download/{filename}` | Download backup | ✅ |
 | DELETE | `/api/admin/backup/delete/{filename}` | Delete backup | ✅ |
 | POST | `/api/admin/backup/cleanup` | Bulk delete old backups | ✅ |
+| GET | `/api/admin/backup/schedule` | Get auto-backup schedule | 🆕 Pending |
+| PUT | `/api/admin/backup/schedule` | Update schedule | 🆕 Pending |
+| GET | `/api/admin/backup/storage` | Get external storage config | 🆕 Pending |
+| PUT | `/api/admin/backup/storage` | Update storage config | 🆕 Pending |
+| POST | `/api/admin/backup/storage/test` | Test storage connection | 🆕 Pending |
+| DELETE | `/api/admin/backup/storage` | Remove storage config | 🆕 Pending |
+| GET | `/api/admin/backup/usage` | Get storage usage stats | 🆕 Pending |
 
 ### Request/Response Examples
 
@@ -178,25 +183,23 @@ This document lists all API endpoints used by the admin settings modules.
       "size": 1048576,
       "size_human": "1.0 MB",
       "created_at": "2025-12-05 14:30:00",
-      "created_at_human": "Today at 14:30"
+      "location": "local",
+      "is_monthly": false
     }
   ]
 }
 ```
 
-**POST /api/admin/backup/cleanup**
+**PUT /api/admin/backup/schedule**
 ```json
 // Request
 {
-  "retention_days": 30
-}
-
-// Response
-{
-  "success": true,
-  "data": {
-    "deleted_count": 5
-  }
+  "enabled": true,
+  "frequency": "daily",
+  "time": "03:00",
+  "retention_days": 30,
+  "location": "both",
+  "keep_monthly": true
 }
 ```
 
@@ -207,15 +210,13 @@ This document lists all API endpoints used by the admin settings modules.
 | Method | Endpoint | Purpose | Status |
 |--------|----------|---------|--------|
 | GET | `/api/system/health` | Get system health | ✅ |
-
-### Notes
-
-The database module uses the system health endpoint for connection status. 
-Table information is currently displayed based on the known schema.
-Future enhancements could add:
-- `GET /api/admin/database/tables` - List tables with sizes
-- `POST /api/admin/database/optimize` - Optimize all tables
-- `POST /api/admin/database/analyze` - Analyze all tables
+| GET | `/api/admin/database/status` | Get database status | 🆕 Pending |
+| GET | `/api/admin/database/tables` | List tables with sizes | 🆕 Pending |
+| POST | `/api/admin/database/optimize` | Optimize all tables | 🆕 Pending |
+| POST | `/api/admin/database/analyze` | Analyze all tables | 🆕 Pending |
+| GET | `/api/admin/database/orphaned` | Check orphaned data | 🆕 Pending |
+| POST | `/api/admin/database/cleanup` | Cleanup orphaned data | 🆕 Pending |
+| GET | `/api/admin/database/migrations` | Get migration status | 🆕 Pending |
 
 ---
 
@@ -227,6 +228,24 @@ Future enhancements could add:
 | POST | `/api/users` | Create user | ✅ |
 | PUT | `/api/users/{id}` | Update user | ✅ |
 | DELETE | `/api/users/{id}` | Delete user | ✅ |
+| GET | `/api/admin/users/stats` | Get user statistics | 🆕 Pending |
+
+---
+
+## OAuth2 Module (065) - NEW
+
+| Method | Endpoint | Purpose | Status |
+|--------|----------|---------|--------|
+| GET | `/api/admin/oauth/config` | Get OAuth configuration | 🆕 Pending |
+| PUT | `/api/admin/oauth/config` | Update global settings | 🆕 Pending |
+| PUT | `/api/admin/oauth/providers` | Update provider config | 🆕 Pending |
+| GET | `/api/admin/oauth/users` | List OAuth-linked users | 🆕 Pending |
+
+### Supported Providers
+- Google
+- Microsoft / Azure AD
+- GitHub
+- Custom OIDC
 
 ---
 
@@ -235,9 +254,14 @@ Future enhancements could add:
 | Method | Endpoint | Purpose | Status |
 |--------|----------|---------|--------|
 | GET | `/api/admin/signatures` | List all signatures | ✅ |
-| POST | `/api/signatures/global` | Create global signature | ✅ |
-| PUT | `/api/signatures/global/{id}` | Update signature | ✅ |
-| DELETE | `/api/signatures/global/{id}` | Delete signature | ✅ |
+| POST | `/api/admin/signatures` | Create signature | ✅ |
+| PUT | `/api/admin/signatures/{id}` | Update signature | ✅ |
+| DELETE | `/api/admin/signatures/{id}` | Delete signature | ✅ |
+| PUT | `/api/admin/signatures/default` | Set default signature | 🆕 Pending |
+
+### Signature Types
+- **Shared Inbox:** Global signatures for team inbox
+- **Personal:** User-specific signatures (admin editable)
 
 ---
 
@@ -246,15 +270,30 @@ Future enhancements could add:
 | Method | Endpoint | Purpose | Status |
 |--------|----------|---------|--------|
 | GET | `/api/system/errors` | Get recent errors | ✅ |
+| GET | `/api/admin/logger/level` | Get current log level | 🆕 Pending |
+| PUT | `/api/admin/logger/level` | Set log level | 🆕 Pending |
+| GET | `/api/admin/logger/stream` | Get log stream | 🆕 Pending |
+| GET | `/api/admin/logger/stats` | Get log statistics | 🆕 Pending |
+| POST | `/api/admin/logger/clear` | Clear log files | 🆕 Pending |
+| POST | `/api/admin/logger/download` | Download log archive | 🆕 Pending |
+| POST | `/api/admin/logger/archive` | Archive old logs | 🆕 Pending |
 
-### Notes
+---
 
-The logger module currently uses the system errors endpoint for log viewing.
-Future enhancements could add:
-- `GET /api/admin/logger/level` - Get current log level
-- `PUT /api/admin/logger/level` - Set log level
-- `POST /api/admin/logger/clear` - Clear log files
-- `GET /api/admin/logger/download` - Download log archive
+## Summary
+
+| Module | Existing | Pending | Total |
+|--------|----------|---------|-------|
+| IMAP | 4 | 0 | 4 |
+| SMTP | 4 | 0 | 4 |
+| Cron | 3 | 2 | 5 |
+| Backup | 5 | 7 | 12 |
+| Database | 1 | 7 | 8 |
+| Users | 4 | 1 | 5 |
+| OAuth2 | 0 | 4 | 4 |
+| Signatures | 4 | 1 | 5 |
+| Logger | 1 | 7 | 8 |
+| **Total** | **26** | **29** | **55** |
 
 ---
 
