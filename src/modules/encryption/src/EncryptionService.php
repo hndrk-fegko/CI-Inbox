@@ -5,8 +5,8 @@ namespace CiInbox\Modules\Encryption;
 use CiInbox\Modules\Config\ConfigInterface;
 use CiInbox\Modules\Encryption\Exceptions\EncryptionException;
 use CiInbox\Modules\Logger\LoggerService;
-use App\Interfaces\ModuleHealthInterface;
-use App\DTOs\ModuleHealthDTO;
+use CiInbox\App\Interfaces\ModuleHealthInterface;
+use CiInbox\App\DTOs\ModuleHealthDTO;
 
 /**
  * Encryption Service

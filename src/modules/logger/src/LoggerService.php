@@ -7,8 +7,8 @@ use Monolog\Logger;
 use Monolog\Handler\RotatingFileHandler;
 use Monolog\Level;
 use CiInbox\Modules\Logger\Formatters\JsonFormatter;
-use App\Interfaces\ModuleHealthInterface;
-use App\DTOs\ModuleHealthDTO;
+use CiInbox\App\Interfaces\ModuleHealthInterface;
+use CiInbox\App\DTOs\ModuleHealthDTO;
 
 /**
  * CI-Inbox Logger Service
