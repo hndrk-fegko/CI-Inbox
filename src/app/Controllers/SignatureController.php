@@ -34,9 +34,8 @@ class SignatureController
             return (int) $user['id'];
         }
         
-        // Fallback for development/testing (should be removed in production)
-        // TODO: Remove fallback in production - require authentication
-        return 1;
+        // No authentication found - throw exception
+        throw new \RuntimeException('Unauthorized: Authentication required');
     }
     
     /**

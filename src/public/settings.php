@@ -13,14 +13,14 @@
 session_start();
 
 // Check authentication
-if (!isset($_SESSION['user_email'])) {
+if (!isset($_SESSION['user_email']) || !isset($_SESSION['user_id'])) {
     header('Location: /login.php');
     exit;
 }
 
 // Get user info from session
 $userEmail = $_SESSION['user_email'];
-$userId = $_SESSION['user_id'] ?? 1; // Fallback to 1 for now
+$userId = $_SESSION['user_id'];
 
 // Get user's theme preference and calculate initials
 $themeMode = 'auto'; // Default

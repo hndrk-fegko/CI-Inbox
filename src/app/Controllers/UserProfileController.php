@@ -29,8 +29,10 @@ class UserProfileController
     public function getProfile(Request $request, Response $response): Response
     {
         try {
-            // TODO: Get user ID from JWT token
-            $userId = $request->getAttribute('user_id') ?? 1; // Temporary hardcoded
+            $userId = $request->getAttribute('user_id');
+            if (!$userId) {
+                throw new \RuntimeException('Unauthorized: Authentication required');
+            }
             
             $user = $this->profileService->getProfile($userId);
             
@@ -83,8 +85,10 @@ class UserProfileController
     public function updateProfile(Request $request, Response $response): Response
     {
         try {
-            // TODO: Get user ID from JWT token
-            $userId = $request->getAttribute('user_id') ?? 1; // Temporary hardcoded
+            $userId = $request->getAttribute('user_id');
+            if (!$userId) {
+                throw new \RuntimeException('Unauthorized: Authentication required');
+            }
             
             $data = $request->getParsedBody();
             
@@ -165,8 +169,10 @@ class UserProfileController
     public function uploadAvatar(Request $request, Response $response): Response
     {
         try {
-            // TODO: Get user ID from JWT token
-            $userId = $request->getAttribute('user_id') ?? 1; // Temporary hardcoded
+            $userId = $request->getAttribute('user_id');
+            if (!$userId) {
+                throw new \RuntimeException('Unauthorized: Authentication required');
+            }
             
             $uploadedFiles = $request->getUploadedFiles();
             
@@ -222,8 +228,10 @@ class UserProfileController
     public function deleteAvatar(Request $request, Response $response): Response
     {
         try {
-            // TODO: Get user ID from JWT token
-            $userId = $request->getAttribute('user_id') ?? 1; // Temporary hardcoded
+            $userId = $request->getAttribute('user_id');
+            if (!$userId) {
+                throw new \RuntimeException('Unauthorized: Authentication required');
+            }
             
             $this->profileService->deleteAvatar($userId);
             
@@ -255,8 +263,10 @@ class UserProfileController
     public function changePassword(Request $request, Response $response): Response
     {
         try {
-            // TODO: Get user ID from JWT token
-            $userId = $request->getAttribute('user_id') ?? 1; // Temporary hardcoded
+            $userId = $request->getAttribute('user_id');
+            if (!$userId) {
+                throw new \RuntimeException('Unauthorized: Authentication required');
+            }
             
             $data = $request->getParsedBody();
             
