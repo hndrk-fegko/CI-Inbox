@@ -75,7 +75,7 @@ return [
         <div id="db-alert" style="margin-bottom: 1rem;"></div>
         
         <!-- Status Cards -->
-        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
             <div style="background: white; border-radius: 12px; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
                 <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Status</div>
                 <div id="db-status-detail" style="font-size: 1.25rem; font-weight: 600; color: #4CAF50;">Connected</div>
