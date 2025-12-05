@@ -4,6 +4,30 @@ Dieser Ordner enthält **archivierte Dokumente**, die durch neuere ersetzt wurde
 
 ---
 
+## Ordnerstruktur
+
+```
+archive/
+├── bugs/                    # Archivierte Bugfix-Dokumentation
+│   └── BUGFIX-2025-11-18.md
+├── workflow-v1.0-2025-11-17.md
+└── README.md                # Diese Datei
+```
+
+---
+
+## bugs/BUGFIX-2025-11-18.md
+
+**Erstellt:** 18. November 2025  
+**Archiviert:** 4. Dezember 2025  
+**Grund:** Bugfix abgeschlossen, Dokumentation für historische Referenz
+
+**Wertvoll für:**
+- Nachvollziehbarkeit von Bugfixes
+- Lessons Learned bei ähnlichen Problemen
+
+---
+
 ## workflow-v1.0-2025-11-17.md
 
 **Erstellt:** 17. November 2025  
@@ -48,4 +72,4 @@ Dieser Ordner enthält **archivierte Dokumente**, die durch neuere ersetzt wurde
 
 ---
 
-**Letzte Aktualisierung:** 17. November 2025
+**Letzte Aktualisierung:** 4. Dezember 2025

@@ -1,7 +1,7 @@
 # CI-Inbox: Project Status & Documentation Index
 
-**Last Updated:** 18. November 2025  
-**Current Milestone:** M3 - MVP UI (Planning)
+**Last Updated:** 4. December 2025  
+**Current Milestone:** M3 - MVP UI (In Progress)
 
 ---
 

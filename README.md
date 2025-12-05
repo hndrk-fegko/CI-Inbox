@@ -2,7 +2,7 @@
 
 **Leichtgewichtige IMAP-Inbox-Verwaltung für kleine autonome Teams (3-7 Personen).**
 
-[![Status](https://img.shields.io/badge/Status-M2%20Complete-brightgreen)](https://github.com/your-repo)
+[![Status](https://img.shields.io/badge/Status-M3%20In%20Progress-yellow)](https://github.com/your-repo)
 [![PHP](https://img.shields.io/badge/PHP-8.1%2B-blue)](https://php.net)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
@@ -61,16 +61,19 @@ CI-Inbox löst das Problem chaotischer Shared-Inbox-Verwaltung für kleine Teams
 
 ## 📚 Dokumentation
 
+**🆕 New to CI-Inbox?** Start with [Getting Started Guide](docs/GETTING-STARTED.md)!
+
 Alle Entwickler-Dokumentation findest du in `docs/dev/`:
 
 | Dokument | Beschreibung |
 |----------|--------------|
+| [`GETTING-STARTED.md`](docs/GETTING-STARTED.md) | **Start here!** Quick setup (5 min) |
 | [`vision.md`](docs/dev/vision.md) | Projektziele, Workflows (A/B/C), Use Cases |
 | [`inventar.md`](docs/dev/inventar.md) | Feature-Liste mit Prioritäten (MUST/SHOULD/COULD) |
 | [`roadmap.md`](docs/dev/roadmap.md) | Entwicklungs-Timeline (M0-M5, 16 Wochen) |
 | [`architecture.md`](docs/dev/architecture.md) | Technische Architektur, Datenmodell, Security |
 | [`codebase.md`](docs/dev/codebase.md) | Entwicklungsumgebung, Code-Konventionen, Testing |
-| [`workflow.md`](docs/dev/workflow.md) | 5-Phasen-Entwicklungsprozess |
+| [`PROJECT-STATUS.md`](docs/dev/PROJECT-STATUS.md) | Aktueller Projektstatus |
 
 ---
 
@@ -172,9 +175,9 @@ php src/modules/imap/tests/setup-autodiscover.php
 
 ## 🤝 Contributing
 
-Aktuell ist das Projekt in der Planungs-/Foundation-Phase. Contributions sind willkommen ab M3 (MVP UI).
+Contributions sind willkommen! Siehe [CONTRIBUTING.md](CONTRIBUTING.md) für Guidelines.
 
-**Workflow:**
+**Kurzfassung:**
 1. Fork das Repository
 2. Feature-Branch erstellen (`git checkout -b feature/my-feature`)
 3. Committen (`git commit -m 'feat(scope): Add feature'`)
