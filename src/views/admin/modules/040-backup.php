@@ -3,10 +3,12 @@
  * Admin Tab Module: Backup Management
  * 
  * Provides:
- * - Database backup creation
- * - Backup list with download/delete
- * - Auto-cleanup of old backups
- * - Backup statistics
+ * - Database backup creation (local/external/both)
+ * - External storage configuration (FTP/WebDAV)
+ * - Backup list with download/delete and location indicators
+ * - Auto-backup scheduling with retention settings
+ * - Keep monthly backups option
+ * - Bulk cleanup of old backups
  * 
  * Auto-discovered by admin dashboard
  */
@@ -30,7 +32,7 @@ return [
                     <h3 class="c-admin-card__title">Backup System</h3>
                 </div>
             </div>
-            <p class="c-admin-card__description">Manage database backups and configure automated backup schedules.</p>
+            <p class="c-admin-card__description">Manage database backups, external storage, and automated schedules.</p>
             <div class="c-admin-card__content">
                 <div class="c-info-row">
                     <span class="c-info-row__label">Latest Backup</span>
@@ -39,6 +41,13 @@ return [
                 <div class="c-info-row">
                     <span class="c-info-row__label">Total Backups</span>
                     <span class="c-info-row__value" id="total-backups-count">0</span>
+                </div>
+                <div class="c-info-row">
+                    <span class="c-info-row__label">External Storage</span>
+                    <span id="backup-external-status" class="c-status-badge c-status-badge--warning">
+                        <span class="status-dot"></span>
+                        Not Configured
+                    </span>
                 </div>
             </div>
         </div>
@@ -49,7 +58,7 @@ return [
         ?>
         <div style="margin-bottom: 2rem;">
             <h3 style="margin: 0 0 0.5rem 0; font-size: 1.25rem; font-weight: 600;">Backup Management</h3>
-            <p style="margin: 0; color: #666; font-size: 0.875rem;">Create, download, and manage database backups.</p>
+            <p style="margin: 0; color: #666; font-size: 0.875rem;">Create, download, and manage database backups with local and external storage options.</p>
         </div>
         
         <!-- Info Box -->
@@ -63,6 +72,7 @@ return [
                     <p style="margin: 0.5rem 0 0 0; color: #1976D2; font-size: 0.875rem;">
                         Backups include your entire database: users, threads, emails, settings, and configuration. 
                         We recommend creating backups before major changes and keeping at least 3 recent backups.
+                        Configure external storage (FTP/WebDAV) for off-site backup copies.
                     </p>
                 </div>
             </div>
@@ -71,15 +81,38 @@ return [
         <!-- Alert Container -->
         <div id="backup-alert" style="margin-bottom: 1rem;"></div>
         
-        <!-- Actions Panel -->
+        <!-- Create Backup Panel -->
         <div style="background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 1.5rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <h4 style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z" clip-rule="evenodd"/>
-                    </svg>
-                    Quick Actions
-                </h4>
+            <h4 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
+                </svg>
+                Create Backup
+            </h4>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                <div class="c-input-group">
+                    <label for="backup-type">Backup Type</label>
+                    <select id="backup-type" class="c-input">
+                        <option value="full">Full Backup (Database + Files)</option>
+                        <option value="database">Database Only</option>
+                        <option value="files">Files Only</option>
+                    </select>
+                </div>
+                <div class="c-input-group">
+                    <label for="backup-location">Storage Location</label>
+                    <select id="backup-location" class="c-input">
+                        <option value="local">Local Only</option>
+                        <option value="external" id="backup-location-external" disabled>External Only</option>
+                        <option value="both" id="backup-location-both" disabled>Both (Local + External)</option>
+                    </select>
+                    <small style="color: #666;">Configure external storage below to enable</small>
+                </div>
+            </div>
+            
+            <div class="c-input-group" style="margin-bottom: 1rem;">
+                <label for="backup-description">Description (optional)</label>
+                <input type="text" id="backup-description" class="c-input" placeholder="e.g., Before migration, Weekly backup...">
             </div>
             
             <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
@@ -99,7 +132,7 @@ return [
         </div>
         
         <!-- Backup List -->
-        <div style="background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+        <div style="background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 1.5rem;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                 <h4 style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
@@ -116,10 +149,226 @@ return [
                 </button>
             </div>
             
+            <!-- Location Legend -->
+            <div style="margin-bottom: 1rem; padding: 0.75rem; background: #f5f5f5; border-radius: 8px; font-size: 0.875rem;">
+                <strong>Location Icons:</strong>
+                <span style="margin-left: 1rem;">💾 Local</span>
+                <span style="margin-left: 1rem;">☁️ External</span>
+                <span style="margin-left: 1rem;">📌 Monthly (Protected)</span>
+            </div>
+            
             <div id="backup-list-container">
                 <div style="padding: 2rem; text-align: center; color: #666;">
                     Loading backups...
                 </div>
+            </div>
+        </div>
+        
+        <!-- Auto-Backup Schedule -->
+        <div style="background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 1.5rem;">
+            <h4 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+                </svg>
+                Auto-Backup Schedule
+            </h4>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                <div class="c-input-group">
+                    <label>
+                        <input type="checkbox" id="backup-auto-enabled">
+                        Enable Automatic Backups
+                    </label>
+                </div>
+            </div>
+            
+            <div id="backup-schedule-options" style="display: none;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                    <div class="c-input-group">
+                        <label for="backup-schedule-frequency">Frequency</label>
+                        <select id="backup-schedule-frequency" class="c-input">
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                        </select>
+                    </div>
+                    <div class="c-input-group">
+                        <label for="backup-schedule-time">Time (24h)</label>
+                        <input type="time" id="backup-schedule-time" class="c-input" value="03:00">
+                    </div>
+                    <div class="c-input-group">
+                        <label for="backup-schedule-retention">Retention (days)</label>
+                        <input type="number" id="backup-schedule-retention" class="c-input" value="30" min="1" max="365">
+                    </div>
+                    <div class="c-input-group">
+                        <label for="backup-schedule-location">Location</label>
+                        <select id="backup-schedule-location" class="c-input">
+                            <option value="local">Local Only</option>
+                            <option value="external" disabled>External Only</option>
+                            <option value="both" disabled>Both</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Keep Monthly Option -->
+                <div style="background: #E8F5E9; border-left: 4px solid #4CAF50; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
+                    <label style="display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" id="backup-keep-monthly" style="margin-top: 3px;">
+                        <div>
+                            <strong style="color: #2E7D32;">Keep Monthly Backups Forever</strong>
+                            <p style="margin: 0.25rem 0 0 0; color: #388E3C; font-size: 0.875rem;">
+                                Automatically preserve the last backup of each month. These will be excluded from cleanup 
+                                and must be deleted manually. Only applies to external storage.
+                            </p>
+                        </div>
+                    </label>
+                </div>
+                
+                <button type="button" id="backup-save-schedule-btn" class="c-button c-button--primary">
+                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" style="margin-right: 0.25rem;">
+                        <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6h5a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2h5v5.586l-1.293-1.293zM9 4a1 1 0 012 0v2H9V4z"/>
+                    </svg>
+                    Save Schedule
+                </button>
+            </div>
+        </div>
+        
+        <!-- External Storage Configuration -->
+        <div style="background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 1.5rem;">
+            <h4 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M5.5 16a3.5 3.5 0 01-.369-6.98 4 4 0 117.753-1.977A4.5 4.5 0 1113.5 16h-8z"/>
+                </svg>
+                External Storage Configuration
+            </h4>
+            
+            <div class="c-input-group" style="margin-bottom: 1rem;">
+                <label for="backup-storage-type">Storage Type</label>
+                <select id="backup-storage-type" class="c-input" style="max-width: 300px;">
+                    <option value="">-- Select Storage Type --</option>
+                    <option value="ftp">FTP / SFTP</option>
+                    <option value="webdav">WebDAV (Nextcloud, etc.)</option>
+                </select>
+            </div>
+            
+            <!-- FTP Configuration -->
+            <div id="backup-ftp-config" style="display: none;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                    <div class="c-input-group">
+                        <label for="backup-ftp-host">FTP Host <span style="color: #f44336;">*</span></label>
+                        <input type="text" id="backup-ftp-host" class="c-input" placeholder="ftp.example.com">
+                    </div>
+                    <div class="c-input-group">
+                        <label for="backup-ftp-port">Port</label>
+                        <input type="number" id="backup-ftp-port" class="c-input" value="21" placeholder="21">
+                    </div>
+                    <div class="c-input-group">
+                        <label for="backup-ftp-username">Username <span style="color: #f44336;">*</span></label>
+                        <input type="text" id="backup-ftp-username" class="c-input" placeholder="username">
+                    </div>
+                    <div class="c-input-group">
+                        <label for="backup-ftp-password">Password <span style="color: #f44336;">*</span></label>
+                        <input type="password" id="backup-ftp-password" class="c-input" placeholder="Leave empty to keep current">
+                    </div>
+                </div>
+                <div class="c-input-group" style="margin-bottom: 1rem;">
+                    <label for="backup-ftp-path">Remote Path</label>
+                    <input type="text" id="backup-ftp-path" class="c-input" placeholder="/backups/ci-inbox/" style="max-width: 400px;">
+                    <small style="color: #666;">Directory on FTP server where backups will be stored</small>
+                </div>
+                <div class="c-input-group" style="margin-bottom: 1rem;">
+                    <label>
+                        <input type="checkbox" id="backup-ftp-ssl">
+                        Use FTPS (FTP over SSL)
+                    </label>
+                </div>
+            </div>
+            
+            <!-- WebDAV Configuration -->
+            <div id="backup-webdav-config" style="display: none;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                    <div class="c-input-group">
+                        <label for="backup-webdav-url">WebDAV URL <span style="color: #f44336;">*</span></label>
+                        <input type="url" id="backup-webdav-url" class="c-input" placeholder="https://cloud.example.com/remote.php/dav/files/user/">
+                    </div>
+                    <div class="c-input-group">
+                        <label for="backup-webdav-username">Username <span style="color: #f44336;">*</span></label>
+                        <input type="text" id="backup-webdav-username" class="c-input" placeholder="username">
+                    </div>
+                    <div class="c-input-group">
+                        <label for="backup-webdav-password">Password <span style="color: #f44336;">*</span></label>
+                        <input type="password" id="backup-webdav-password" class="c-input" placeholder="Leave empty to keep current">
+                    </div>
+                </div>
+                <div class="c-input-group" style="margin-bottom: 1rem;">
+                    <label for="backup-webdav-path">Remote Path</label>
+                    <input type="text" id="backup-webdav-path" class="c-input" placeholder="/Backups/CI-Inbox/" style="max-width: 400px;">
+                    <small style="color: #666;">Folder path on WebDAV server</small>
+                </div>
+            </div>
+            
+            <div id="backup-storage-actions" style="display: none; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #eee;">
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <button type="button" id="backup-test-storage-btn" class="c-button c-button--secondary">
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" style="margin-right: 0.25rem;">
+                            <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                        </svg>
+                        Test Connection
+                    </button>
+                    <button type="button" id="backup-save-storage-btn" class="c-button c-button--primary">
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" style="margin-right: 0.25rem;">
+                            <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6h5a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2h5v5.586l-1.293-1.293zM9 4a1 1 0 012 0v2H9V4z"/>
+                        </svg>
+                        Save Storage Configuration
+                    </button>
+                    <button type="button" id="backup-remove-storage-btn" class="c-button c-button--danger">
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" style="margin-right: 0.25rem;">
+                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                        Remove Configuration
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Storage Test Result -->
+            <div id="backup-storage-test-result" style="display: none; margin-top: 1rem;"></div>
+        </div>
+        
+        <!-- Storage Usage -->
+        <div style="background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+            <h4 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/>
+                </svg>
+                Storage Usage
+            </h4>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                <div style="background: #f5f5f5; padding: 1rem; border-radius: 8px;">
+                    <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.25rem;">Local Storage</div>
+                    <div id="backup-local-usage" style="font-size: 1.25rem; font-weight: 600;">—</div>
+                </div>
+                <div style="background: #f5f5f5; padding: 1rem; border-radius: 8px;">
+                    <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.25rem;">External Storage</div>
+                    <div id="backup-external-usage" style="font-size: 1.25rem; font-weight: 600;">Not configured</div>
+                </div>
+                <div style="background: #f5f5f5; padding: 1rem; border-radius: 8px;">
+                    <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.25rem;">Monthly Backups</div>
+                    <div id="backup-monthly-count" style="font-size: 1.25rem; font-weight: 600;">0</div>
+                </div>
+                <div style="background: #f5f5f5; padding: 1rem; border-radius: 8px;">
+                    <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.25rem;">Oldest Backup</div>
+                    <div id="backup-oldest" style="font-size: 1.25rem; font-weight: 600;">—</div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #eee;">
+                <button type="button" id="backup-cleanup-monthly-btn" class="c-button c-button--secondary">
+                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" style="margin-right: 0.25rem;">
+                        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                    </svg>
+                    Cleanup Monthly Backups (&gt;18 months)
+                </button>
             </div>
         </div>
         

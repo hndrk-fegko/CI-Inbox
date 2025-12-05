@@ -70,8 +70,13 @@ return [
                     <strong style="color: #1565C0;">About Webcron Polling</strong>
                     <p style="margin: 0.5rem 0 0 0; color: #1976D2; font-size: 0.875rem;">
                         The webcron service polls your IMAP accounts at regular intervals to fetch new emails. 
-                        It's triggered by an external cron job calling the webhook endpoint. A healthy service 
-                        should run every 5-15 minutes.
+                        It's triggered by an external cron job calling the webhook endpoint.
+                    </p>
+                    <p style="margin: 0.5rem 0 0 0; color: #1976D2; font-size: 0.875rem;">
+                        <strong>Health Thresholds (for minutely cron):</strong><br>
+                        🟢 <strong>Healthy:</strong> &gt;55 executions/hour • 
+                        🟡 <strong>Delayed:</strong> &lt;30 executions/hour • 
+                        🔴 <strong>Stale:</strong> &lt;1 execution/hour
                     </p>
                 </div>
             </div>
@@ -91,7 +96,7 @@ return [
                 <div id="cron-detail-last" style="font-size: 1.5rem; font-weight: 600; color: #333;">—</div>
             </div>
             <div style="background: white; border-radius: 12px; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
-                <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Success Rate (24h)</div>
+                <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Executions/Hour</div>
                 <div id="cron-detail-success" style="font-size: 1.5rem; font-weight: 600; color: #4CAF50;">—</div>
             </div>
             <div style="background: white; border-radius: 12px; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
@@ -176,6 +181,99 @@ return [
                 </div>
             </div>
         </div>
+        
+        <!-- Webhook Configuration -->
+        <div style="background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+            <h4 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"/>
+                </svg>
+                Webhook Configuration
+            </h4>
+            
+            <p style="margin: 0 0 1rem 0; color: #666; font-size: 0.875rem;">
+                Configure your external cron service to call this webhook URL at regular intervals (recommended: every minute).
+            </p>
+            
+            <!-- Webhook URL -->
+            <div class="c-input-group" style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #333;">Webhook URL</label>
+                <div style="display: flex; gap: 0.5rem;">
+                    <input type="text" id="cron-webhook-url" class="c-input" readonly 
+                           style="flex: 1; font-family: monospace; font-size: 0.875rem; background: #f5f5f5;"
+                           value="Loading...">
+                    <button type="button" id="cron-copy-url-btn" class="c-button c-button--secondary" style="white-space: nowrap;">
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" style="margin-right: 0.25rem;">
+                            <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/>
+                            <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z"/>
+                        </svg>
+                        Copy
+                    </button>
+                </div>
+                <small style="color: #666; display: block; margin-top: 0.25rem;">
+                    Use this URL in your cron service (cron-job.org, Uptime Robot, etc.)
+                </small>
+            </div>
+            
+            <!-- Secret Token -->
+            <div class="c-input-group" style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #333;">Secret Token</label>
+                <div style="display: flex; gap: 0.5rem;">
+                    <input type="text" id="cron-secret-token" class="c-input" readonly 
+                           style="flex: 1; font-family: monospace; font-size: 0.875rem; background: #f5f5f5;"
+                           value="Loading...">
+                    <button type="button" id="cron-copy-token-btn" class="c-button c-button--secondary" style="white-space: nowrap;">
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" style="margin-right: 0.25rem;">
+                            <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/>
+                            <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z"/>
+                        </svg>
+                        Copy
+                    </button>
+                </div>
+                <small style="color: #666; display: block; margin-top: 0.25rem;">
+                    This token authenticates the webhook request
+                </small>
+            </div>
+            
+            <!-- Regenerate Token -->
+            <div style="background: #FFF3E0; border-left: 4px solid #FF9800; padding: 0.75rem; border-radius: 4px; margin-bottom: 1rem;">
+                <strong style="color: #E65100;">⚠️ Security Notice:</strong>
+                <p style="margin: 0.25rem 0 0 0; color: #E65100; font-size: 0.875rem;">
+                    Regenerating the token will invalidate the current webhook URL. You'll need to update your external cron service with the new URL.
+                </p>
+            </div>
+            
+            <button type="button" id="cron-regenerate-token-btn" class="c-button c-button--danger">
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" style="margin-right: 0.25rem;">
+                    <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/>
+                </svg>
+                Regenerate Token
+            </button>
+        </div>
+        
+        <!-- Regenerate Token Confirmation Modal -->
+        <div class="c-modal" id="cron-regenerate-modal">
+            <div class="c-modal__content" style="max-width: 450px;">
+                <div class="c-modal__header">
+                    <h2>Regenerate Webhook Token</h2>
+                    <button class="c-modal__close" id="cron-regenerate-close">&times;</button>
+                </div>
+                <div class="c-modal__body">
+                    <p style="color: #666;">Are you sure you want to regenerate the webhook token?</p>
+                    <p style="color: #f44336;"><strong>This will invalidate the current webhook URL.</strong></p>
+                    <p style="color: #666; font-size: 0.875rem;">You will need to update your external cron service with the new URL after regeneration.</p>
+                </div>
+                <div class="c-modal__footer">
+                    <button type="button" class="c-button c-button--secondary" id="cron-regenerate-cancel">Cancel</button>
+                    <button type="button" class="c-button c-button--danger" id="cron-regenerate-confirm">
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" style="margin-right: 0.25rem;">
+                            <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/>
+                        </svg>
+                        Regenerate Token
+                    </button>
+                </div>
+            </div>
+        </div>
         <?php
     },
     
@@ -186,12 +284,14 @@ return [
             currentPage: 1,
             perPage: 10,
             totalCount: 0,
+            webhookToken: null,
             
             init() {
                 console.log('[Cron] Initializing module...');
                 this.loadStatus();
                 this.loadHistory();
                 this.loadStatistics();
+                this.loadWebhookConfig();
                 this.bindEvents();
                 
                 // Auto-refresh every 30 seconds
@@ -229,6 +329,121 @@ return [
                         }
                     });
                 }
+                
+                // Webhook configuration buttons
+                const copyUrlBtn = document.getElementById('cron-copy-url-btn');
+                const copyTokenBtn = document.getElementById('cron-copy-token-btn');
+                const regenerateBtn = document.getElementById('cron-regenerate-token-btn');
+                
+                if (copyUrlBtn) {
+                    copyUrlBtn.addEventListener('click', () => this.copyToClipboard('cron-webhook-url', 'Webhook URL copied!'));
+                }
+                
+                if (copyTokenBtn) {
+                    copyTokenBtn.addEventListener('click', () => this.copyToClipboard('cron-secret-token', 'Token copied!'));
+                }
+                
+                if (regenerateBtn) {
+                    regenerateBtn.addEventListener('click', () => this.openRegenerateModal());
+                }
+                
+                // Regenerate modal
+                const regenerateClose = document.getElementById('cron-regenerate-close');
+                const regenerateCancel = document.getElementById('cron-regenerate-cancel');
+                const regenerateConfirm = document.getElementById('cron-regenerate-confirm');
+                
+                if (regenerateClose) regenerateClose.addEventListener('click', () => this.closeRegenerateModal());
+                if (regenerateCancel) regenerateCancel.addEventListener('click', () => this.closeRegenerateModal());
+                if (regenerateConfirm) regenerateConfirm.addEventListener('click', () => this.regenerateToken());
+            },
+            
+            async loadWebhookConfig() {
+                try {
+                    const response = await fetch('/api/admin/cron/webhook');
+                    const data = await response.json();
+                    
+                    if (data.success && data.data) {
+                        this.webhookToken = data.data.token;
+                        this.updateWebhookDisplay(data.data);
+                    } else {
+                        // Fallback: Generate URL with placeholder
+                        this.updateWebhookDisplay({
+                            token: 'Not configured',
+                            url: window.location.origin + '/api/webcron/poll?token=YOUR_TOKEN'
+                        });
+                    }
+                } catch (error) {
+                    console.error('[Cron] Failed to load webhook config:', error);
+                    // Show placeholder on error
+                    document.getElementById('cron-webhook-url').value = 'Failed to load';
+                    document.getElementById('cron-secret-token').value = 'Failed to load';
+                }
+            },
+            
+            updateWebhookDisplay(data) {
+                const urlInput = document.getElementById('cron-webhook-url');
+                const tokenInput = document.getElementById('cron-secret-token');
+                
+                if (urlInput) {
+                    urlInput.value = data.url || window.location.origin + '/api/webcron/poll?token=' + (data.token || 'YOUR_TOKEN');
+                }
+                
+                if (tokenInput) {
+                    tokenInput.value = data.token || 'Not configured';
+                }
+            },
+            
+            copyToClipboard(inputId, successMessage) {
+                const input = document.getElementById(inputId);
+                if (!input) return;
+                
+                navigator.clipboard.writeText(input.value).then(() => {
+                    this.showAlert('cron-config-alert', successMessage, 'success');
+                }).catch(err => {
+                    console.error('[Cron] Copy failed:', err);
+                    // Fallback for older browsers
+                    input.select();
+                    document.execCommand('copy');
+                    this.showAlert('cron-config-alert', successMessage, 'success');
+                });
+            },
+            
+            openRegenerateModal() {
+                document.getElementById('cron-regenerate-modal').classList.add('show');
+            },
+            
+            closeRegenerateModal() {
+                document.getElementById('cron-regenerate-modal').classList.remove('show');
+            },
+            
+            async regenerateToken() {
+                const confirmBtn = document.getElementById('cron-regenerate-confirm');
+                confirmBtn.disabled = true;
+                confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Regenerating...';
+                
+                try {
+                    const response = await fetch('/api/admin/cron/webhook/regenerate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.closeRegenerateModal();
+                        this.webhookToken = data.data.token;
+                        this.updateWebhookDisplay(data.data);
+                        this.showAlert('cron-config-alert', 'Token regenerated successfully! Update your cron service with the new URL.', 'success');
+                    } else {
+                        this.showAlert('cron-config-alert', data.error || 'Failed to regenerate token', 'error');
+                    }
+                } catch (error) {
+                    console.error('[Cron] Regenerate failed:', error);
+                    this.showAlert('cron-config-alert', 'Failed to regenerate token: ' + error.message, 'error');
+                } finally {
+                    confirmBtn.disabled = false;
+                    confirmBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" style="margin-right: 0.25rem;"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/></svg> Regenerate Token';
+                }
             },
             
             async loadStatus() {
@@ -250,15 +465,34 @@ return [
                 const lastExec = document.getElementById('cron-last-execution');
                 const execCount = document.getElementById('cron-executions-count');
                 
-                // Determine status
+                // Determine status based on executions in last hour
+                // For minutely cron: Healthy >55, Delayed <30, Stale <1
                 let status = 'warning';
                 let statusText = 'Unknown';
                 
-                if (data.minutes_ago !== null) {
-                    if (data.minutes_ago <= 20) {
+                const execsLastHour = data.executions_last_hour ?? null;
+                
+                if (execsLastHour !== null) {
+                    if (execsLastHour > 55) {
                         status = 'success';
                         statusText = 'Healthy';
-                    } else if (data.minutes_ago <= 60) {
+                    } else if (execsLastHour >= 1 && execsLastHour < 30) {
+                        status = 'warning';
+                        statusText = 'Delayed';
+                    } else if (execsLastHour < 1) {
+                        status = 'error';
+                        statusText = 'Stale';
+                    } else {
+                        // 30-55 range - still acceptable but borderline
+                        status = 'warning';
+                        statusText = 'Degraded';
+                    }
+                } else if (data.minutes_ago !== null) {
+                    // Fallback to time-based if executions_last_hour not available
+                    if (data.minutes_ago <= 5) {
+                        status = 'success';
+                        statusText = 'Healthy';
+                    } else if (data.minutes_ago <= 30) {
                         status = 'warning';
                         statusText = 'Delayed';
                     } else {
@@ -266,7 +500,7 @@ return [
                         statusText = 'Stale';
                     }
                 } else if (data.status === 'never_run') {
-                    status = 'warning';
+                    status = 'error';
                     statusText = 'Never Run';
                 }
                 
@@ -302,8 +536,14 @@ return [
                 }
                 
                 if (detailSuccess) {
-                    detailSuccess.textContent = data.success_rate !== undefined ? 
-                        `${data.success_rate}%` : '—';
+                    // Show executions in last hour if available
+                    if (execsLastHour !== null) {
+                        detailSuccess.textContent = `${execsLastHour}/60`;
+                    } else if (data.success_rate !== undefined) {
+                        detailSuccess.textContent = `${data.success_rate}%`;
+                    } else {
+                        detailSuccess.textContent = '—';
+                    }
                 }
                 
                 if (detailEmails) {
@@ -406,6 +646,26 @@ return [
                     }
                 } catch (error) {
                     console.error('[Cron] Failed to load statistics:', error);
+                }
+            },
+            
+            showAlert(containerId, message, type = 'info') {
+                const container = document.getElementById(containerId);
+                if (!container) return;
+                
+                const alertClass = type === 'success' ? 'c-alert--success' : 
+                                   type === 'error' ? 'c-alert--error' : 'c-alert--info';
+                
+                container.innerHTML = `
+                    <div class="c-alert ${alertClass} is-visible">
+                        ${this.escapeHtml(message)}
+                    </div>
+                `;
+                
+                if (type !== 'error') {
+                    setTimeout(() => {
+                        container.innerHTML = '';
+                    }, 5000);
                 }
             },
             
