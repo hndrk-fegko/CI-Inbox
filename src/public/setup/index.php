@@ -1442,8 +1442,8 @@ $steps = [
                     </div>
                 </form>
                 
-            <?php elseif ($currentStep == 3): ?>
-                <!-- Step 3: Admin Account -->
+            <?php elseif ($currentStep == 4): ?>
+                <!-- Step 4: Admin Account -->
                 <h2 class="section-title">Administrator-Account</h2>
                 <p class="section-desc">Erstellen Sie den ersten Administrator-Account.</p>
                 
