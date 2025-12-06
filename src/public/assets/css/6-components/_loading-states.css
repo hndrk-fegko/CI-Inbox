@@ -1,0 +1,367 @@
+/**
+ * Loading State Component
+ * 
+ * CSS for unified loading indicators, spinners, and skeleton screens.
+ * 
+ * @since 2025-12-06 (M3 Production Readiness)
+ */
+
+/* ==========================================================================
+   LOADING SPINNER
+   ========================================================================== */
+
+.c-loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--color-neutral-300, #d1d5db);
+    border-right-color: var(--color-primary-600, #2563eb);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+.c-loading-spinner--sm {
+    width: 16px;
+    height: 16px;
+    border-width: 2px;
+}
+
+.c-loading-spinner--lg {
+    width: 32px;
+    height: 32px;
+    border-width: 3px;
+}
+
+.c-loading-spinner--white {
+    border-color: rgba(255, 255, 255, 0.3);
+    border-right-color: white;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ==========================================================================
+   LOADING STATE CONTAINER
+   ========================================================================== */
+
+.is-loading {
+    position: relative;
+    pointer-events: none;
+    cursor: wait;
+}
+
+.is-loading::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+[data-theme="dark"] .is-loading::after {
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+/* ==========================================================================
+   LOADING OVERLAY
+   ========================================================================== */
+
+.c-loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-4, 16px);
+    z-index: 9999;
+}
+
+.c-loading-overlay__spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid rgba(255, 255, 255, 0.2);
+    border-right-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+.c-loading-overlay__text {
+    color: white;
+    font-size: var(--font-size-lg, 18px);
+    font-weight: 500;
+}
+
+/* ==========================================================================
+   BUTTON LOADING STATE
+   ========================================================================== */
+
+.c-button.is-loading {
+    position: relative;
+    color: transparent !important;
+    pointer-events: none;
+}
+
+.c-button.is-loading::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 16px;
+    height: 16px;
+    margin: -8px 0 0 -8px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    opacity: 0.7;
+}
+
+.c-button--primary.is-loading::before {
+    border-color: white;
+    border-right-color: transparent;
+}
+
+/* ==========================================================================
+   INLINE LOADING TEXT
+   ========================================================================== */
+
+.c-loading-text {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-2, 8px);
+    color: var(--color-neutral-600, #4b5563);
+    font-size: var(--font-size-sm, 14px);
+}
+
+.c-loading-text::before {
+    content: "";
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--color-neutral-400, #9ca3af);
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+/* ==========================================================================
+   PULSE ANIMATION (for skeleton loaders)
+   ========================================================================== */
+
+.c-loading-pulse {
+    background: linear-gradient(
+        90deg,
+        var(--color-neutral-200, #e5e7eb) 25%,
+        var(--color-neutral-100, #f3f4f6) 50%,
+        var(--color-neutral-200, #e5e7eb) 75%
+    );
+    background-size: 200% 100%;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+[data-theme="dark"] .c-loading-pulse {
+    background: linear-gradient(
+        90deg,
+        var(--color-neutral-700, #374151) 25%,
+        var(--color-neutral-800, #1f2937) 50%,
+        var(--color-neutral-700, #374151) 75%
+    );
+}
+
+/* ==========================================================================
+   SKELETON LOADER COMPONENTS
+   ========================================================================== */
+
+.c-skeleton {
+    display: block;
+    background-color: var(--color-neutral-200, #e5e7eb);
+    border-radius: var(--border-radius-md, 6px);
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.c-skeleton--text {
+    height: 16px;
+    margin-bottom: var(--spacing-2, 8px);
+}
+
+.c-skeleton--text:last-child {
+    margin-bottom: 0;
+    width: 70%; /* Last line typically shorter */
+}
+
+.c-skeleton--avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+}
+
+.c-skeleton--button {
+    height: 36px;
+    width: 100px;
+}
+
+.c-skeleton--card {
+    height: 120px;
+    margin-bottom: var(--spacing-4, 16px);
+}
+
+[data-theme="dark"] .c-skeleton {
+    background-color: var(--color-neutral-700, #374151);
+}
+
+/* ==========================================================================
+   THREAD LIST SKELETON
+   ========================================================================== */
+
+.c-thread-skeleton {
+    display: flex;
+    gap: var(--spacing-3, 12px);
+    padding: var(--spacing-4, 16px);
+    border-bottom: 1px solid var(--color-neutral-200, #e5e7eb);
+}
+
+.c-thread-skeleton__avatar {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--color-neutral-200, #e5e7eb);
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.c-thread-skeleton__content {
+    flex: 1;
+    min-width: 0;
+}
+
+.c-thread-skeleton__line {
+    height: 16px;
+    background-color: var(--color-neutral-200, #e5e7eb);
+    border-radius: 4px;
+    margin-bottom: var(--spacing-2, 8px);
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.c-thread-skeleton__line:nth-child(1) {
+    width: 40%;
+}
+
+.c-thread-skeleton__line:nth-child(2) {
+    width: 90%;
+}
+
+.c-thread-skeleton__line:nth-child(3) {
+    width: 70%;
+}
+
+/* ==========================================================================
+   PROGRESS BAR
+   ========================================================================== */
+
+.c-progress {
+    height: 4px;
+    background-color: var(--color-neutral-200, #e5e7eb);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.c-progress__bar {
+    height: 100%;
+    background-color: var(--color-primary-600, #2563eb);
+    transition: width 0.3s ease;
+}
+
+.c-progress--indeterminate .c-progress__bar {
+    width: 30%;
+    animation: progress-indeterminate 1.5s ease-in-out infinite;
+}
+
+@keyframes progress-indeterminate {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(400%);
+    }
+}
+
+/* ==========================================================================
+   LOADING STATES FOR SPECIFIC COMPONENTS
+   ========================================================================== */
+
+/* Thread list loading */
+.c-thread-list.is-loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Thread detail loading */
+.c-thread-detail.is-loading {
+    opacity: 0.6;
+}
+
+/* Form loading */
+form.is-loading {
+    pointer-events: none;
+}
+
+form.is-loading input,
+form.is-loading textarea,
+form.is-loading select {
+    opacity: 0.5;
+}
+
+/* ==========================================================================
+   RESPONSIVE
+   ========================================================================== */
+
+@media (max-width: 480px) {
+    .c-loading-overlay__spinner {
+        width: 40px;
+        height: 40px;
+    }
+
+    .c-loading-overlay__text {
+        font-size: var(--font-size-base, 16px);
+    }
+}
+
+/* ==========================================================================
+   REDUCED MOTION
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+    .c-loading-spinner,
+    .c-loading-spinner::after,
+    .c-button.is-loading::before,
+    .c-loading-text::before,
+    .c-loading-pulse,
+    .c-skeleton {
+        animation: none;
+    }
+
+    .is-loading {
+        opacity: 0.7;
+    }
+}

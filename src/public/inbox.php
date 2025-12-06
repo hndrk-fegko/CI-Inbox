@@ -103,7 +103,9 @@ foreach ($threads as $thread) {
     <link rel="stylesheet" href="/assets/css/6-components/_skeleton.css<?= asset_version() ?>">
     <link rel="stylesheet" href="/assets/css/6-components/_keyboard-shortcuts.css<?= asset_version() ?>">
     <link rel="stylesheet" href="/assets/css/6-components/_onboarding.css<?= asset_version() ?>">
+    <link rel="stylesheet" href="/assets/css/6-components/_toast.css<?= asset_version() ?>">
     <link rel="stylesheet" href="/assets/css/7-utilities/_utilities.css<?= asset_version() ?>">
+    <link rel="stylesheet" href="/assets/css/7-utilities/_accessibility.css<?= asset_version() ?>">
     
     <!-- Theme Module -->
     <script src="/modules/theme/assets/theme-switcher.js<?= asset_version() ?>"></script>
@@ -116,7 +118,9 @@ foreach ($threads as $thread) {
     </script>
     
     <!-- Modular JavaScript Architecture -->
-    <!-- Load order: ApiClient → UiComponents → ThreadRenderer → InboxManager → Keyboard → Onboarding -->
+    <!-- Load order: ErrorHandler → Accessibility → ApiClient → UiComponents → ThreadRenderer → InboxManager → Keyboard → Onboarding -->
+    <script src="/assets/js/modules/error-handler.js<?= asset_version() ?>"></script>
+    <script src="/assets/js/modules/accessibility.js<?= asset_version() ?>"></script>
     <script src="/assets/js/modules/api-client.js<?= asset_version() ?>"></script>
     <script src="/assets/js/modules/ui-components.js<?= asset_version() ?>"></script>
     <script src="/assets/js/modules/thread-renderer.js<?= asset_version() ?>"></script>
