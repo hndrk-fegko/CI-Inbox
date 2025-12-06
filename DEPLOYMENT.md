@@ -40,7 +40,7 @@ Der Setup-Wizard kann automatisch versuchen, die Dependencies zu installieren:
 
 Falls weder Option A noch B funktionieren:
 1. Laden Sie `vendor.zip` herunter:
-   - **GitHub Release:** https://github.com/hndrk-fegko/C-IMAP/releases/latest
+   - **GitHub Release:** https://github.com/hndrk-fegko/CI-Inbox/releases/latest
    - **Direktlink:** Im Setup-Wizard unter "📦 Manuelle Installation"
 2. Entpacken Sie `vendor.zip` im Projekt-Root
 3. Das Verzeichnis `vendor/` sollte nun existieren

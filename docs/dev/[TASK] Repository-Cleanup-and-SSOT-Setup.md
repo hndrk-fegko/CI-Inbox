@@ -559,7 +559,7 @@ docs/dev/
 ### 1. Clone & Install
 ```bash
 git clone [repo-url]
-cd C-IMAP
+cd CI-Inbox
 composer install
 ```
 

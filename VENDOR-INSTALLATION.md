@@ -19,7 +19,7 @@ Sie benötigen eine manuelle vendor/ Installation wenn:
 ### Option 1: GitHub Release (empfohlen)
 
 ```
-https://github.com/hndrk-fegko/C-IMAP/releases/latest
+https://github.com/hndrk-fegko/CI-Inbox/releases/latest
 ```
 
 1. Gehen Sie zur neuesten Release-Seite
@@ -212,7 +212,7 @@ Bei CI-Inbox Updates kann es sein, dass auch Dependencies aktualisiert wurden.
 
 1. Laden Sie die **neueste** `vendor.zip` für die entsprechende Version herunter:
    ```
-   https://github.com/hndrk-fegko/C-IMAP/releases
+   https://github.com/hndrk-fegko/CI-Inbox/releases
    ```
 2. Sichern Sie Ihr aktuelles `vendor/` (optional):
    ```
@@ -242,7 +242,7 @@ Falls Sie weiterhin Probleme haben:
 
 3. **GitHub Issues:**
    ```
-   https://github.com/hndrk-fegko/C-IMAP/issues
+   https://github.com/hndrk-fegko/CI-Inbox/issues
    ```
 
 4. **Hosting-Support kontaktieren:**

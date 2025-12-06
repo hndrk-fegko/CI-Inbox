@@ -52,8 +52,8 @@ This document provides a complete reference for all REST API endpoints in CI-Inb
 **Current Implementation:** `AuthController` with session management (src/app/Controllers/AuthController.php)
 
 **Demo Credentials:**
-- Email: `demo@c-imap.local` / Password: `demo123`
-- Email: `admin@c-imap.local` / Password: `admin123`
+- Email: `demo@ci-inbox.local` / Password: `demo123`
+- Email: `admin@ci-inbox.local` / Password: `admin123`
 
 **TODO:**
 - [ ] POST /api/auth/login - API login endpoint

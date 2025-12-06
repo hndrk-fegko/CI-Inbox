@@ -4,7 +4,7 @@
 
 CI-Inbox verwandelt gemeinsam genutzte IMAP-Postfächer in kollaborative Aufgaben-Warteschlangen mit klarer Zuständigkeit, internen Notizen und vollständiger Nachvollziehbarkeit – ohne die Komplexität eines Ticketsystems.
 
-[![Status](https://img.shields.io/badge/Status-M3%20In%20Progress-yellow)](https://github.com/hndrk-fegko/C-IMAP)
+[![Status](https://img.shields.io/badge/Status-M3%20In%20Progress-yellow)](https://github.com/hndrk-fegko/CI-Inbox)
 [![PHP](https://img.shields.io/badge/PHP-8.1%2B-blue)](https://php.net)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
@@ -92,7 +92,7 @@ Die vollständige Entwicklerdokumentation finden Sie in `docs/dev/`:
 
 ```bash
 # 1. Repository klonen
-git clone https://github.com/hndrk-fegko/C-IMAP.git ci-inbox
+git clone https://github.com/hndrk-fegko/CI-Inbox.git ci-inbox
 cd ci-inbox
 
 # 2. Dependencies installieren
@@ -113,7 +113,9 @@ php -S localhost:8080 -t src/public
 
 **Oder mit XAMPP/Apache:**
 - DocumentRoot auf `src/public/` zeigen lassen
-- Virtual Host einrichten: `http://ci-inbox.local`
+- Virtual Host einrichten (z.B. `http://myproject.local`)
+  - vHost-Datei erstellen
+  - Domain in Windows `hosts`-Datei eintragen
 
 **📖 Detaillierte Installationsanleitung:** Siehe [`docs/dev/codebase.md`](docs/dev/codebase.md) → Abschnitt 2
 
@@ -229,6 +231,8 @@ Contributions sind willkommen! Siehe [CONTRIBUTING.md](CONTRIBUTING.md) für aus
 - Strict Types in allen PHP-Dateien
 - Vollständiges Logging aller Operationen
 - Layer-Abstraktion (Service → Repository Pattern)
+- Klare, strukturierte Dateien mit verständlichen Änderungen
+- **KI-Einsatz erlaubt** - Projekt wurde mit KI-Unterstützung entwickelt
 
 Weitere Details: [`docs/dev/codebase.md`](docs/dev/codebase.md) → Abschnitt 4
 
@@ -276,7 +280,7 @@ Alle Lizenzen sind MIT-kompatibel.
 
 **Fragen oder Probleme?**
 - 📖 Konsultieren Sie die [Dokumentation](docs/dev/)
-- 🐛 Öffnen Sie ein [Issue](https://github.com/hndrk-fegko/C-IMAP/issues)
+- 🐛 Öffnen Sie ein [Issue](https://github.com/hndrk-fegko/CI-Inbox/issues)
 - 💬 Kontakt: [hendrik.dreis@feg-koblenz.de](mailto:hendrik.dreis@feg-koblenz.de)
 
 ---

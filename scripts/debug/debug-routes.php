@@ -22,7 +22,7 @@ $routes = $routeCollector->getRoutes();
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Registered Routes - C-IMAP</title>
+    <title>Registered Routes - CI-Inbox</title>
     <style>
         body { font-family: monospace; padding: 20px; }
         h1 { color: #3b82f6; }

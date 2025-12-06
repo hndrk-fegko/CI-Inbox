@@ -78,7 +78,7 @@ C:\xampp\php\php.exe src/modules/imap/tests/setup-autodiscover.php
 
 **Verwendung:**
 ```bash
-cd C:\Users\Dienstlaptop-HD\Documents\Privat-Nextcloud\Private_Dateien\Tools_und_Systeme\C-IMAP
+cd C:\Users\Dienstlaptop-HD\Documents\Privat-Nextcloud\Private_Dateien\Tools_und_Systeme\CI-Inbox
 
 C:\xampp\php\php.exe src/modules/imap/tests/mercury-quick-test.php
 ```

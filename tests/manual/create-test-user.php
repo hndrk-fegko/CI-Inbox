@@ -24,7 +24,7 @@ if ($existingUser) {
     $user = new User();
     $user->id = 1;
     $user->name = 'Test User';
-    $user->email = 'test@c-imap.local';
+    $user->email = 'test@ci-inbox.local';
     $user->password = password_hash('test1234', PASSWORD_BCRYPT);
     $user->timezone = 'UTC';
     $user->language = 'de';

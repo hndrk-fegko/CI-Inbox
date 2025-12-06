@@ -70,7 +70,7 @@ foreach ($threads as $thread) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inbox - C-IMAP</title>
+    <title>Inbox - CI-Inbox</title>
     <!-- CSS in ITCSS order - cache busting via asset_version() from config/version.php -->
     <link rel="stylesheet" href="/assets/css/1-settings/_variables.css<?= asset_version() ?>">
     <link rel="stylesheet" href="/assets/css/3-generic/_reset.css<?= asset_version() ?>">
@@ -135,7 +135,7 @@ foreach ($threads as $thread) {
                 <svg class="c-header__logo" width="32" height="32" viewBox="0 0 48 48" fill="none">
                     <path d="M12 18L24 26L36 18M12 18V30C12 30.5304 12.2107 31.0391 12.5858 31.4142C12.9609 31.7893 13.4696 32 14 32H34C34.5304 32 35.0391 31.7893 35.4142 31.4142C35.7893 31.0391 36 30.5304 36 30V18M12 18C12 17.4696 12.2107 16.9609 12.5858 16.5858C12.9609 16.2107 13.4696 16 14 16H34C34.5304 16 35.0391 16.2107 35.4142 16.5858C35.7893 16.9609 36 17.4696 36 18Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                <h1 class="c-header__title">C-IMAP</h1>
+                <h1 class="c-header__title">CI-Inbox</h1>
             </a>
         </div>
         
