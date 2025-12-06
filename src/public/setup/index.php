@@ -42,9 +42,17 @@ if (!$vendorExists && isset($_GET['action']) && $_GET['action'] === 'auto_instal
         $composerCommand = null;
         
         if (file_exists($rootDir . 'composer.phar')) {
-            $composerCommand = 'php ' . $rootDir . 'composer.phar';
-        } elseif (@shell_exec('which composer 2>/dev/null') || @shell_exec('where composer 2>nul')) {
-            $composerCommand = 'composer';
+            $composerCommand = 'composer.phar';
+        } else {
+            $whichComposer = @shell_exec('which composer 2>/dev/null');
+            if (!empty($whichComposer)) {
+                $composerCommand = 'composer';
+            } else {
+                $whereComposer = @shell_exec('where composer 2>nul');
+                if (!empty($whereComposer)) {
+                    $composerCommand = 'composer';
+                }
+            }
         }
         
         if (!$composerCommand) {
@@ -54,8 +62,17 @@ if (!$vendorExists && isset($_GET['action']) && $_GET['action'] === 'auto_instal
             ];
         }
         
-        // Run composer install
-        $command = "cd {$rootDir} && {$composerCommand} install --no-dev --optimize-autoloader --no-interaction 2>&1";
+        // Run composer install (with proper escaping)
+        $escapedRootDir = escapeshellarg($rootDir);
+        $command = "cd {$escapedRootDir} && ";
+        
+        if ($composerCommand === 'composer.phar') {
+            $command .= "php " . escapeshellarg($rootDir . 'composer.phar');
+        } else {
+            $command .= "composer";
+        }
+        
+        $command .= " install --no-dev --optimize-autoloader --no-interaction 2>&1";
         
         $output = [];
         $returnVar = 0;
@@ -620,36 +637,40 @@ function installComposerDependencies(): array
     // Check if composer is available
     $composerCommand = null;
     
-    // Try global composer first
-    $whichComposer = @shell_exec('which composer 2>/dev/null');
-    $whereComposer = @shell_exec('where composer 2>nul');
-    
-    if (!empty($whichComposer) || !empty($whereComposer)) {
-        $composerCommand = 'composer';
-    }
-    // Try composer.phar in project root
-    elseif (file_exists($rootDir . 'composer.phar')) {
-        $composerCommand = 'php ' . $rootDir . 'composer.phar';
-    }
-    // Try to download composer.phar
-    else {
-        try {
-            $composerInstaller = @file_get_contents('https://getcomposer.org/installer');
-            if ($composerInstaller) {
-                file_put_contents($rootDir . 'composer-setup.php', $composerInstaller);
-                @exec('php ' . $rootDir . 'composer-setup.php --install-dir=' . $rootDir . ' --filename=composer.phar 2>&1', $output, $returnVar);
-                @unlink($rootDir . 'composer-setup.php');
-                
-                if ($returnVar === 0 && file_exists($rootDir . 'composer.phar')) {
-                    $composerCommand = 'php ' . $rootDir . 'composer.phar';
+    // Try composer.phar in project root first
+    if (file_exists($rootDir . 'composer.phar')) {
+        $composerCommand = 'composer.phar';
+    } else {
+        // Try global composer
+        $whichComposer = @shell_exec('which composer 2>/dev/null');
+        if (!empty($whichComposer)) {
+            $composerCommand = 'composer';
+        } else {
+            $whereComposer = @shell_exec('where composer 2>nul');
+            if (!empty($whereComposer)) {
+                $composerCommand = 'composer';
+            } else {
+                // Try to download composer.phar
+                try {
+                    $composerInstaller = @file_get_contents('https://getcomposer.org/installer');
+                    if ($composerInstaller) {
+                        file_put_contents($rootDir . 'composer-setup.php', $composerInstaller);
+                        $escapedRootDir = escapeshellarg($rootDir);
+                        @exec('php ' . escapeshellarg($rootDir . 'composer-setup.php') . ' --install-dir=' . $escapedRootDir . ' --filename=composer.phar 2>&1', $output, $returnVar);
+                        @unlink($rootDir . 'composer-setup.php');
+                        
+                        if ($returnVar === 0 && file_exists($rootDir . 'composer.phar')) {
+                            $composerCommand = 'composer.phar';
+                        }
+                    }
+                } catch (Exception $e) {
+                    return [
+                        'success' => false,
+                        'message' => 'Composer konnte nicht heruntergeladen werden: ' . $e->getMessage() . 
+                                   ' Bitte vendor.zip manuell installieren.'
+                    ];
                 }
             }
-        } catch (Exception $e) {
-            return [
-                'success' => false,
-                'message' => 'Composer konnte nicht heruntergeladen werden: ' . $e->getMessage() . 
-                           ' Bitte vendor.zip manuell installieren.'
-            ];
         }
     }
     
@@ -661,8 +682,17 @@ function installComposerDependencies(): array
         ];
     }
     
-    // Run composer install with timeout handling
-    $command = "cd {$rootDir} && timeout 300 {$composerCommand} install --no-dev --optimize-autoloader --no-interaction 2>&1";
+    // Run composer install with timeout handling (with proper escaping)
+    $escapedRootDir = escapeshellarg($rootDir);
+    $command = "cd {$escapedRootDir} && timeout 300 ";
+    
+    if ($composerCommand === 'composer.phar') {
+        $command .= "php " . escapeshellarg($rootDir . 'composer.phar');
+    } else {
+        $command .= "composer";
+    }
+    
+    $command .= " install --no-dev --optimize-autoloader --no-interaction 2>&1";
     
     // Try with timeout, fallback without
     $output = [];
@@ -671,7 +701,15 @@ function installComposerDependencies(): array
     
     // If timeout command doesn't exist, try without
     if ($returnVar === 127 || empty($output)) {
-        $command = "cd {$rootDir} && {$composerCommand} install --no-dev --optimize-autoloader --no-interaction 2>&1";
+        $command = "cd {$escapedRootDir} && ";
+        
+        if ($composerCommand === 'composer.phar') {
+            $command .= "php " . escapeshellarg($rootDir . 'composer.phar');
+        } else {
+            $command .= "composer";
+        }
+        
+        $command .= " install --no-dev --optimize-autoloader --no-interaction 2>&1";
         @exec($command, $output, $returnVar);
     }
     
@@ -1271,9 +1309,6 @@ $steps = [
             
             <?php if (isset($_GET['installed'])): ?>
                 <div class="alert alert-success">✅ Dependencies erfolgreich installiert! Bitte prüfen Sie die Ergebnisse unten.</div>
-            <?php endif; ?>
-            <?php if ($error): ?>
-                <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
             <?php endif; ?>
             
             <?php if ($currentStep == 1): ?>
