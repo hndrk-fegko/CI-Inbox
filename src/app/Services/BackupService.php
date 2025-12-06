@@ -266,12 +266,6 @@ class BackupService
                 $filename = basename($file);
                 
                 if (preg_match($pattern, $filename, $matches)) {
-                    // Parse timestamp from filename
-                    $dateStr = str_replace('_', ' ', $matches[1]);
-                    $dateStr = str_replace('-', ':', substr($dateStr, 11));
-                    $dateStr = substr($matches[1], 0, 10) . ' ' . $dateStr;
-                    $timestamp = strtotime(str_replace('_', ' ', str_replace('-', ':', substr($matches[1], 11, 8))));
-                    
                     // Get file size
                     $size = @ftp_size($connection, $file);
                     if ($size === -1) {

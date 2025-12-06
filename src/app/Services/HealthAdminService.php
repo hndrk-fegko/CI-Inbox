@@ -14,6 +14,31 @@ use CiInbox\Modules\Config\ConfigService;
 
 class HealthAdminService
 {
+    /**
+     * Retention periods for cleanup operations (in days)
+     */
+    private const LOG_RETENTION_DAYS = 7;
+    private const BACKUP_RETENTION_DAYS = 30;
+    private const SESSION_RETENTION_HOURS = 24;
+    private const QUEUE_RETENTION_DAYS = 7;
+    
+    /**
+     * Cron health thresholds (in minutes)
+     */
+    private const CRON_HEALTHY_THRESHOLD_MINUTES = 30;
+    private const CRON_WARNING_THRESHOLD_MINUTES = 60;
+    
+    /**
+     * Disk space thresholds (percentage)
+     */
+    private const DISK_CRITICAL_PERCENT = 5;
+    private const DISK_WARNING_PERCENT = 15;
+    
+    /**
+     * Queue stuck thresholds
+     */
+    private const QUEUE_CRITICAL_STUCK = 10;
+    
     private string $dataDir;
     
     public function __construct(
@@ -194,8 +219,8 @@ class HealthAdminService
             
             $percentFree = ($free / $total) * 100;
             
-            if ($percentFree < 5) return 'critical';
-            if ($percentFree < 15) return 'warning';
+            if ($percentFree < self::DISK_CRITICAL_PERCENT) return 'critical';
+            if ($percentFree < self::DISK_WARNING_PERCENT) return 'warning';
             return 'healthy';
             
         } catch (\Exception $e) {
@@ -245,8 +270,8 @@ class HealthAdminService
             $minutesAgo = (time() - $lastTime) / 60;
             
             // Based on cron thresholds from 030-cron module
-            if ($minutesAgo < 30) return 'healthy';
-            if ($minutesAgo < 60) return 'warning';
+            if ($minutesAgo < self::CRON_HEALTHY_THRESHOLD_MINUTES) return 'healthy';
+            if ($minutesAgo < self::CRON_WARNING_THRESHOLD_MINUTES) return 'warning';
             return 'critical';
             
         } catch (\Exception $e) {
@@ -285,7 +310,7 @@ class HealthAdminService
             $stmt->execute();
             $stuck = (int)$stmt->fetchColumn();
             
-            if ($stuck > 10) return 'critical';
+            if ($stuck > self::QUEUE_CRITICAL_STUCK) return 'critical';
             if ($stuck > 0) return 'warning';
             return 'healthy';
             
@@ -584,7 +609,7 @@ class HealthAdminService
         
         if (is_dir($logsDir)) {
             $files = glob($logsDir . '/*.log');
-            $cutoff = strtotime('-7 days');
+            $cutoff = strtotime('-' . self::LOG_RETENTION_DAYS . ' days');
             
             foreach ($files as $file) {
                 if (filemtime($file) < $cutoff) {
@@ -598,7 +623,7 @@ class HealthAdminService
         $backupsDir = $this->dataDir . '/backups';
         if (is_dir($backupsDir)) {
             $files = glob($backupsDir . '/backup-*.sql.gz');
-            $cutoff = strtotime('-30 days');
+            $cutoff = strtotime('-' . self::BACKUP_RETENTION_DAYS . ' days');
             
             foreach ($files as $file) {
                 if (filemtime($file) < $cutoff) {
@@ -644,7 +669,8 @@ class HealthAdminService
             $reset = $stmt->rowCount();
             
             // Delete very old stuck items
-            $stmt = $pdo->prepare("DELETE FROM email_queue WHERE created_at < DATE_SUB(NOW(), INTERVAL 7 DAY)");
+            $retentionDays = self::QUEUE_RETENTION_DAYS;
+            $stmt = $pdo->prepare("DELETE FROM email_queue WHERE created_at < DATE_SUB(NOW(), INTERVAL {$retentionDays} DAY)");
             $stmt->execute();
             $deleted = $stmt->rowCount();
             
@@ -670,7 +696,7 @@ class HealthAdminService
         
         if (is_dir($sessionPath)) {
             $files = glob($sessionPath . '/sess_*');
-            $cutoff = strtotime('-24 hours');
+            $cutoff = strtotime('-' . self::SESSION_RETENTION_HOURS . ' hours');
             
             foreach ($files as $file) {
                 if (filemtime($file) < $cutoff) {
