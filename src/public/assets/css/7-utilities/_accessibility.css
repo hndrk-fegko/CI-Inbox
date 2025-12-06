@@ -1,0 +1,281 @@
+/**
+ * Accessibility Styles
+ * 
+ * Screen reader only content, skip links, focus indicators,
+ * and keyboard navigation enhancements.
+ * 
+ * @since 2025-12-06 (M3 Production Readiness)
+ */
+
+/* ==========================================================================
+   SCREEN READER ONLY
+   ========================================================================== */
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+.sr-only-focusable:focus,
+.sr-only-focusable:active {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+}
+
+/* ==========================================================================
+   SKIP LINKS
+   ========================================================================== */
+
+.skip-links {
+    position: fixed;
+    top: -100px;
+    left: 0;
+    z-index: 10000;
+    width: 100%;
+    background-color: var(--color-primary-600, #2563eb);
+}
+
+.skip-link {
+    position: absolute;
+    left: -9999px;
+    display: inline-block;
+    padding: var(--spacing-3, 12px) var(--spacing-4, 16px);
+    color: white;
+    font-weight: 600;
+    text-decoration: none;
+    background-color: var(--color-primary-600, #2563eb);
+    transition: left 0.2s ease-in-out;
+}
+
+.skip-link:focus {
+    position: relative;
+    left: 0;
+    top: 0;
+    z-index: 10001;
+    outline: 2px solid white;
+    outline-offset: -4px;
+}
+
+/* ==========================================================================
+   FOCUS INDICATORS
+   ========================================================================== */
+
+/* Remove default outline for mouse users, keep for keyboard */
+*:focus {
+    outline: none;
+}
+
+*:focus-visible {
+    outline: 2px solid var(--color-primary-600, #2563eb);
+    outline-offset: 2px;
+    border-radius: var(--border-radius-sm, 4px);
+}
+
+/* High contrast focus for buttons */
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible {
+    outline: 3px solid var(--color-primary-600, #2563eb);
+    outline-offset: 2px;
+}
+
+/* Focus within containers */
+.c-thread-item:focus-within {
+    outline: 2px solid var(--color-primary-500, #3b82f6);
+    outline-offset: -2px;
+    z-index: 1;
+}
+
+/* ==========================================================================
+   KEYBOARD NAVIGATION
+   ========================================================================== */
+
+/* Show keyboard focus on interactive elements */
+[tabindex]:not([tabindex="-1"]):focus-visible {
+    outline: 2px solid var(--color-primary-600, #2563eb);
+    outline-offset: 2px;
+}
+
+/* Keyboard navigation state for lists */
+.c-thread-item:focus {
+    background-color: var(--color-primary-50, #eff6ff);
+    cursor: pointer;
+}
+
+.c-thread-item:focus .c-thread-item__subject {
+    text-decoration: underline;
+}
+
+/* Modal keyboard trap indicator */
+.c-modal[aria-modal="true"] {
+    /* Ensure modal is announced */
+}
+
+/* ==========================================================================
+   LOADING STATES (ARIA)
+   ========================================================================== */
+
+[aria-busy="true"] {
+    cursor: wait;
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+[aria-busy="true"]::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid var(--color-primary-500, #3b82f6);
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ==========================================================================
+   ERROR STATES (VALIDATION)
+   ========================================================================== */
+
+.c-input.has-error,
+input.has-error {
+    border-color: var(--color-danger, #ef4444);
+    background-color: #fef2f2;
+}
+
+.c-input.has-error:focus,
+input.has-error:focus {
+    outline-color: var(--color-danger, #ef4444);
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.c-input-error {
+    display: block;
+    margin-top: var(--spacing-1, 4px);
+    font-size: var(--font-size-sm, 14px);
+    color: var(--color-danger, #ef4444);
+}
+
+/* ==========================================================================
+   HIGH CONTRAST MODE
+   ========================================================================== */
+
+@media (prefers-contrast: high) {
+    *:focus-visible {
+        outline-width: 3px;
+        outline-offset: 3px;
+    }
+
+    .c-button {
+        border-width: 2px;
+    }
+
+    .c-thread-item:hover,
+    .c-thread-item:focus {
+        outline: 3px solid currentColor;
+    }
+}
+
+/* ==========================================================================
+   REDUCED MOTION
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    .c-toast {
+        animation: none;
+    }
+
+    .c-modal {
+        transition: none;
+    }
+}
+
+/* ==========================================================================
+   PRINT ACCESSIBILITY
+   ========================================================================== */
+
+@media print {
+    .skip-links,
+    .sr-only {
+        display: none;
+    }
+
+    *:focus,
+    *:focus-visible {
+        outline: none;
+    }
+}
+
+/* ==========================================================================
+   DARK MODE ACCESSIBILITY
+   ========================================================================== */
+
+[data-theme="dark"] {
+    /* Ensure sufficient contrast in dark mode */
+}
+
+[data-theme="dark"] *:focus-visible {
+    outline-color: var(--color-primary-400, #60a5fa);
+}
+
+[data-theme="dark"] .skip-link {
+    background-color: var(--color-primary-700, #1d4ed8);
+}
+
+/* ==========================================================================
+   ARIA LIVE REGIONS (HIDDEN BUT ACCESSIBLE)
+   ========================================================================== */
+
+.aria-live-polite,
+.aria-live-assertive,
+.aria-live-status {
+    /* Already using .sr-only class */
+}
+
+/* ==========================================================================
+   KEYBOARD SHORTCUTS HINT
+   ========================================================================== */
+
+.keyboard-shortcut {
+    display: inline-block;
+    padding: 2px 6px;
+    font-size: var(--font-size-xs, 12px);
+    font-family: var(--font-family-mono, monospace);
+    color: var(--color-neutral-600, #4b5563);
+    background-color: var(--color-neutral-100, #f3f4f6);
+    border: 1px solid var(--color-neutral-300, #d1d5db);
+    border-radius: 3px;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="dark"] .keyboard-shortcut {
+    color: var(--color-neutral-300, #d1d5db);
+    background-color: var(--color-neutral-800, #1f2937);
+    border-color: var(--color-neutral-600, #4b5563);
+}
