@@ -109,13 +109,49 @@ class BackupService
     }
 
     /**
-     * List all backups
+     * List all backups (local and external)
      *
+     * @param bool $includeExternal Whether to include external storage backups
      * @return array List of backups with metadata
      */
-    public function listBackups(): array
+    public function listBackups(bool $includeExternal = true): array
     {
         $backups = [];
+        
+        // List local backups
+        $localBackups = $this->listLocalBackups();
+        foreach ($localBackups as $backup) {
+            $backup['location'] = 'local';
+            $backups[] = $backup;
+        }
+        
+        // List external backups if configured and requested
+        if ($includeExternal) {
+            $externalBackups = $this->listExternalBackups();
+            foreach ($externalBackups as $backup) {
+                $backup['location'] = 'external';
+                $backups[] = $backup;
+            }
+        }
+
+        // Sort by date descending
+        usort($backups, function ($a, $b) {
+            return $b['created_at'] - $a['created_at'];
+        });
+
+        return $backups;
+    }
+    
+    /**
+     * List local backups only
+     *
+     * @return array List of local backups
+     */
+    public function listLocalBackups(): array
+    {
+        $backups = [];
+        
+        // Pattern: backup-YYYY-MM-DD_HH-MM-SS.sql.gz
         $files = glob($this->backupDir . '/backup-*.sql.gz');
 
         foreach ($files as $file) {
@@ -125,16 +161,543 @@ class BackupService
                 'size_mb' => round(filesize($file) / 1024 / 1024, 2),
                 'created_at' => filemtime($file),
                 'created_at_human' => date('Y-m-d H:i:s', filemtime($file)),
-                'path' => $file
+                'path' => $file,
+                'location' => 'local',
+                'downloadable' => true
             ];
         }
 
-        // Sort by date descending
-        usort($backups, function ($a, $b) {
-            return $b['created_at'] - $a['created_at'];
-        });
-
         return $backups;
+    }
+    
+    /**
+     * List external backups from FTP/WebDAV storage
+     * 
+     * Discovery is based on filename pattern: backup-YYYY-MM-DD_HH-MM-SS.sql.gz
+     * This ensures consistency between local and external backups.
+     *
+     * @return array List of external backups
+     */
+    public function listExternalBackups(): array
+    {
+        try {
+            $config = $this->getExternalStorageRaw();
+            
+            if (empty($config['type']) || $config['type'] === 'none') {
+                return [];
+            }
+            
+            if ($config['type'] === 'ftp') {
+                return $this->listFtpBackups($config);
+            } elseif ($config['type'] === 'webdav') {
+                return $this->listWebDavBackups($config);
+            }
+            
+            return [];
+            
+        } catch (\Exception $e) {
+            $this->logger->warning('Failed to list external backups', [
+                'error' => $e->getMessage()
+            ]);
+            return [];
+        }
+    }
+    
+    /**
+     * List backups from FTP storage
+     * 
+     * @param array $config FTP configuration
+     * @return array List of backups
+     */
+    private function listFtpBackups(array $config): array
+    {
+        $backups = [];
+        $host = $config['host'];
+        $port = (int)($config['port'] ?? 21);
+        $username = $config['username'] ?? '';
+        $password = $config['password'] ?? '';
+        $ssl = $config['ssl'] ?? false;
+        $path = $config['path'] ?? '/backups';
+        
+        try {
+            // Connect
+            if ($ssl) {
+                $connection = @ftp_ssl_connect($host, $port, 15);
+            } else {
+                $connection = @ftp_connect($host, $port, 15);
+            }
+            
+            if (!$connection) {
+                $this->logger->debug('Cannot connect to FTP for backup listing');
+                return [];
+            }
+            
+            // Login
+            if (!empty($username)) {
+                if (!@ftp_login($connection, $username, $password)) {
+                    ftp_close($connection);
+                    return [];
+                }
+            }
+            
+            ftp_pasv($connection, true);
+            
+            // Change to backup directory
+            if (!empty($path) && $path !== '/') {
+                if (!@ftp_chdir($connection, $path)) {
+                    ftp_close($connection);
+                    return [];
+                }
+            }
+            
+            // List files - discover by filename pattern
+            $files = @ftp_nlist($connection, '.');
+            
+            if ($files === false) {
+                ftp_close($connection);
+                return [];
+            }
+            
+            // Filter and process backup files
+            // Pattern: backup-YYYY-MM-DD_HH-MM-SS.sql.gz
+            $pattern = '/^backup-(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})\.sql\.gz$/';
+            
+            foreach ($files as $file) {
+                $filename = basename($file);
+                
+                if (preg_match($pattern, $filename, $matches)) {
+                    // Parse timestamp from filename
+                    $dateStr = str_replace('_', ' ', $matches[1]);
+                    $dateStr = str_replace('-', ':', substr($dateStr, 11));
+                    $dateStr = substr($matches[1], 0, 10) . ' ' . $dateStr;
+                    $timestamp = strtotime(str_replace('_', ' ', str_replace('-', ':', substr($matches[1], 11, 8))));
+                    
+                    // Get file size
+                    $size = @ftp_size($connection, $file);
+                    if ($size === -1) {
+                        $size = 0;
+                    }
+                    
+                    // Parse date from filename for reliable timestamp
+                    $dateParts = explode('_', $matches[1]);
+                    $datePart = $dateParts[0]; // YYYY-MM-DD
+                    $timePart = str_replace('-', ':', $dateParts[1]); // HH:MM:SS
+                    $timestamp = strtotime("{$datePart} {$timePart}");
+                    
+                    $backups[] = [
+                        'filename' => $filename,
+                        'size' => $size,
+                        'size_mb' => round($size / 1024 / 1024, 2),
+                        'created_at' => $timestamp,
+                        'created_at_human' => date('Y-m-d H:i:s', $timestamp),
+                        'path' => rtrim($path, '/') . '/' . $filename,
+                        'location' => 'external',
+                        'storage_type' => 'ftp',
+                        'downloadable' => true
+                    ];
+                }
+            }
+            
+            ftp_close($connection);
+            
+            $this->logger->debug('Listed FTP backups', ['count' => count($backups)]);
+            
+            return $backups;
+            
+        } catch (\Exception $e) {
+            $this->logger->warning('FTP backup listing failed', [
+                'error' => $e->getMessage()
+            ]);
+            return [];
+        }
+    }
+    
+    /**
+     * List backups from WebDAV storage
+     * 
+     * @param array $config WebDAV configuration
+     * @return array List of backups
+     */
+    private function listWebDavBackups(array $config): array
+    {
+        $backups = [];
+        $host = $config['host'];
+        $port = (int)($config['port'] ?? 443);
+        $username = $config['username'] ?? '';
+        $password = $config['password'] ?? '';
+        $ssl = $config['ssl'] ?? true;
+        $path = $config['path'] ?? '/backups';
+        
+        try {
+            // Build URL
+            $protocol = $ssl ? 'https' : 'http';
+            $url = "{$protocol}://{$host}:{$port}" . $path;
+            
+            // PROPFIND request for directory listing
+            $ch = curl_init();
+            curl_setopt_array($ch, [
+                CURLOPT_URL => $url,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_CUSTOMREQUEST => 'PROPFIND',
+                CURLOPT_HTTPHEADER => [
+                    'Depth: 1',
+                    'Content-Type: application/xml'
+                ],
+                CURLOPT_TIMEOUT => 30,
+                CURLOPT_SSL_VERIFYPEER => $ssl,
+                CURLOPT_SSL_VERIFYHOST => $ssl ? 2 : 0
+            ]);
+            
+            if (!empty($username)) {
+                curl_setopt($ch, CURLOPT_USERPWD, "{$username}:{$password}");
+            }
+            
+            // Request body for PROPFIND
+            $propfindBody = '<?xml version="1.0" encoding="utf-8"?>
+                <propfind xmlns="DAV:">
+                    <prop>
+                        <getcontentlength/>
+                        <getlastmodified/>
+                        <displayname/>
+                    </prop>
+                </propfind>';
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $propfindBody);
+            
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            
+            if ($httpCode !== 207 && $httpCode !== 200) {
+                return [];
+            }
+            
+            // Parse XML response to extract file info
+            // Pattern: backup-YYYY-MM-DD_HH-MM-SS.sql.gz
+            $pattern = '/backup-(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})\.sql\.gz/';
+            
+            // Simple regex-based parsing of WebDAV response
+            preg_match_all('/<d:href>([^<]*backup-[^<]+\.sql\.gz)<\/d:href>/i', $response, $hrefMatches);
+            preg_match_all('/<D:href>([^<]*backup-[^<]+\.sql\.gz)<\/D:href>/i', $response, $hrefMatches2);
+            
+            $hrefs = array_merge($hrefMatches[1] ?? [], $hrefMatches2[1] ?? []);
+            
+            foreach ($hrefs as $href) {
+                $filename = basename($href);
+                
+                if (preg_match($pattern, $filename, $matches)) {
+                    // Parse date from filename
+                    $dateParts = explode('_', $matches[1]);
+                    $datePart = $dateParts[0];
+                    $timePart = str_replace('-', ':', $dateParts[1]);
+                    $timestamp = strtotime("{$datePart} {$timePart}");
+                    
+                    $backups[] = [
+                        'filename' => $filename,
+                        'size' => 0, // Would need separate request per file
+                        'size_mb' => 0,
+                        'created_at' => $timestamp,
+                        'created_at_human' => date('Y-m-d H:i:s', $timestamp),
+                        'path' => rtrim($path, '/') . '/' . $filename,
+                        'location' => 'external',
+                        'storage_type' => 'webdav',
+                        'downloadable' => true
+                    ];
+                }
+            }
+            
+            $this->logger->debug('Listed WebDAV backups', ['count' => count($backups)]);
+            
+            return $backups;
+            
+        } catch (\Exception $e) {
+            $this->logger->warning('WebDAV backup listing failed', [
+                'error' => $e->getMessage()
+            ]);
+            return [];
+        }
+    }
+    
+    /**
+     * Upload backup to external storage
+     * 
+     * @param string $localPath Local file path
+     * @param string $filename Backup filename
+     * @return array Upload result
+     */
+    public function uploadToExternalStorage(string $localPath, string $filename): array
+    {
+        try {
+            $config = $this->getExternalStorageRaw();
+            
+            if (empty($config['type']) || $config['type'] === 'none') {
+                return [
+                    'success' => false,
+                    'error' => 'No external storage configured'
+                ];
+            }
+            
+            if ($config['type'] === 'ftp') {
+                return $this->uploadToFtp($localPath, $filename, $config);
+            } elseif ($config['type'] === 'webdav') {
+                return $this->uploadToWebDav($localPath, $filename, $config);
+            }
+            
+            return [
+                'success' => false,
+                'error' => 'Unknown storage type'
+            ];
+            
+        } catch (\Exception $e) {
+            $this->logger->error('External storage upload failed', [
+                'filename' => $filename,
+                'error' => $e->getMessage()
+            ]);
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Upload file to FTP
+     */
+    private function uploadToFtp(string $localPath, string $filename, array $config): array
+    {
+        $host = $config['host'];
+        $port = (int)($config['port'] ?? 21);
+        $username = $config['username'] ?? '';
+        $password = $config['password'] ?? '';
+        $ssl = $config['ssl'] ?? false;
+        $path = $config['path'] ?? '/backups';
+        
+        try {
+            if ($ssl) {
+                $connection = @ftp_ssl_connect($host, $port, 30);
+            } else {
+                $connection = @ftp_connect($host, $port, 30);
+            }
+            
+            if (!$connection) {
+                return ['success' => false, 'error' => 'Cannot connect to FTP server'];
+            }
+            
+            if (!empty($username)) {
+                if (!@ftp_login($connection, $username, $password)) {
+                    ftp_close($connection);
+                    return ['success' => false, 'error' => 'FTP login failed'];
+                }
+            }
+            
+            ftp_pasv($connection, true);
+            
+            // Ensure directory exists
+            if (!empty($path) && $path !== '/') {
+                @ftp_chdir($connection, $path) || @ftp_mkdir($connection, $path);
+                @ftp_chdir($connection, $path);
+            }
+            
+            // Upload file
+            $remotePath = $filename;
+            $result = @ftp_put($connection, $remotePath, $localPath, FTP_BINARY);
+            
+            ftp_close($connection);
+            
+            if ($result) {
+                $this->logger->info('[SUCCESS] Backup uploaded to FTP', [
+                    'filename' => $filename,
+                    'path' => $path
+                ]);
+                return ['success' => true, 'message' => 'Uploaded to FTP'];
+            }
+            
+            return ['success' => false, 'error' => 'FTP upload failed'];
+            
+        } catch (\Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Upload file to WebDAV
+     */
+    private function uploadToWebDav(string $localPath, string $filename, array $config): array
+    {
+        $host = $config['host'];
+        $port = (int)($config['port'] ?? 443);
+        $username = $config['username'] ?? '';
+        $password = $config['password'] ?? '';
+        $ssl = $config['ssl'] ?? true;
+        $path = $config['path'] ?? '/backups';
+        
+        try {
+            $protocol = $ssl ? 'https' : 'http';
+            $url = "{$protocol}://{$host}:{$port}" . rtrim($path, '/') . '/' . $filename;
+            
+            $fileHandle = fopen($localPath, 'rb');
+            if (!$fileHandle) {
+                return ['success' => false, 'error' => 'Cannot open local file'];
+            }
+            
+            $fileSize = filesize($localPath);
+            
+            $ch = curl_init();
+            curl_setopt_array($ch, [
+                CURLOPT_URL => $url,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_PUT => true,
+                CURLOPT_INFILE => $fileHandle,
+                CURLOPT_INFILESIZE => $fileSize,
+                CURLOPT_TIMEOUT => 300,
+                CURLOPT_SSL_VERIFYPEER => $ssl,
+                CURLOPT_SSL_VERIFYHOST => $ssl ? 2 : 0
+            ]);
+            
+            if (!empty($username)) {
+                curl_setopt($ch, CURLOPT_USERPWD, "{$username}:{$password}");
+            }
+            
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            fclose($fileHandle);
+            
+            if ($httpCode === 201 || $httpCode === 200 || $httpCode === 204) {
+                $this->logger->info('[SUCCESS] Backup uploaded to WebDAV', [
+                    'filename' => $filename,
+                    'path' => $path
+                ]);
+                return ['success' => true, 'message' => 'Uploaded to WebDAV'];
+            }
+            
+            return ['success' => false, 'error' => "WebDAV upload failed with HTTP {$httpCode}"];
+            
+        } catch (\Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Delete backup from external storage
+     * 
+     * @param string $filename Backup filename
+     * @return array Deletion result
+     */
+    public function deleteFromExternalStorage(string $filename): array
+    {
+        try {
+            $config = $this->getExternalStorageRaw();
+            
+            if (empty($config['type']) || $config['type'] === 'none') {
+                return ['success' => false, 'error' => 'No external storage configured'];
+            }
+            
+            if ($config['type'] === 'ftp') {
+                return $this->deleteFromFtp($filename, $config);
+            } elseif ($config['type'] === 'webdav') {
+                return $this->deleteFromWebDav($filename, $config);
+            }
+            
+            return ['success' => false, 'error' => 'Unknown storage type'];
+            
+        } catch (\Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Delete file from FTP
+     */
+    private function deleteFromFtp(string $filename, array $config): array
+    {
+        $host = $config['host'];
+        $port = (int)($config['port'] ?? 21);
+        $username = $config['username'] ?? '';
+        $password = $config['password'] ?? '';
+        $ssl = $config['ssl'] ?? false;
+        $path = $config['path'] ?? '/backups';
+        
+        try {
+            if ($ssl) {
+                $connection = @ftp_ssl_connect($host, $port, 30);
+            } else {
+                $connection = @ftp_connect($host, $port, 30);
+            }
+            
+            if (!$connection) {
+                return ['success' => false, 'error' => 'Cannot connect to FTP server'];
+            }
+            
+            if (!empty($username)) {
+                if (!@ftp_login($connection, $username, $password)) {
+                    ftp_close($connection);
+                    return ['success' => false, 'error' => 'FTP login failed'];
+                }
+            }
+            
+            ftp_pasv($connection, true);
+            
+            $remotePath = rtrim($path, '/') . '/' . $filename;
+            $result = @ftp_delete($connection, $remotePath);
+            
+            ftp_close($connection);
+            
+            if ($result) {
+                $this->logger->info('Backup deleted from FTP', ['filename' => $filename]);
+                return ['success' => true];
+            }
+            
+            return ['success' => false, 'error' => 'FTP delete failed'];
+            
+        } catch (\Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Delete file from WebDAV
+     */
+    private function deleteFromWebDav(string $filename, array $config): array
+    {
+        $host = $config['host'];
+        $port = (int)($config['port'] ?? 443);
+        $username = $config['username'] ?? '';
+        $password = $config['password'] ?? '';
+        $ssl = $config['ssl'] ?? true;
+        $path = $config['path'] ?? '/backups';
+        
+        try {
+            $protocol = $ssl ? 'https' : 'http';
+            $url = "{$protocol}://{$host}:{$port}" . rtrim($path, '/') . '/' . $filename;
+            
+            $ch = curl_init();
+            curl_setopt_array($ch, [
+                CURLOPT_URL => $url,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_CUSTOMREQUEST => 'DELETE',
+                CURLOPT_TIMEOUT => 30,
+                CURLOPT_SSL_VERIFYPEER => $ssl,
+                CURLOPT_SSL_VERIFYHOST => $ssl ? 2 : 0
+            ]);
+            
+            if (!empty($username)) {
+                curl_setopt($ch, CURLOPT_USERPWD, "{$username}:{$password}");
+            }
+            
+            curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            
+            if ($httpCode === 204 || $httpCode === 200) {
+                $this->logger->info('Backup deleted from WebDAV', ['filename' => $filename]);
+                return ['success' => true];
+            }
+            
+            return ['success' => false, 'error' => "WebDAV delete failed with HTTP {$httpCode}"];
+            
+        } catch (\Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
     }
 
     /**

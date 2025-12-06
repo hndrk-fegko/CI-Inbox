@@ -619,7 +619,8 @@ $logger->debug('Admin settings loaded', [
     </div>
     
     <!-- Help FAB Button & Modal -->
-    <button type="button" id="help-fab" class="c-help-fab" title="Help">
+    <!-- FAB button uses global .c-fab class from _fab.css -->
+    <button type="button" id="help-fab" class="c-fab" title="Help">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
             <path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/>
         </svg>
@@ -640,33 +641,7 @@ $logger->debug('Admin settings loaded', [
     </div>
     
     <style>
-        .c-help-fab {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            background: #2196F3;
-            color: white;
-            border: none;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s ease;
-            z-index: 1000;
-        }
-        .c-help-fab:hover {
-            background: #1976D2;
-            transform: scale(1.1);
-            box-shadow: 0 6px 16px rgba(33, 150, 243, 0.5);
-        }
-        .c-help-fab:active {
-            transform: scale(0.95);
-        }
-        
+        /* Help section styles - FAB button now uses global .c-fab from _fab.css */
         .help-section {
             margin-bottom: 1.5rem;
         }

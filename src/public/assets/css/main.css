@@ -37,6 +37,7 @@
 @import url('6-components/_inbox-view.css');
 @import url('6-components/_email-composer.css');
 @import url('6-components/_toast.css');
+@import url('6-components/_fab.css');
 
 /* 7. Utilities - Helper classes */
 @import url('7-utilities/_utilities.css');

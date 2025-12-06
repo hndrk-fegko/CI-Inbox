@@ -130,6 +130,12 @@ Konfiguration von OAuth2/SSO-Providern für Single Sign-On Authentifizierung.
 - Admin decides if new OAuth users auto-register
 - Default role prevents privilege escalation
 
+### Existing User Linking
+- OAuth callback checks if email already exists in database
+- If user exists: Link OAuth account to existing user (no duplicate)
+- If user doesn't exist + auto-registration enabled: Create new user
+- If user doesn't exist + auto-registration disabled: Reject with message
+
 ## Success Metrics
 - ✅ Provider configurations display correctly
 - ✅ Toggle switches work

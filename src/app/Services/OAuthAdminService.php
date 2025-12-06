@@ -290,6 +290,289 @@ class OAuthAdminService
     }
     
     /**
+     * Find existing user by email address
+     * 
+     * When a user authenticates via OAuth, we check if their email already exists
+     * in our user database. If so, we link the OAuth account to the existing user
+     * instead of creating a new account.
+     * 
+     * @param string $email Email address from OAuth provider
+     * @return array|null User data if found, null otherwise
+     */
+    public function findExistingUserByEmail(string $email): ?array
+    {
+        try {
+            // Get PDO connection from config or environment
+            $dsn = sprintf(
+                'mysql:host=%s;dbname=%s;charset=utf8mb4',
+                getenv('DB_HOST') ?: 'localhost',
+                getenv('DB_NAME') ?: 'ci_inbox'
+            );
+            
+            $pdo = new \PDO(
+                $dsn,
+                getenv('DB_USER') ?: 'root',
+                getenv('DB_PASS') ?: '',
+                [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION]
+            );
+            
+            $stmt = $pdo->prepare('SELECT id, email, name, role, is_active FROM users WHERE email = ? LIMIT 1');
+            $stmt->execute([$email]);
+            $user = $stmt->fetch(\PDO::FETCH_ASSOC);
+            
+            if ($user) {
+                $this->logger->info('[OAuthAdmin] Found existing user for OAuth email', [
+                    'email' => $email,
+                    'user_id' => $user['id']
+                ]);
+                return $user;
+            }
+            
+            return null;
+            
+        } catch (\Exception $e) {
+            $this->logger->error('[OAuthAdmin] Failed to find user by email', [
+                'email' => $email,
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
+    }
+    
+    /**
+     * Link OAuth account to existing user
+     * 
+     * @param int $userId Existing user ID
+     * @param string $provider OAuth provider (google, microsoft, github, custom)
+     * @param string $providerUserId User ID from the OAuth provider
+     * @param array $providerData Additional data from OAuth provider
+     * @return bool Success status
+     */
+    public function linkOAuthToUser(int $userId, string $provider, string $providerUserId, array $providerData = []): bool
+    {
+        try {
+            $dsn = sprintf(
+                'mysql:host=%s;dbname=%s;charset=utf8mb4',
+                getenv('DB_HOST') ?: 'localhost',
+                getenv('DB_NAME') ?: 'ci_inbox'
+            );
+            
+            $pdo = new \PDO(
+                $dsn,
+                getenv('DB_USER') ?: 'root',
+                getenv('DB_PASS') ?: '',
+                [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION]
+            );
+            
+            // Check if link already exists
+            $stmt = $pdo->prepare('SELECT id FROM user_oauth WHERE user_id = ? AND provider = ?');
+            $stmt->execute([$userId, $provider]);
+            
+            if ($stmt->fetch()) {
+                // Update existing link
+                $stmt = $pdo->prepare(
+                    'UPDATE user_oauth SET provider_user_id = ?, provider_data = ?, updated_at = NOW() WHERE user_id = ? AND provider = ?'
+                );
+                $stmt->execute([
+                    $providerUserId,
+                    json_encode($providerData),
+                    $userId,
+                    $provider
+                ]);
+            } else {
+                // Create new link
+                $stmt = $pdo->prepare(
+                    'INSERT INTO user_oauth (user_id, provider, provider_user_id, provider_data, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())'
+                );
+                $stmt->execute([
+                    $userId,
+                    $provider,
+                    $providerUserId,
+                    json_encode($providerData)
+                ]);
+            }
+            
+            $this->logger->info('[OAuthAdmin] Linked OAuth account to user', [
+                'user_id' => $userId,
+                'provider' => $provider
+            ]);
+            
+            return true;
+            
+        } catch (\Exception $e) {
+            $this->logger->error('[OAuthAdmin] Failed to link OAuth to user', [
+                'user_id' => $userId,
+                'provider' => $provider,
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+    
+    /**
+     * Process OAuth callback - handles user lookup/creation and session
+     * 
+     * This is the main method called when a user completes OAuth authentication.
+     * It checks if a user with the OAuth email already exists, and either:
+     * 1. Links the OAuth account to the existing user
+     * 2. Creates a new user (if auto-registration is enabled)
+     * 3. Rejects the login (if auto-registration is disabled and user doesn't exist)
+     * 
+     * @param string $provider OAuth provider name
+     * @param array $oauthUser User data from OAuth provider (email, name, id, etc.)
+     * @return array Result with success status and user data or error
+     */
+    public function processOAuthCallback(string $provider, array $oauthUser): array
+    {
+        try {
+            $email = $oauthUser['email'] ?? null;
+            $providerUserId = $oauthUser['id'] ?? $oauthUser['sub'] ?? null;
+            
+            if (!$email) {
+                return [
+                    'success' => false,
+                    'error' => 'OAuth provider did not return email address'
+                ];
+            }
+            
+            // Check if user already exists
+            $existingUser = $this->findExistingUserByEmail($email);
+            
+            if ($existingUser) {
+                // User exists - link OAuth account and return user
+                if ($providerUserId) {
+                    $this->linkOAuthToUser(
+                        (int)$existingUser['id'],
+                        $provider,
+                        $providerUserId,
+                        $oauthUser
+                    );
+                }
+                
+                $this->logger->info('[OAuthAdmin] OAuth login linked to existing user', [
+                    'email' => $email,
+                    'provider' => $provider,
+                    'user_id' => $existingUser['id']
+                ]);
+                
+                return [
+                    'success' => true,
+                    'user' => $existingUser,
+                    'is_new' => false
+                ];
+            }
+            
+            // User doesn't exist - check if auto-registration is allowed
+            $config = $this->getConfig();
+            
+            if (!($config['allow_registration'] ?? false)) {
+                $this->logger->warning('[OAuthAdmin] OAuth login rejected - user not found and auto-registration disabled', [
+                    'email' => $email,
+                    'provider' => $provider
+                ]);
+                
+                return [
+                    'success' => false,
+                    'error' => 'User not found. Please contact an administrator to create your account.'
+                ];
+            }
+            
+            // Create new user
+            $newUser = $this->createUserFromOAuth($provider, $oauthUser, $config['default_role'] ?? 'user');
+            
+            if ($newUser) {
+                return [
+                    'success' => true,
+                    'user' => $newUser,
+                    'is_new' => true
+                ];
+            }
+            
+            return [
+                'success' => false,
+                'error' => 'Failed to create user account'
+            ];
+            
+        } catch (\Exception $e) {
+            $this->logger->error('[OAuthAdmin] OAuth callback processing failed', [
+                'provider' => $provider,
+                'error' => $e->getMessage()
+            ]);
+            
+            return [
+                'success' => false,
+                'error' => 'Authentication failed. Please try again.'
+            ];
+        }
+    }
+    
+    /**
+     * Create new user from OAuth data
+     * 
+     * @param string $provider OAuth provider
+     * @param array $oauthUser User data from provider
+     * @param string $role Default role for new user
+     * @return array|null Created user data or null on failure
+     */
+    private function createUserFromOAuth(string $provider, array $oauthUser, string $role = 'user'): ?array
+    {
+        try {
+            $email = $oauthUser['email'];
+            $name = $oauthUser['name'] ?? $oauthUser['displayName'] ?? explode('@', $email)[0];
+            $providerUserId = $oauthUser['id'] ?? $oauthUser['sub'] ?? '';
+            
+            $dsn = sprintf(
+                'mysql:host=%s;dbname=%s;charset=utf8mb4',
+                getenv('DB_HOST') ?: 'localhost',
+                getenv('DB_NAME') ?: 'ci_inbox'
+            );
+            
+            $pdo = new \PDO(
+                $dsn,
+                getenv('DB_USER') ?: 'root',
+                getenv('DB_PASS') ?: '',
+                [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION]
+            );
+            
+            // Create user (no password - OAuth only)
+            $stmt = $pdo->prepare(
+                'INSERT INTO users (email, name, role, is_active, created_at, updated_at) VALUES (?, ?, ?, 1, NOW(), NOW())'
+            );
+            $stmt->execute([$email, $name, $role]);
+            
+            $userId = (int)$pdo->lastInsertId();
+            
+            // Link OAuth account
+            if ($providerUserId) {
+                $this->linkOAuthToUser($userId, $provider, $providerUserId, $oauthUser);
+            }
+            
+            $this->logger->info('[OAuthAdmin] Created new user from OAuth', [
+                'user_id' => $userId,
+                'email' => $email,
+                'provider' => $provider,
+                'role' => $role
+            ]);
+            
+            return [
+                'id' => $userId,
+                'email' => $email,
+                'name' => $name,
+                'role' => $role,
+                'is_active' => true
+            ];
+            
+        } catch (\Exception $e) {
+            $this->logger->error('[OAuthAdmin] Failed to create user from OAuth', [
+                'email' => $oauthUser['email'] ?? 'unknown',
+                'provider' => $provider,
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
+    }
+    
+    /**
      * Get default redirect URI for a provider
      * 
      * @param string $provider Provider key
