@@ -484,14 +484,42 @@ function installComposerDependencies(): array
     // Try to download composer.phar
     else {
         try {
+            // Detect PHP CLI path (not httpd.exe from Apache)
+            $phpPath = null;
+            
+            // On Windows XAMPP, try common PHP CLI paths first
+            if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+                $possiblePaths = [
+                    'C:\\xampp\\php\\php.exe',
+                    'C:\\XAMPP\\php\\php.exe',
+                    'C:\\xampp7\\php\\php.exe'
+                ];
+                foreach ($possiblePaths as $path) {
+                    if (file_exists($path)) {
+                        $phpPath = $path;
+                        break;
+                    }
+                }
+            }
+            
+            // Fallback: Try PHP_BINARY if it points to php.exe (not httpd.exe)
+            if (!$phpPath && PHP_BINARY && stripos(PHP_BINARY, 'php.exe') !== false && file_exists(PHP_BINARY)) {
+                $phpPath = PHP_BINARY;
+            }
+            
+            // Last resort: hope 'php' is in PATH
+            if (!$phpPath) {
+                $phpPath = 'php';
+            }
+            
             $composerInstaller = @file_get_contents('https://getcomposer.org/installer');
             if ($composerInstaller) {
                 file_put_contents($rootDir . 'composer-setup.php', $composerInstaller);
-                @exec('php ' . $rootDir . 'composer-setup.php --install-dir=' . $rootDir . ' --filename=composer.phar 2>&1', $output, $returnVar);
+                @exec($phpPath . ' ' . $rootDir . 'composer-setup.php --install-dir=' . $rootDir . ' --filename=composer.phar 2>&1', $output, $returnVar);
                 @unlink($rootDir . 'composer-setup.php');
                 
                 if ($returnVar === 0 && file_exists($rootDir . 'composer.phar')) {
-                    $composerCommand = 'php ' . $rootDir . 'composer.phar';
+                    $composerCommand = $phpPath . ' ' . $rootDir . 'composer.phar';
                 }
             }
         } catch (Exception $e) {
@@ -509,6 +537,39 @@ function installComposerDependencies(): array
             'message' => 'Composer ist auf diesem Server nicht verfügbar. ' .
                         'Bitte laden Sie vendor.zip herunter und entpacken Sie es im Projekt-Root.'
         ];
+    }
+    
+    // Detect PHP CLI path for command execution
+    $phpPath = null;
+    
+    // On Windows XAMPP, try common PHP CLI paths first
+    if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+        $possiblePaths = [
+            'C:\\xampp\\php\\php.exe',
+            'C:\\XAMPP\\php\\php.exe',
+            'C:\\xampp7\\php\\php.exe'
+        ];
+        foreach ($possiblePaths as $path) {
+            if (file_exists($path)) {
+                $phpPath = $path;
+                break;
+            }
+        }
+    }
+    
+    // Fallback: Try PHP_BINARY if it points to php.exe (not httpd.exe)
+    if (!$phpPath && PHP_BINARY && stripos(PHP_BINARY, 'php.exe') !== false && file_exists(PHP_BINARY)) {
+        $phpPath = PHP_BINARY;
+    }
+    
+    // Last resort: hope 'php' is in PATH
+    if (!$phpPath) {
+        $phpPath = 'php';
+    }
+    
+    // If composer command starts with 'php', replace with detected path
+    if (strpos($composerCommand, 'php ') === 0) {
+        $composerCommand = $phpPath . substr($composerCommand, 3);
     }
     
     // Run composer install with timeout handling

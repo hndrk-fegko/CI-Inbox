@@ -1,0 +1,431 @@
+# Issue: Autosetup fehlgeschlagen - PHP_BINARY zeigt auf Apache httpd.exe
+
+**Datum:** 2025-12-06
+**Betroffen:** Setup-Assistent (src/public/setup/index.php)
+**Status:** ✅ GELÖST
+
+---
+
+## Problem
+
+Die automatische Composer-Installation im Setup-Assistenten schlug fehl mit:
+```
+Der Befehl "php" ist entweder falsch geschrieben oder
+konnte nicht gefunden werden.
+```
+
+### Root Cause
+
+Wenn PHP über Apache/Webserver ausgeführt wird, gibt die PHP-Konstante `PHP_BINARY` 
+**nicht** den Pfad zu `php.exe` zurück, sondern zum **Apache-Prozess**:
+
+```
+PHP_BINARY = C:\xampp\apache\bin\httpd.exe  ❌
+```
+
+Der Code versuchte dann, `httpd.exe` als PHP-CLI-Interpreter zu verwenden, was fehlschlug:
+```
+Command: cd "..." && "C:\xampp\apache\bin\httpd.exe" "composer.phar" install
+Result: AH02965: Child: Unable to retrieve my generation from the parent
+```
+
+---
+
+## Lösung
+
+### 1. PHP-CLI-Pfad-Erkennung überarbeitet
+
+Statt `PHP_BINARY` blind zu verwenden, priorisiert der Code jetzt:
+
+1. **XAMPP-Standard-Pfade zuerst prüfen** (direkter Dateisystem-Check)
+2. **PHP_BINARY als Fallback** - aber nur wenn es auf `php.exe` zeigt
+3. **Last Resort:** `php` im System-PATH
+
+### 2. Implementierung
+
+**Geänderte Funktionen:**
+- `installComposerDependencies()` - Composer-Download-Sektion (Zeile ~486)
+- `installComposerDependencies()` - Haupt-Execution (Zeile ~528)
+
+**Code-Logik:**
+```php
+// Detect PHP CLI path (not httpd.exe from Apache)
+$phpPath = null;
+
+// On Windows XAMPP, try common PHP CLI paths first
+if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+    $possiblePaths = [
+        'C:\\xampp\\php\\php.exe',
+        'C:\\XAMPP\\php\\php.exe',
+        'C:\\xampp7\\php\\php.exe'
+    ];
+    foreach ($possiblePaths as $path) {
+        if (file_exists($path)) {
+            $phpPath = $path;
+            break;
+        }
+    }
+}
+
+// Fallback: Try PHP_BINARY if it points to php.exe (not httpd.exe)
+if (!$phpPath && PHP_BINARY && stripos(PHP_BINARY, 'php.exe') !== false && file_exists(PHP_BINARY)) {
+    $phpPath = PHP_BINARY;
+}
+
+// Last resort: hope 'php' is in PATH
+if (!$phpPath) {
+    $phpPath = 'php';
+}
+```
+
+---
+
+## Erweiterbarkeit: Weitere Webhosting-Umgebungen
+
+Dieser Fix ist für **lokale XAMPP-Entwicklung** optimiert. 
+Für andere Hosting-Setups können zusätzliche Pfad-Checks hinzugefügt werden:
+
+### Beispiel: Strato/Ionos Shared Hosting
+```php
+if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+    // XAMPP paths...
+} else {
+    // Linux shared hosting paths
+    $possiblePaths = [
+        '/usr/local/bin/php',
+        '/usr/bin/php',
+        '/opt/php/bin/php',
+        '/usr/local/php81/bin/php',  // Strato PHP 8.1
+        '/usr/local/php82/bin/php',  // Strato PHP 8.2
+        exec('which php 2>/dev/null')
+    ];
+    // ... check logic
+}
+```
+
+### Beispiel: Plesk/cPanel
+```php
+// Plesk with PHP selector
+if (file_exists('/usr/local/psa/bin/php-selector')) {
+    $phpPath = exec('/usr/local/psa/bin/php-selector get-current 2>/dev/null');
+}
+
+// cPanel with EasyApache
+if (file_exists('/usr/local/bin/ea-php82')) {
+    $phpPath = '/usr/local/bin/ea-php82';
+}
+```
+
+### Beispiel: Docker/Containerized
+```php
+// Docker environment detection
+if (file_exists('/.dockerenv')) {
+    // In Docker, PHP_BINARY is usually reliable
+    $phpPath = PHP_BINARY ?: 'php';
+}
+```
+
+---
+
+## Testing
+
+### Manueller Test (CLI)
+```bash
+# Zeigt PHP_BINARY Wert im CLI-Kontext
+C:\xampp\php\php.exe tests\manual\test-php-detection.php
+```
+
+Erwartete Ausgabe:
+```
+=== PHP Binary Detection Test (CLI) ===
+
+1. PHP_BINARY constant:
+   Value: C:\xampp\php\php.exe
+   Exists: ✅ Yes
+   Is php.exe: ✅ Yes
+
+2. XAMPP Standard Paths:
+   C:\xampp\php\php.exe: ✅ Found
+      → This would be used!
+
+3. Detection Logic (Simulated):
+   Final detected path: C:\xampp\php\php.exe
+   Detection method: XAMPP Standard Path (preferred)
+
+4. Execution Test:
+   Command: C:\xampp\php\php.exe --version
+   Result: ✅ Success
+   Output: PHP 8.1.10 (cli) (built: Aug 30 2022 18:05:49)...
+
+5. System Information:
+   PHP Version: 8.1.10
+   Operating System: WINNT
+   SAPI: cli
+```
+
+### Web-Context Test
+```
+http://ci-inbox.local/tests/manual/test-php-binary.php
+```
+
+Erwartete Ergebnisse:
+- **PHP_BINARY:** Zeigt auf `httpd.exe` (Problem visualisiert)
+- **Detected PHP Path:** Zeigt auf `C:\xampp\php\php.exe` (Lösung angewendet)
+- **Detection Method:** "XAMPP Standard Path (Preferred)"
+
+---
+
+## Geänderte Dateien
+
+### src/public/setup/index.php
+**Zeilen geändert:** 2 Stellen in `installComposerDependencies()`
+
+**Änderung 1 - Composer Download (Zeile ~486):**
+```php
+// OLD:
+@exec('php ' . $rootDir . 'composer-setup.php --install-dir=' . $rootDir . ' --filename=composer.phar 2>&1', $output, $returnVar);
+
+// NEW:
+// Detect PHP CLI path first (28 lines added)
+$phpPath = detectPHPCLI();  // Helper logic
+@exec($phpPath . ' ' . $rootDir . 'composer-setup.php --install-dir=' . $rootDir . ' --filename=composer.phar 2>&1', $output, $returnVar);
+```
+
+**Änderung 2 - Composer Install (Zeile ~528):**
+```php
+// OLD:
+$composerCommand = 'php ' . $rootDir . 'composer.phar';
+
+// NEW:
+$phpPath = detectPHPCLI();  // Helper logic
+if (strpos($composerCommand, 'php ') === 0) {
+    $composerCommand = $phpPath . substr($composerCommand, 3);
+}
+```
+
+---
+
+## TODO: UX-Verbesserung
+
+⚠️ **Wichtig:** Der Setup-Assistent sollte während der Installation eine **Ladeanimation** zeigen.
+
+### Warum?
+- Composer-Installation dauert 1-3 Minuten
+- Benutzer sieht nur statische "Installation läuft..." Meldung
+- Keine Rückmeldung ob Prozess noch aktiv oder hängt
+
+### Vorschlag für Implementierung:
+
+1. **AJAX-Polling während Installation:**
+```javascript
+// In setup/index.php Frontend-Teil
+function checkInstallProgress() {
+    fetch('/setup/index.php?action=check_vendor_status')
+        .then(r => r.json())
+        .then(data => {
+            if (data.complete) {
+                window.location.reload();
+            } else {
+                // Update progress indicator
+                updateProgressBar(data.progress);
+                setTimeout(checkInstallProgress, 2000);
+            }
+        });
+}
+```
+
+2. **Backend-Endpoint für Status-Check:**
+```php
+if ($_GET['action'] === 'check_vendor_status') {
+    $vendorExists = file_exists($rootDir . 'vendor/autoload.php');
+    $vendorDirCount = is_dir($rootDir . 'vendor') 
+        ? count(scandir($rootDir . 'vendor')) - 2 
+        : 0;
+    
+    echo json_encode([
+        'complete' => $vendorExists,
+        'progress' => min(($vendorDirCount / 25) * 100, 95) // Max 25 packages
+    ]);
+    exit;
+}
+```
+
+3. **CSS Spinner/Animation:**
+```html
+<div class="loader">
+    <div class="spinner"></div>
+    <p>Composer Dependencies werden installiert...</p>
+    <p class="progress-text">Dies kann 1-3 Minuten dauern</p>
+    <div class="progress-bar">
+        <div class="progress-fill" id="progress"></div>
+    </div>
+</div>
+```
+
+### Alternative: Simpler Ansatz
+- Animiertes Spinner-GIF
+- Text: "Installation läuft... Bitte nicht neu laden (1-3 Minuten)"
+- Automatischer Reload nach Success
+
+---
+
+## Verwandte Dateien
+
+- `src/public/setup/index.php` - Setup-Assistent (1490 Zeilen) - **✅ GEÄNDERT**
+- `composer.json` - Dependency-Definitionen
+- `logs/composer-install.log` - Installation-Logs
+- `tests/manual/test-php-detection.php` - CLI Test-Skript - **✅ NEU ERSTELLT**
+- `tests/manual/test-php-binary.php` - Web-Context Test - **✅ NEU ERSTELLT**
+
+---
+
+## Lessons Learned
+
+1. **PHP_BINARY ist kontextabhängig:**
+   - CLI: Zeigt auf `php.exe`
+   - Apache/FPM: Zeigt auf Web-Server-Binary
+
+2. **Environment-agnostischer Code:**
+   - Nie auf eine einzelne Methode zur PHP-Erkennung verlassen
+   - Immer Fallback-Chain implementieren
+
+3. **Windows-spezifische Herausforderungen:**
+   - Pfade case-insensitive (`C:\xampp` vs `C:\XAMPP`)
+   - Backslashes müssen escaped werden in PHP-Strings
+   - Kein `which` Befehl - `where` stattdessen
+
+4. **Logging ist kritisch:**
+   - `logs/composer-install.log` war entscheidend für Diagnose
+   - Zeigt exakten Command + Return Code + Output
+
+---
+
+## Commit Message Vorlage
+
+```
+fix(setup): PHP CLI detection für XAMPP/Apache-Umgebungen
+
+Problem:
+- PHP_BINARY zeigt auf httpd.exe statt php.exe wenn über Apache aufgerufen
+- Composer-Installation schlug fehl mit "php command not found"
+
+Lösung:
+- Priorisiere XAMPP-Standard-Pfade vor PHP_BINARY
+- Validiere PHP_BINARY (nur verwenden wenn es php.exe enthält)
+- Fallback zu PATH-basierter Erkennung
+
+Betroffene Dateien:
+- src/public/setup/index.php (2 Stellen aktualisiert)
+
+Zusätzlich:
+- Test-Skripte für CLI und Web-Context hinzugefügt
+  - tests/manual/test-php-detection.php (CLI)
+  - tests/manual/test-php-binary.php (Web)
+- Dokumentation in docs/dev/issue-autosetup-php-binary.txt
+
+TODO: Ladeanimation für Composer-Installation hinzufügen
+
+Refs: M3 Setup-Assistent
+```
+
+---
+
+## Weiterführende Informationen
+
+### PHP_BINARY Dokumentation
+- **PHP Manual:** https://www.php.net/manual/en/reserved.constants.php
+- **Verhalten:** 
+  - Returns the path to the PHP binary (or `phpdbg` if using that)
+  - In Apache module mode: Returns path to Apache httpd.exe
+  - In CLI mode: Returns path to php.exe
+
+### Debugging-Commands
+```bash
+# Windows: Find PHP executables
+where php
+where /R C:\ php.exe
+
+# Windows: Check if PHP_BINARY is httpd.exe
+php -r "echo PHP_BINARY;"
+
+# Check Composer installation
+composer --version
+php composer.phar --version
+
+# Test PHP execution
+C:\xampp\php\php.exe --version
+```
+
+### Environment Variables
+```bash
+# Windows: Add PHP to PATH
+setx PATH "%PATH%;C:\xampp\php"
+
+# Check PATH
+echo %PATH%
+```
+
+---
+
+## Anhang: Vollständige Detection-Logik
+
+```php
+/**
+ * Detect PHP CLI executable path
+ * 
+ * Priority:
+ * 1. XAMPP standard paths (Windows)
+ * 2. PHP_BINARY (validated to point to php.exe)
+ * 3. PATH environment variable
+ * 
+ * @return string PHP executable path
+ */
+function detectPHPCLI(): string
+{
+    $phpPath = null;
+    
+    // On Windows XAMPP, try common PHP CLI paths first
+    if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+        $possiblePaths = [
+            'C:\\xampp\\php\\php.exe',
+            'C:\\XAMPP\\php\\php.exe',
+            'C:\\xampp7\\php\\php.exe'
+        ];
+        foreach ($possiblePaths as $path) {
+            if (file_exists($path)) {
+                $phpPath = $path;
+                break;
+            }
+        }
+    } else {
+        // Linux shared hosting paths (future extension)
+        $possiblePaths = [
+            '/usr/local/bin/php',
+            '/usr/bin/php',
+            '/opt/php/bin/php'
+        ];
+        foreach ($possiblePaths as $path) {
+            if (file_exists($path)) {
+                $phpPath = $path;
+                break;
+            }
+        }
+    }
+    
+    // Fallback: Try PHP_BINARY if it points to php.exe (not httpd.exe)
+    if (!$phpPath && PHP_BINARY && stripos(PHP_BINARY, 'php.exe') !== false && file_exists(PHP_BINARY)) {
+        $phpPath = PHP_BINARY;
+    }
+    
+    // Last resort: hope 'php' is in PATH
+    if (!$phpPath) {
+        $phpPath = 'php';
+    }
+    
+    return $phpPath;
+}
+```
+
+---
+
+**Ende der Dokumentation**

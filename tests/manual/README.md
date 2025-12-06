@@ -60,6 +60,8 @@ This directory contains all manual test scripts for CI-Inbox. These tests are de
 | `test-integrity-webcron.php` | Webcron integrity check | ✅ |
 | `backup-service-test.php` | Backup service functionality | ✅ |
 | `theme-module-test.php` | Theme module functionality | ✅ |
+| `test-php-detection.php` | PHP CLI path detection (CLI) | ✅ |
+| `test-php-binary.php` | PHP binary detection (Web) | ✅ |
 
 ### Utility Scripts
 | Script | Purpose |
