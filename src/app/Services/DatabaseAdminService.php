@@ -166,10 +166,11 @@ class DatabaseAdminService
                 'errors' => count($errors)
             ]);
             
+            $errorCount = count($errors);
             return [
                 'success' => true,
                 'tables_optimized' => $optimized,
-                'message' => "Optimized {$optimized} tables" . (count($errors) > 0 ? " ({$errors} errors)" : "")
+                'message' => "Optimized {$optimized} tables" . ($errorCount > 0 ? " ({$errorCount} errors)" : "")
             ];
             
         } catch (\Exception $e) {

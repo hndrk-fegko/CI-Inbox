@@ -173,8 +173,10 @@ class OAuthAdminService
     public function updateProvider(string $provider, array $providerConfig): array
     {
         try {
-            if (!array_key_exists($provider, self::PROVIDERS)) {
-                throw new \Exception("Unknown provider: {$provider}");
+            // Validate provider is in whitelist
+            $validProviders = array_keys(self::PROVIDERS);
+            if (!in_array($provider, $validProviders, true)) {
+                throw new \Exception("Invalid provider. Must be one of: " . implode(', ', $validProviders));
             }
             
             $config = $this->getFullConfig();

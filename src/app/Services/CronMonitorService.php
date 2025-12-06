@@ -34,7 +34,10 @@ class CronMonitorService
                 $this->settingsRepository = $container->get(SystemSettingRepository::class);
             }
         } catch (\Exception $e) {
-            // Continue without settings repository
+            // Log that settings repository is unavailable
+            $this->logger->debug('[CronMonitor] Settings repository unavailable, using defaults', [
+                'reason' => $e->getMessage()
+            ]);
         }
     }
     
