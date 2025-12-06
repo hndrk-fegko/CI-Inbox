@@ -1,6 +1,6 @@
 # Implementation Workflow & Feature Roadmap
 
-**Projekt:** C-IMAP Email Management System  
+**Projekt:** CI-Inbox Email Management System  
 **Letztes Update:** 2025-11-18  
 **Status:** UI-Implementierung Phase 1
 

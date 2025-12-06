@@ -16,7 +16,7 @@ CI-Inbox is a collaborative IMAP inbox management system for small teams. We wel
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/hndrk-fegko/C-IMAP.git ci-inbox
+   git clone https://github.com/hndrk-fegko/CI-Inbox.git ci-inbox
    cd ci-inbox
    ```
 

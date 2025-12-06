@@ -1,0 +1,170 @@
+/**
+ * Floating Action Button (FAB) Component
+ * 
+ * Reusable FAB button styles for help, actions, etc.
+ * Can be used on any page that needs a floating action button.
+ * 
+ * Usage:
+ * <button type="button" class="c-fab" title="Help">
+ *     <svg>...</svg>
+ * </button>
+ * 
+ * Variants:
+ * - .c-fab--primary (default blue)
+ * - .c-fab--secondary (gray)
+ * - .c-fab--success (green)
+ * - .c-fab--danger (red)
+ * - .c-fab--small (40x40)
+ * - .c-fab--mini (32x32)
+ */
+
+.c-fab {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--color-primary, #2196F3);
+    color: white;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    z-index: 1000;
+}
+
+.c-fab:hover {
+    background: var(--color-primary-dark, #1976D2);
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(33, 150, 243, 0.5);
+}
+
+.c-fab:active {
+    transform: scale(0.95);
+}
+
+.c-fab:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.3), 0 4px 12px rgba(33, 150, 243, 0.4);
+}
+
+/* Variants */
+.c-fab--secondary {
+    background: var(--color-secondary, #6b7280);
+    box-shadow: 0 4px 12px rgba(107, 114, 128, 0.4);
+}
+
+.c-fab--secondary:hover {
+    background: var(--color-secondary-dark, #4b5563);
+    box-shadow: 0 6px 16px rgba(107, 114, 128, 0.5);
+}
+
+.c-fab--success {
+    background: var(--color-success, #10b981);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.c-fab--success:hover {
+    background: var(--color-success-dark, #059669);
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.5);
+}
+
+.c-fab--danger {
+    background: var(--color-danger, #ef4444);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+.c-fab--danger:hover {
+    background: var(--color-danger-dark, #dc2626);
+    box-shadow: 0 6px 16px rgba(239, 68, 68, 0.5);
+}
+
+/* Size variants */
+.c-fab--small {
+    width: 40px;
+    height: 40px;
+    bottom: 20px;
+    right: 20px;
+}
+
+.c-fab--small svg {
+    width: 20px;
+    height: 20px;
+}
+
+.c-fab--mini {
+    width: 32px;
+    height: 32px;
+    bottom: 16px;
+    right: 16px;
+}
+
+.c-fab--mini svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Position variants */
+.c-fab--bottom-left {
+    right: auto;
+    left: 24px;
+}
+
+.c-fab--top-right {
+    bottom: auto;
+    top: 24px;
+}
+
+.c-fab--top-left {
+    bottom: auto;
+    top: 24px;
+    right: auto;
+    left: 24px;
+}
+
+/* Pulse animation for attention */
+.c-fab--pulse {
+    animation: fab-pulse 2s infinite;
+}
+
+@keyframes fab-pulse {
+    0% {
+        box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
+    }
+    50% {
+        box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4), 0 0 0 10px rgba(33, 150, 243, 0.1);
+    }
+    100% {
+        box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4), 0 0 0 20px rgba(33, 150, 243, 0);
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .c-fab {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    
+    .c-fab:hover {
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .c-fab {
+        bottom: 16px;
+        right: 16px;
+        width: 48px;
+        height: 48px;
+    }
+    
+    .c-fab svg {
+        width: 20px;
+        height: 20px;
+    }
+}

@@ -14,6 +14,104 @@
 $vendorAutoload = __DIR__ . '/../../../vendor/autoload.php';
 $vendorExists = file_exists($vendorAutoload);
 
+// Handle auto-install request BEFORE showing error page
+if (!$vendorExists && isset($_GET['action']) && $_GET['action'] === 'auto_install_vendor') {
+    // Function must be defined here (can't use autoload without vendor!)
+    function installComposerDependenciesVendorMissing(): array
+    {
+        $rootDir = __DIR__ . '/../../../';
+        $logFile = $rootDir . 'logs/composer-install.log';
+        
+        // Check if exec functions are available
+        $disabledFunctions = explode(',', ini_get('disable_functions'));
+        $disabledFunctions = array_map('trim', $disabledFunctions);
+        
+        if (in_array('exec', $disabledFunctions) || in_array('shell_exec', $disabledFunctions)) {
+            return [
+                'success' => false,
+                'message' => 'PHP exec() und shell_exec() sind deaktiviert.'
+            ];
+        }
+        
+        // Ensure logs directory exists
+        if (!is_dir($rootDir . 'logs')) {
+            @mkdir($rootDir . 'logs', 0755, true);
+        }
+        
+        // Check if composer is available
+        $composerCommand = null;
+        
+        if (file_exists($rootDir . 'composer.phar')) {
+            $composerCommand = 'composer.phar';
+        } else {
+            $whichComposer = @shell_exec('which composer 2>/dev/null');
+            if (!empty($whichComposer)) {
+                $composerCommand = 'composer';
+            } else {
+                $whereComposer = @shell_exec('where composer 2>nul');
+                if (!empty($whereComposer)) {
+                    $composerCommand = 'composer';
+                }
+            }
+        }
+        
+        if (!$composerCommand) {
+            return [
+                'success' => false,
+                'message' => 'Composer nicht verfügbar.'
+            ];
+        }
+        
+        // Run composer install (with proper escaping)
+        $escapedRootDir = escapeshellarg($rootDir);
+        $command = "cd {$escapedRootDir} && ";
+        
+        if ($composerCommand === 'composer.phar') {
+            $command .= "php " . escapeshellarg($rootDir . 'composer.phar');
+        } else {
+            $command .= "composer";
+        }
+        
+        $command .= " install --no-dev --optimize-autoloader --no-interaction 2>&1";
+        
+        $output = [];
+        $returnVar = 0;
+        @exec($command, $output, $returnVar);
+        
+        // Log output
+        $logContent = "=== Composer Install Log ===\n";
+        $logContent .= "Date: " . date('Y-m-d H:i:s') . "\n";
+        $logContent .= "Command: {$command}\n";
+        $logContent .= "Return Code: {$returnVar}\n";
+        $logContent .= "Output:\n" . implode("\n", $output);
+        file_put_contents($logFile, $logContent);
+        
+        if ($returnVar === 0 && is_dir($rootDir . 'vendor') && file_exists($rootDir . 'vendor/autoload.php')) {
+            return [
+                'success' => true,
+                'message' => 'Dependencies erfolgreich installiert!'
+            ];
+        } else {
+            return [
+                'success' => false,
+                'message' => 'Installation fehlgeschlagen. Siehe logs/composer-install.log'
+            ];
+        }
+    }
+    
+    // Execute installation
+    $result = installComposerDependenciesVendorMissing();
+    
+    if ($result['success']) {
+        // Redirect to setup wizard
+        header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?'));
+        exit;
+    } else {
+        // Show error and vendor missing page
+        $autoInstallError = $result['message'];
+    }
+}
+
 if (!$vendorExists) {
     // Show minimal error page without dependencies
     showVendorMissingPage();
@@ -49,6 +147,21 @@ function getBasePath(): string
  */
 function showVendorMissingPage(): void
 {
+    // Check if auto-install is available
+    $disabledFunctions = explode(',', ini_get('disable_functions'));
+    $disabledFunctions = array_map('trim', $disabledFunctions);
+    $execDisabled = in_array('exec', $disabledFunctions) || in_array('shell_exec', $disabledFunctions);
+    
+    $composerExists = false;
+    if (!$execDisabled) {
+        $composerExists = file_exists(__DIR__ . '/../../../composer.phar') || 
+                          @shell_exec('which composer 2>/dev/null') || 
+                          @shell_exec('where composer 2>nul');
+    }
+    
+    // Check if there was an error from auto-install
+    global $autoInstallError;
+    
     ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -138,6 +251,13 @@ function showVendorMissingPage(): void
         </div>
         
         <div class="content">
+            <?php if (isset($autoInstallError)): ?>
+                <div class="alert" style="background: #fef2f2; border-color: #ef4444;">
+                    <h2>❌ Automatische Installation fehlgeschlagen</h2>
+                    <p><?= htmlspecialchars($autoInstallError) ?></p>
+                </div>
+            <?php endif; ?>
+            
             <div class="alert">
                 <h2>Installation kann nicht gestartet werden</h2>
                 <p>
@@ -157,21 +277,49 @@ function showVendorMissingPage(): void
                 
                 <p><strong>Wählen Sie eine der folgenden Methoden:</strong></p>
                 
-                <h4 style="margin-top: 20px;">📦 Option 1: vendor.zip herunterladen (Einfachste Methode)</h4>
+                <?php if ($composerExists && !$execDisabled): ?>
+                <!-- Auto-Fix Option as FIRST Option -->
+                <div style="background: #f0f9ff; border: 2px solid #3b82f6; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                    <h4 style="color: #1e40af; margin-top: 0;">🚀 Automatische Installation (Empfohlen)</h4>
+                    <p style="color: #1e3a8a; margin-bottom: 15px;">
+                        Composer wurde auf diesem Server erkannt. Klicken Sie auf den Button für 
+                        automatische Installation der Dependencies (dauert 2-5 Minuten).
+                    </p>
+                    <form method="GET" action="" style="margin: 0;">
+                        <input type="hidden" name="action" value="auto_install_vendor">
+                        <button type="submit" class="btn" style="background: #10b981; cursor: pointer; border: none; font-family: inherit;">
+                            🚀 Jetzt automatisch installieren
+                        </button>
+                    </form>
+                    <p style="color: #6b7280; font-size: 13px; margin-top: 10px;">
+                        Nach erfolgreicher Installation werden Sie automatisch zum Setup-Wizard weitergeleitet.
+                    </p>
+                </div>
+                <?php elseif ($execDisabled): ?>
+                <div style="background: #fef2f2; border: 2px solid #ef4444; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                    <h4 style="color: #991b1b; margin-top: 0;">⚠️ Automatische Installation nicht möglich</h4>
+                    <p style="color: #7f1d1d;">
+                        Die PHP-Funktionen <code>exec()</code> und <code>shell_exec()</code> sind 
+                        auf diesem Server deaktiviert. Bitte verwenden Sie eine der manuellen Optionen unten.
+                    </p>
+                </div>
+                <?php endif; ?>
+                
+                <h4 style="margin-top: 20px;">📦 Option <?= ($composerExists && !$execDisabled) ? '2' : '1' ?>: vendor.zip herunterladen (Einfachste Methode)</h4>
                 <ol>
                     <li>Laden Sie <strong>vendor.zip</strong> herunter (~50 MB)</li>
                     <li>Entpacken Sie die Datei</li>
                     <li>Laden Sie den Ordner <code>vendor/</code> per FTP ins Projekt-Root hoch</li>
                     <li>Laden Sie diese Seite neu</li>
                 </ol>
-                <a href="https://github.com/hndrk-fegko/C-IMAP/releases/latest" class="btn" target="_blank">
+                <a href="https://github.com/hndrk-fegko/CI-Inbox/releases/latest" class="btn" target="_blank">
                     📥 vendor.zip von GitHub herunterladen
                 </a>
                 <a href="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>?action=check_vendor" class="btn btn-secondary">
                     🔄 Erneut prüfen
                 </a>
                 
-                <h4 style="margin-top: 20px;">💻 Option 2: Lokal mit Composer (Für Entwickler)</h4>
+                <h4 style="margin-top: 20px;">💻 Option <?= ($composerExists && !$execDisabled) ? '3' : '2' ?>: Lokal mit Composer (Für Entwickler)</h4>
                 <ol>
                     <li>Öffnen Sie ein Terminal auf Ihrem PC</li>
                     <li>Navigieren Sie zum Projekt-Verzeichnis</li>
@@ -179,7 +327,7 @@ function showVendorMissingPage(): void
                     <li>Laden Sie das komplette Projekt inkl. <code>vendor/</code> per FTP hoch</li>
                 </ol>
                 
-                <h4 style="margin-top: 20px;">🔌 Option 3: SSH-Zugang (Falls verfügbar)</h4>
+                <h4 style="margin-top: 20px;">🔌 Option <?= ($composerExists && !$execDisabled) ? '4' : '3' ?>: SSH-Zugang (Falls verfügbar)</h4>
                 <ol>
                     <li>Verbinden Sie sich per SSH mit Ihrem Server</li>
                     <li>Navigieren Sie zum Projekt-Verzeichnis</li>
@@ -374,7 +522,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'pass' => $_POST['smtp_pass'] ?? '',
                     'ssl' => isset($_POST['smtp_ssl']),
                     'from_email' => $_POST['smtp_from_email'] ?? '',
-                    'from_name' => $_POST['smtp_from_name'] ?? 'C-IMAP',
+                    'from_name' => $_POST['smtp_from_name'] ?? 'CI-Inbox',
                 ];
                 
                 $_SESSION['setup']['step'] = 6;
@@ -442,6 +590,25 @@ function completeSetup(array $data): void
         'password_hash' => password_hash($data['admin']['password'], PASSWORD_BCRYPT),
         'name' => $data['admin']['name'],
         'role' => 'admin',
+    ]);
+    
+    // 5. Create IMAP account if configured
+    if (!empty($data['imap']['host'])) {
+        \CiInbox\App\Models\ImapAccount::create([
+            'email' => $data['imap']['user'],
+            'server' => $data['imap']['host'],
+            'port' => (int)$data['imap']['port'],
+            'username' => $data['imap']['user'],
+            'password' => $data['imap']['pass'], // Will be encrypted by model
+            'ssl' => $data['imap']['ssl'],
+            'is_active' => true,
+        ]);
+    }
+    
+    // 6. Write production .htaccess in root
+    writeProductionHtaccess();
+}
+
 /**
  * Attempt to install Composer dependencies
  */
@@ -470,64 +637,40 @@ function installComposerDependencies(): array
     // Check if composer is available
     $composerCommand = null;
     
-    // Try global composer first
-    $whichComposer = @shell_exec('which composer 2>/dev/null');
-    $whereComposer = @shell_exec('where composer 2>nul');
-    
-    if (!empty($whichComposer) || !empty($whereComposer)) {
-        $composerCommand = 'composer';
-    }
-    // Try composer.phar in project root
-    elseif (file_exists($rootDir . 'composer.phar')) {
-        $composerCommand = 'php ' . $rootDir . 'composer.phar';
-    }
-    // Try to download composer.phar
-    else {
-        try {
-            // Detect PHP CLI path (not httpd.exe from Apache)
-            $phpPath = null;
-            
-            // On Windows XAMPP, try common PHP CLI paths first
-            if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-                $possiblePaths = [
-                    'C:\\xampp\\php\\php.exe',
-                    'C:\\XAMPP\\php\\php.exe',
-                    'C:\\xampp7\\php\\php.exe'
-                ];
-                foreach ($possiblePaths as $path) {
-                    if (file_exists($path)) {
-                        $phpPath = $path;
-                        break;
+    // Try composer.phar in project root first
+    if (file_exists($rootDir . 'composer.phar')) {
+        $composerCommand = 'composer.phar';
+    } else {
+        // Try global composer
+        $whichComposer = @shell_exec('which composer 2>/dev/null');
+        if (!empty($whichComposer)) {
+            $composerCommand = 'composer';
+        } else {
+            $whereComposer = @shell_exec('where composer 2>nul');
+            if (!empty($whereComposer)) {
+                $composerCommand = 'composer';
+            } else {
+                // Try to download composer.phar
+                try {
+                    $composerInstaller = @file_get_contents('https://getcomposer.org/installer');
+                    if ($composerInstaller) {
+                        file_put_contents($rootDir . 'composer-setup.php', $composerInstaller);
+                        $escapedRootDir = escapeshellarg($rootDir);
+                        @exec('php ' . escapeshellarg($rootDir . 'composer-setup.php') . ' --install-dir=' . $escapedRootDir . ' --filename=composer.phar 2>&1', $output, $returnVar);
+                        @unlink($rootDir . 'composer-setup.php');
+                        
+                        if ($returnVar === 0 && file_exists($rootDir . 'composer.phar')) {
+                            $composerCommand = 'composer.phar';
+                        }
                     }
+                } catch (Exception $e) {
+                    return [
+                        'success' => false,
+                        'message' => 'Composer konnte nicht heruntergeladen werden: ' . $e->getMessage() . 
+                                   ' Bitte vendor.zip manuell installieren.'
+                    ];
                 }
             }
-            
-            // Fallback: Try PHP_BINARY if it points to php.exe (not httpd.exe)
-            if (!$phpPath && PHP_BINARY && stripos(PHP_BINARY, 'php.exe') !== false && file_exists(PHP_BINARY)) {
-                $phpPath = PHP_BINARY;
-            }
-            
-            // Last resort: hope 'php' is in PATH
-            if (!$phpPath) {
-                $phpPath = 'php';
-            }
-            
-            $composerInstaller = @file_get_contents('https://getcomposer.org/installer');
-            if ($composerInstaller) {
-                file_put_contents($rootDir . 'composer-setup.php', $composerInstaller);
-                @exec($phpPath . ' ' . $rootDir . 'composer-setup.php --install-dir=' . $rootDir . ' --filename=composer.phar 2>&1', $output, $returnVar);
-                @unlink($rootDir . 'composer-setup.php');
-                
-                if ($returnVar === 0 && file_exists($rootDir . 'composer.phar')) {
-                    $composerCommand = $phpPath . ' ' . $rootDir . 'composer.phar';
-                }
-            }
-        } catch (Exception $e) {
-            return [
-                'success' => false,
-                'message' => 'Composer konnte nicht heruntergeladen werden: ' . $e->getMessage() . 
-                           ' Bitte vendor.zip manuell installieren.'
-            ];
         }
     }
     
@@ -539,41 +682,17 @@ function installComposerDependencies(): array
         ];
     }
     
-    // Detect PHP CLI path for command execution
-    $phpPath = null;
+    // Run composer install with timeout handling (with proper escaping)
+    $escapedRootDir = escapeshellarg($rootDir);
+    $command = "cd {$escapedRootDir} && timeout 300 ";
     
-    // On Windows XAMPP, try common PHP CLI paths first
-    if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-        $possiblePaths = [
-            'C:\\xampp\\php\\php.exe',
-            'C:\\XAMPP\\php\\php.exe',
-            'C:\\xampp7\\php\\php.exe'
-        ];
-        foreach ($possiblePaths as $path) {
-            if (file_exists($path)) {
-                $phpPath = $path;
-                break;
-            }
-        }
+    if ($composerCommand === 'composer.phar') {
+        $command .= "php " . escapeshellarg($rootDir . 'composer.phar');
+    } else {
+        $command .= "composer";
     }
     
-    // Fallback: Try PHP_BINARY if it points to php.exe (not httpd.exe)
-    if (!$phpPath && PHP_BINARY && stripos(PHP_BINARY, 'php.exe') !== false && file_exists(PHP_BINARY)) {
-        $phpPath = PHP_BINARY;
-    }
-    
-    // Last resort: hope 'php' is in PATH
-    if (!$phpPath) {
-        $phpPath = 'php';
-    }
-    
-    // If composer command starts with 'php', replace with detected path
-    if (strpos($composerCommand, 'php ') === 0) {
-        $composerCommand = $phpPath . substr($composerCommand, 3);
-    }
-    
-    // Run composer install with timeout handling
-    $command = "cd {$rootDir} && timeout 300 {$composerCommand} install --no-dev --optimize-autoloader --no-interaction 2>&1";
+    $command .= " install --no-dev --optimize-autoloader --no-interaction 2>&1";
     
     // Try with timeout, fallback without
     $output = [];
@@ -582,7 +701,15 @@ function installComposerDependencies(): array
     
     // If timeout command doesn't exist, try without
     if ($returnVar === 127 || empty($output)) {
-        $command = "cd {$rootDir} && {$composerCommand} install --no-dev --optimize-autoloader --no-interaction 2>&1";
+        $command = "cd {$escapedRootDir} && ";
+        
+        if ($composerCommand === 'composer.phar') {
+            $command .= "php " . escapeshellarg($rootDir . 'composer.phar');
+        } else {
+            $command .= "composer";
+        }
+        
+        $command .= " install --no-dev --optimize-autoloader --no-interaction 2>&1";
         @exec($command, $output, $returnVar);
     }
     
@@ -607,27 +734,6 @@ function installComposerDependencies(): array
                         'Details siehe logs/composer-install.log. Bitte vendor.zip manuell installieren.'
         ];
     }
-}
-
-/**
- * Write production .htaccess that redirects to src/public/
- */
-function writeProductionHtaccess(): void
-{
-    $htaccessContent = <<<'HTACCESS'
-        \CiInbox\App\Models\ImapAccount::create([
-            'email' => $data['imap']['user'],
-            'server' => $data['imap']['host'],
-            'port' => (int)$data['imap']['port'],
-            'username' => $data['imap']['user'],
-            'password' => $data['imap']['pass'], // Will be encrypted by model
-            'ssl' => $data['imap']['ssl'],
-            'is_active' => true,
-        ]);
-    }
-    
-    // 6. Write production .htaccess in root
-    writeProductionHtaccess();
 }
 
 /**
@@ -684,8 +790,10 @@ HTACCESS;
  */
 function generateEnvFile(array $data): string
 {
+    $smtpEncryption = !empty($data['smtp']['ssl']) ? 'tls' : 'none';
+    
     return <<<ENV
-# C-IMAP Environment Configuration
+# CI-Inbox Environment Configuration
 # Generated by Setup Wizard
 
 # Application
@@ -714,7 +822,7 @@ SMTP_HOST={$data['smtp']['host']}
 SMTP_PORT={$data['smtp']['port']}
 SMTP_USERNAME={$data['smtp']['user']}
 SMTP_PASSWORD={$data['smtp']['pass']}
-SMTP_ENCRYPTION={$data['smtp']['ssl'] ? 'tls' : 'none'}
+SMTP_ENCRYPTION={$smtpEncryption}
 SMTP_FROM_EMAIL={$data['smtp']['from_email']}
 SMTP_FROM_NAME={$data['smtp']['from_name']}
 ENV;
@@ -1018,7 +1126,7 @@ $steps = [
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>C-IMAP Setup</title>
+    <title>CI-Inbox Setup</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { 
@@ -1103,19 +1211,8 @@ $steps = [
             gap: 8px;
         }
         .checkbox-group input { width: auto; }
-            <?php if ($error): ?>
-                <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
-            <?php endif; ?>
-            
-            <?php if ($success): ?>
-                <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>
-            <?php endif; ?>
-            
-            <?php if (isset($_GET['installed'])): ?>
-                <div class="alert alert-success">✅ Dependencies erfolgreich installiert! Bitte prüfen Sie die Ergebnisse unten.</div>
-            <?php endif; ?>
-            
-            <?php if ($currentStep == 1): ?>
+        .btn {
+            padding: 12px 24px;
             font-size: 15px;
             font-weight: 600;
             border: none;
@@ -1172,80 +1269,23 @@ $steps = [
             width: 80px;
             height: 80px;
             background: #10b981;
-                <?php if (!$hostingReady): ?>
-                <div class="alert alert-error" style="margin-top: 20px;">
-                    <strong>⛔ Installation blockiert</strong><br>
-                    Bitte beheben Sie die kritischen Fehler oben, bevor Sie fortfahren. 
-                    Kontaktieren Sie ggf. Ihren Hosting-Anbieter für Hilfe bei der PHP-Konfiguration.
-                </div>
-                <?php endif; ?>
-                
-                <?php 
-                // Show auto-fix options
-                $autoFixChecks = array_filter($hostingChecks, fn($check) => !empty($check['can_autofix']));
-                if (!empty($autoFixChecks)): 
-                ?>
-                <div style="background: #f0f9ff; border: 2px solid #3b82f6; border-radius: 8px; padding: 20px; margin-top: 20px;">
-                    <h3 style="margin-bottom: 15px; color: #1e40af;">🔧 Automatische Fehlerbehebung verfügbar</h3>
-                    <?php foreach ($autoFixChecks as $check): ?>
-                    <div style="margin-bottom: 15px;">
-                        <strong><?= htmlspecialchars($check['name']) ?>:</strong><br>
-                        <span style="color: #6b7280; font-size: 14px;"><?= htmlspecialchars($check['recommendation']) ?></span><br>
-                        <a href="?action=<?= htmlspecialchars($check['autofix_action']) ?>" 
-                           class="btn btn-primary" 
-                           style="margin-top: 8px; display: inline-block; font-size: 14px; padding: 8px 16px;">
-                            🚀 Automatisch beheben
-                        </a>
-                    </div>
-                    <?php endforeach; ?>
-                </div>
-                <?php endif; ?>
-                
-                <?php 
-                // Show manual download option if vendor is missing
-                if (!is_dir(__DIR__ . '/../../../vendor')): 
-                ?>
-                <div style="background: #fffbeb; border: 2px solid #f59e0b; border-radius: 8px; padding: 20px; margin-top: 20px;">
-                    <h3 style="margin-bottom: 15px; color: #92400e;">📦 Manuelle Installation: vendor.zip herunterladen</h3>
-                    <p style="color: #78350f; margin-bottom: 15px;">
-                        Falls die automatische Installation nicht funktioniert, können Sie die Dependencies manuell herunterladen:
-                    </p>
-                    <ol style="color: #78350f; margin-left: 20px; margin-bottom: 15px;">
-                        <li>Laden Sie <strong>vendor.zip</strong> herunter (ca. 80 MB)</li>
-                        <li>Entpacken Sie die Datei im Projekt-Root (dort wo auch composer.json liegt)</li>
-                        <li>Das Verzeichnis <code>vendor/</code> sollte danach existieren</li>
-                        <li>Laden Sie diese Seite neu</li>
-                    </ol>
-                    <a href="https://github.com/hndrk-fegko/C-IMAP/releases/latest/download/vendor.zip" 
-                       class="btn btn-primary" 
-                       target="_blank"
-                       style="display: inline-block;">
-                        📥 vendor.zip herunterladen (GitHub Release)
-                    </a>
-                    <a href="https://www.dropbox.com/s/example/vendor.zip?dl=1" 
-                       class="btn btn-secondary" 
-                       target="_blank"
-                       style="display: inline-block; margin-left: 10px;">
-                        📥 Alternativer Download (Dropbox)
-                    </a>
-                    <p style="color: #92400e; font-size: 13px; margin-top: 10px;">
-                        💡 <strong>Tipp:</strong> Führen Sie auf Ihrem lokalen PC <code>composer install --no-dev</code> aus 
-                        und laden Sie dann das komplette Projekt inkl. vendor/ per FTP hoch.
-                    </p>
-                </div>
-                <?php endif; ?>
-                
-                <form method="POST">
-                    <div class="actions">
-                        <div></div>
-                        <button type="submit" class="btn btn-primary" <?= !$hostingReady ? 'disabled' : '' ?>>
-                            Weiter zu System-Anforderungen →
-                        </button>
-                    </div>
-                </form>
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        .success-icon svg {
+            width: 50px;
+            height: 50px;
+        }
+    </style>
+</head>
+<body>
     <div class="container">
         <div class="header">
-            <h1>🚀 C-IMAP Setup</h1>
+            <h1>🚀 CI-Inbox Setup</h1>
             <p>Willkommen! Lassen Sie uns Ihre Installation einrichten.</p>
         </div>
         
@@ -1261,6 +1301,14 @@ $steps = [
         <div class="content">
             <?php if ($error): ?>
                 <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
+            <?php endif; ?>
+            
+            <?php if ($success): ?>
+                <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>
+            <?php endif; ?>
+            
+            <?php if (isset($_GET['installed'])): ?>
+                <div class="alert alert-success">✅ Dependencies erfolgreich installiert! Bitte prüfen Sie die Ergebnisse unten.</div>
             <?php endif; ?>
             
             <?php if ($currentStep == 1): ?>
@@ -1486,7 +1534,7 @@ $steps = [
                         </div>
                         <div class="form-group">
                             <label>Absender-Name</label>
-                            <input type="text" name="smtp_from_name" value="C-IMAP">
+                            <input type="text" name="smtp_from_name" value="CI-Inbox">
                         </div>
                     </div>
                     <div class="form-group">
@@ -1533,7 +1581,7 @@ $steps = [
                     </div>
                     <h2 class="section-title" style="text-align: center;">Installation abgeschlossen!</h2>
                     <p class="section-desc" style="text-align: center;">
-                        C-IMAP wurde erfolgreich installiert. Sie können sich jetzt mit Ihrem Administrator-Account anmelden.
+                        CI-Inbox wurde erfolgreich installiert. Sie können sich jetzt mit Ihrem Administrator-Account anmelden.
                     </p>
                     <a href="/login.php" class="btn btn-success" style="margin-top: 20px;">
                         Zur Anmeldung →

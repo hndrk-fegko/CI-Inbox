@@ -2,6 +2,8 @@
 
 **Version:** 0.1.0  
 **Status:** ✅ Implementiert  
+**Autor:** Hendrik Dreis  
+**Lizenz:** MIT License  
 **Modul-Pfad:** `src/modules/webcron/`
 
 ## Übersicht

@@ -1,6 +1,9 @@
 # Module Documentation Index
 
-Dieses Verzeichnis enthält die **technische Dokumentation** für alle C-IMAP Module.
+**Autor:** Hendrik Dreis ([hendrik.dreis@feg-koblenz.de](mailto:hendrik.dreis@feg-koblenz.de))  
+**Lizenz:** MIT License
+
+Dieses Verzeichnis enthält die **technische Dokumentation** für alle CI-Inbox Module.
 
 ## Struktur
 

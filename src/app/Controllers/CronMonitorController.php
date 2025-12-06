@@ -113,4 +113,68 @@ class CronMonitorController
             return $response->withHeader('Content-Type', 'application/json')->withStatus(500);
         }
     }
+    
+    /**
+     * GET /api/admin/cron/webhook
+     * Get webhook configuration (URL and token)
+     */
+    public function getWebhook(Request $request, Response $response): Response
+    {
+        try {
+            $config = $this->service->getWebhookConfig();
+            
+            $response->getBody()->write(json_encode([
+                'success' => true,
+                'data' => $config
+            ]));
+            
+            return $response->withHeader('Content-Type', 'application/json');
+            
+        } catch (\Exception $e) {
+            $this->logger->error('[CronMonitorController] Failed to get webhook config', [
+                'exception' => $e->getMessage()
+            ]);
+            
+            $response->getBody()->write(json_encode([
+                'success' => false,
+                'error' => $e->getMessage()
+            ]));
+            
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(500);
+        }
+    }
+    
+    /**
+     * POST /api/admin/cron/webhook/regenerate
+     * Regenerate webhook token
+     */
+    public function regenerateWebhook(Request $request, Response $response): Response
+    {
+        try {
+            $result = $this->service->regenerateWebhookToken();
+            
+            $response->getBody()->write(json_encode([
+                'success' => $result['success'],
+                'data' => [
+                    'token' => $result['token'],
+                    'url' => $result['url']
+                ],
+                'message' => $result['message']
+            ]));
+            
+            return $response->withHeader('Content-Type', 'application/json');
+            
+        } catch (\Exception $e) {
+            $this->logger->error('[CronMonitorController] Failed to regenerate webhook', [
+                'exception' => $e->getMessage()
+            ]);
+            
+            $response->getBody()->write(json_encode([
+                'success' => false,
+                'error' => $e->getMessage()
+            ]));
+            
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(500);
+        }
+    }
 }

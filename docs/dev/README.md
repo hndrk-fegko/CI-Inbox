@@ -1,6 +1,15 @@
 # Developer Documentation Index
 
-Willkommen zur C-IMAP Entwickler-Dokumentation! 📚
+Willkommen zur CI-Inbox Entwickler-Dokumentation! 📚
+
+---
+
+**Projekt:** CI-Inbox - Collaborative IMAP Inbox Management  
+**Lead Developer:** Hendrik Dreis ([hendrik.dreis@feg-koblenz.de](mailto:hendrik.dreis@feg-koblenz.de))  
+**Lizenz:** MIT License  
+**Repository:** [github.com/hndrk-fegko/CI-Inbox](https://github.com/hndrk-fegko/CI-Inbox)
+
+---
 
 ## 📋 Table of Contents
 

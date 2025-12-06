@@ -2,7 +2,8 @@
 /**
  * Cron Monitor Service
  * 
- * Monitors webcron polling service health and provides status information
+ * Monitors webcron polling service health and provides status information.
+ * Also manages webhook configuration and token regeneration.
  */
 
 declare(strict_types=1);
@@ -10,14 +11,35 @@ declare(strict_types=1);
 namespace CiInbox\App\Services;
 
 use CiInbox\App\Models\CronExecution;
+use CiInbox\App\Repositories\SystemSettingRepository;
 use CiInbox\Modules\Logger\LoggerInterface;
 use Carbon\Carbon;
 
 class CronMonitorService
 {
+    // Health thresholds for minutely cron
+    private const THRESHOLD_HEALTHY = 55;   // >55 executions/hour = healthy
+    private const THRESHOLD_DELAYED = 30;   // <30 executions/hour = delayed
+    private const THRESHOLD_STALE = 1;      // <1 execution/hour = stale
+    
+    private ?SystemSettingRepository $settingsRepository = null;
+    
     public function __construct(
         private LoggerInterface $logger
-    ) {}
+    ) {
+        // Try to get settings repository if available
+        try {
+            $container = \CiInbox\Core\Container::getInstance();
+            if ($container->has(SystemSettingRepository::class)) {
+                $this->settingsRepository = $container->get(SystemSettingRepository::class);
+            }
+        } catch (\Exception $e) {
+            // Log that settings repository is unavailable
+            $this->logger->debug('[CronMonitor] Settings repository unavailable, using defaults', [
+                'reason' => $e->getMessage()
+            ]);
+        }
+    }
     
     /**
      * Get current cron service status
@@ -223,6 +245,94 @@ class CronMonitorService
                 'avg_emails_found' => 0,
                 'success_rate' => 0,
                 'total_emails_found' => 0
+            ];
+        }
+    }
+    
+    /**
+     * Get webhook configuration
+     * 
+     * @return array{token: string, url: string}
+     */
+    public function getWebhookConfig(): array
+    {
+        $this->logger->debug('[CronMonitor] Getting webhook config');
+        
+        try {
+            // Get token from settings or generate default
+            $token = null;
+            
+            if ($this->settingsRepository) {
+                $token = $this->settingsRepository->get('cron.webhook_token');
+            }
+            
+            // Fallback to environment variable or generate
+            if (empty($token)) {
+                $token = getenv('WEBCRON_API_KEY') ?: 'dev-secret-key-12345';
+            }
+            
+            // Build webhook URL
+            $baseUrl = getenv('APP_URL') ?: 'http://localhost';
+            $url = rtrim($baseUrl, '/') . '/api/webcron/poll?token=' . $token;
+            
+            return [
+                'token' => $token,
+                'url' => $url
+            ];
+            
+        } catch (\Exception $e) {
+            $this->logger->error('[CronMonitor] Failed to get webhook config', [
+                'error' => $e->getMessage()
+            ]);
+            
+            return [
+                'token' => 'error',
+                'url' => ''
+            ];
+        }
+    }
+    
+    /**
+     * Regenerate webhook token
+     * 
+     * @return array{success: bool, token: string, url: string, message: string}
+     */
+    public function regenerateWebhookToken(): array
+    {
+        $this->logger->info('[CronMonitor] Regenerating webhook token');
+        
+        try {
+            // Generate new secure token
+            $newToken = bin2hex(random_bytes(32));
+            
+            // Save to settings if repository available
+            if ($this->settingsRepository) {
+                $this->settingsRepository->set('cron.webhook_token', $newToken);
+            }
+            
+            // Build new webhook URL
+            $baseUrl = getenv('APP_URL') ?: 'http://localhost';
+            $url = rtrim($baseUrl, '/') . '/api/webcron/poll?token=' . $newToken;
+            
+            $this->logger->info('[CronMonitor] Webhook token regenerated successfully');
+            
+            return [
+                'success' => true,
+                'token' => $newToken,
+                'url' => $url,
+                'message' => 'Webhook token regenerated successfully. Update your cron service with the new URL.'
+            ];
+            
+        } catch (\Exception $e) {
+            $this->logger->error('[CronMonitor] Failed to regenerate webhook token', [
+                'error' => $e->getMessage()
+            ]);
+            
+            return [
+                'success' => false,
+                'token' => '',
+                'url' => '',
+                'message' => 'Failed to regenerate token: ' . $e->getMessage()
             ];
         }
     }

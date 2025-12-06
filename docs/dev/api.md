@@ -1,8 +1,10 @@
 # CI-Inbox REST API Documentation
 
-**Version:** 0.1.0  
+**Version:** 0.3.0  
 **Base URL:** `http://ci-inbox.local/api`  
-**Last Updated:** November 18, 2025
+**Last Updated:** 6. Dezember 2025  
+**Autor:** Hendrik Dreis ([hendrik.dreis@feg-koblenz.de](mailto:hendrik.dreis@feg-koblenz.de))  
+**Lizenz:** MIT License
 
 This document provides a complete reference for all REST API endpoints in CI-Inbox.
 
@@ -50,8 +52,8 @@ This document provides a complete reference for all REST API endpoints in CI-Inb
 **Current Implementation:** `AuthController` with session management (src/app/Controllers/AuthController.php)
 
 **Demo Credentials:**
-- Email: `demo@c-imap.local` / Password: `demo123`
-- Email: `admin@c-imap.local` / Password: `admin123`
+- Email: `demo@ci-inbox.local` / Password: `demo123`
+- Email: `admin@ci-inbox.local` / Password: `admin123`
 
 **TODO:**
 - [ ] POST /api/auth/login - API login endpoint

@@ -5,8 +5,9 @@
     "license": "MIT",
     "authors": [
         {
-            "name": "Your Name",
-            "email": "your.email@example.com"
+            "name": "Hendrik Dreis",
+            "email": "hendrik.dreis@feg-koblenz.de",
+            "role": "Lead Developer"
         }
     ],
     "require": {

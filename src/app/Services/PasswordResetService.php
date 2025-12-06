@@ -150,7 +150,7 @@ class PasswordResetService
     {
         $resetUrl = $this->buildResetUrl($token);
         
-        $subject = 'Passwort zurücksetzen - C-IMAP';
+        $subject = 'Passwort zurücksetzen - CI-Inbox';
         
         $htmlBody = $this->buildResetEmailHtml($user->name ?? $user->email, $resetUrl);
         $textBody = $this->buildResetEmailText($user->name ?? $user->email, $resetUrl);
@@ -232,7 +232,7 @@ class PasswordResetService
            Ihr Passwort bleibt unverändert.</p>
         
         <div class="footer">
-            <p>Diese E-Mail wurde automatisch von C-IMAP generiert.</p>
+            <p>Diese E-Mail wurde automatisch von CI-Inbox generiert.</p>
         </div>
     </div>
 </body>
@@ -261,7 +261,7 @@ Falls Sie diese Anfrage nicht gestellt haben, können Sie diese E-Mail ignoriere
 Ihr Passwort bleibt unverändert.
 
 ---
-Diese E-Mail wurde automatisch von C-IMAP generiert.
+Diese E-Mail wurde automatisch von CI-Inbox generiert.
 TEXT;
     }
 }

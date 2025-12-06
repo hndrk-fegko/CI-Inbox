@@ -27,21 +27,21 @@ try {
     
     // Update demo user
     $stmt = $pdo->prepare('UPDATE users SET password_hash = ? WHERE email = ?');
-    $stmt->execute([$demoHash, 'demo@c-imap.local']);
-    echo "✓ Updated demo@c-imap.local\n";
+    $stmt->execute([$demoHash, 'demo@ci-inbox.local']);
+    echo "✓ Updated demo@ci-inbox.local\n";
     
     // Update admin user
-    $stmt->execute([$adminHash, 'admin@c-imap.local']);
-    echo "✓ Updated admin@c-imap.local\n\n";
+    $stmt->execute([$adminHash, 'admin@ci-inbox.local']);
+    echo "✓ Updated admin@ci-inbox.local\n\n";
     
     // Verify
     echo "Verification:\n";
     $stmt = $pdo->prepare('SELECT email, password_hash FROM users WHERE email IN (?, ?)');
-    $stmt->execute(['demo@c-imap.local', 'admin@c-imap.local']);
+    $stmt->execute(['demo@ci-inbox.local', 'admin@ci-inbox.local']);
     $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     foreach ($users as $user) {
-        $password = ($user['email'] === 'demo@c-imap.local') ? 'demo123' : 'admin123';
+        $password = ($user['email'] === 'demo@ci-inbox.local') ? 'demo123' : 'admin123';
         $verifies = password_verify($password, $user['password_hash']);
         echo "{$user['email']}: " . ($verifies ? '✓ VALID' : '✗ INVALID') . "\n";
     }

@@ -2,6 +2,15 @@
 
 **Welcome!** This guide gets you up and running in 30 minutes.
 
+---
+
+**Projekt:** CI-Inbox - Collaborative IMAP Inbox Management  
+**Autor:** Hendrik Dreis ([hendrik.dreis@feg-koblenz.de](mailto:hendrik.dreis@feg-koblenz.de))  
+**Lizenz:** MIT License  
+**Repository:** [github.com/hndrk-fegko/CI-Inbox](https://github.com/hndrk-fegko/CI-Inbox)
+
+---
+
 ## Prerequisites
 
 - **PHP** 8.1+ with extensions: pdo_mysql, imap, openssl, mbstring
@@ -23,7 +32,7 @@ composer --version   # Should show 2.5+
 ### 1. Clone & Install Dependencies
 
 ```bash
-git clone https://github.com/hndrk-fegko/C-IMAP.git ci-inbox
+git clone https://github.com/hndrk-fegko/CI-Inbox.git ci-inbox
 cd ci-inbox
 composer install
 ```

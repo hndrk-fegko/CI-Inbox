@@ -2,6 +2,8 @@
 
 **Version:** 1.0.0  
 **Status:** ✅ Production Ready  
+**Autor:** Hendrik Dreis  
+**Lizenz:** MIT License  
 **Dependencies:** None (standalone)
 
 ---

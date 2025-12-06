@@ -497,6 +497,75 @@ return [
         );
     },
     
+    // ========== DATABASE ADMIN ==========
+    
+    // Database Admin Service
+    \CiInbox\App\Services\DatabaseAdminService::class => function($container) {
+        return new \CiInbox\App\Services\DatabaseAdminService(
+            $container->get(LoggerService::class)
+        );
+    },
+    
+    // Database Admin Controller
+    \CiInbox\App\Controllers\DatabaseAdminController::class => function($container) {
+        return new \CiInbox\App\Controllers\DatabaseAdminController(
+            $container->get(\CiInbox\App\Services\DatabaseAdminService::class),
+            $container->get(LoggerService::class)
+        );
+    },
+    
+    // ========== LOGGER ADMIN ==========
+    
+    // Logger Admin Service
+    \CiInbox\App\Services\LoggerAdminService::class => function($container) {
+        return new \CiInbox\App\Services\LoggerAdminService(
+            $container->get(LoggerService::class),
+            $container->get(\CiInbox\App\Repositories\SystemSettingRepository::class)
+        );
+    },
+    
+    // Logger Admin Controller
+    \CiInbox\App\Controllers\LoggerAdminController::class => function($container) {
+        return new \CiInbox\App\Controllers\LoggerAdminController(
+            $container->get(\CiInbox\App\Services\LoggerAdminService::class),
+            $container->get(LoggerService::class)
+        );
+    },
+    
+    // ========== OAUTH ADMIN ==========
+    
+    // OAuth Admin Service
+    \CiInbox\App\Services\OAuthAdminService::class => function($container) {
+        return new \CiInbox\App\Services\OAuthAdminService(
+            $container->get(LoggerService::class)
+        );
+    },
+    
+    // OAuth Admin Controller
+    \CiInbox\App\Controllers\OAuthAdminController::class => function($container) {
+        return new \CiInbox\App\Controllers\OAuthAdminController(
+            $container->get(\CiInbox\App\Services\OAuthAdminService::class),
+            $container->get(LoggerService::class)
+        );
+    },
+    
+    // ========== HEALTH MODULE ==========
+    
+    // Health Admin Service
+    \CiInbox\App\Services\HealthAdminService::class => function($container) {
+        return new \CiInbox\App\Services\HealthAdminService(
+            $container->get(LoggerService::class),
+            $container->get(ConfigService::class)
+        );
+    },
+    
+    // Health Admin Controller
+    \CiInbox\App\Controllers\HealthAdminController::class => function($container) {
+        return new \CiInbox\App\Controllers\HealthAdminController(
+            $container->get(\CiInbox\App\Services\HealthAdminService::class)
+        );
+    },
+    
     // ========== THEME MODULE ==========
     
     // Theme Service

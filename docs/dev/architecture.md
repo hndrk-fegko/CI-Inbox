@@ -1,6 +1,8 @@
 # Architektur-Dokumentation: CI-Inbox
 
-**Letzte Aktualisierung:** 17. November 2025  
+**Letzte Aktualisierung:** 6. Dezember 2025  
+**Autor:** Hendrik Dreis ([hendrik.dreis@feg-koblenz.de](mailto:hendrik.dreis@feg-koblenz.de))  
+**Lizenz:** MIT License  
 **Basis:** `vision.md`, `inventar.md`, `roadmap.md`, `basics.txt`
 
 Diese Dokumentation beschreibt die technische Architektur der CI-Inbox mit Fokus auf **Modularität**, **Testbarkeit** und **Layer-Abstraktion**.

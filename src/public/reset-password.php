@@ -77,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tokenValid) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neues Passwort setzen - C-IMAP</title>
+    <title>Neues Passwort setzen - CI-Inbox</title>
     <link rel="stylesheet" href="/assets/css/main.css<?= asset_version() ?>">
 </head>
 <body class="l-auth">

@@ -58,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Passwort vergessen - C-IMAP</title>
+    <title>Passwort vergessen - CI-Inbox</title>
     <link rel="stylesheet" href="/assets/css/main.css<?= asset_version() ?>">
 </head>
 <body class="l-auth">

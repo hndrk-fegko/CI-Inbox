@@ -1,5 +1,8 @@
 # System Health Check & Monitoring
 
+**Autor:** Hendrik Dreis  
+**Lizenz:** MIT License
+
 ## Übersicht
 
 Das System Health Check Modul bietet umfassende Überwachung der CI-Inbox Installation mit Integration in den Keep-it-easy Update-Server.

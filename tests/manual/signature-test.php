@@ -27,7 +27,7 @@ echo "   SMTP Configured: " . ($smtpConfigured ? 'Yes' : 'No') . PHP_EOL . PHP_E
 echo "2. Create Personal Signature:" . PHP_EOL;
 $result = $signatureService->createPersonalSignature(1, [
     'name' => 'Test Signature',
-    'content' => "Best regards,\nJohn Doe\ntest@c-imap.local",
+    'content' => "Best regards,\nJohn Doe\ntest@ci-inbox.local",
     'is_default' => true
 ]);
 echo "   Success: " . ($result['success'] ? 'Yes' : 'No') . PHP_EOL;
@@ -51,7 +51,7 @@ echo PHP_EOL;
 echo "4. Create Global Signature:" . PHP_EOL;
 $result = $signatureService->createGlobalSignature([
     'name' => 'Company Signature',
-    'content' => "Best regards,\nC-IMAP Team\nsupport@c-imap.local",
+    'content' => "Best regards,\nCI-Inbox Team\nsupport@ci-inbox.local",
     'is_default' => true
 ]);
 echo "   Success: " . ($result['success'] ? 'Yes' : 'No') . PHP_EOL;
