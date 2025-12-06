@@ -154,7 +154,14 @@ class DatabaseAdminService
             
             foreach ($tables as $table) {
                 try {
-                    DB::statement("OPTIMIZE TABLE `{$table->table_name}`");
+                    // Validate table name contains only safe characters
+                    $tableName = $table->table_name;
+                    if (!preg_match('/^[a-zA-Z0-9_]+$/', $tableName)) {
+                        $errors[] = $tableName;
+                        continue;
+                    }
+                    
+                    DB::statement("OPTIMIZE TABLE `{$tableName}`");
                     $optimized++;
                 } catch (\Exception $e) {
                     $errors[] = $table->table_name;
@@ -207,7 +214,13 @@ class DatabaseAdminService
             
             foreach ($tables as $table) {
                 try {
-                    DB::statement("ANALYZE TABLE `{$table->table_name}`");
+                    // Validate table name contains only safe characters
+                    $tableName = $table->table_name;
+                    if (!preg_match('/^[a-zA-Z0-9_]+$/', $tableName)) {
+                        continue;
+                    }
+                    
+                    DB::statement("ANALYZE TABLE `{$tableName}`");
                     $analyzed++;
                 } catch (\Exception $e) {
                     // Continue with next table
