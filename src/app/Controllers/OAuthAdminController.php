@@ -1,8 +1,8 @@
 <?php
 /**
- * Cron Monitor Controller
+ * OAuth Admin Controller
  * 
- * Handles cron monitoring endpoints (admin only)
+ * Handles OAuth2/SSO configuration endpoints for admin interface.
  */
 
 declare(strict_types=1);
@@ -11,117 +11,24 @@ namespace CiInbox\App\Controllers;
 
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
-use CiInbox\App\Services\CronMonitorService;
+use CiInbox\App\Services\OAuthAdminService;
 use CiInbox\Modules\Logger\LoggerInterface;
 
-class CronMonitorController
+class OAuthAdminController
 {
     public function __construct(
-        private CronMonitorService $service,
+        private OAuthAdminService $service,
         private LoggerInterface $logger
     ) {}
     
     /**
-     * GET /api/admin/cron/status
-     * Get current cron service status
+     * GET /api/admin/oauth/config
+     * Get OAuth configuration
      */
-    public function getStatus(Request $request, Response $response): Response
+    public function getConfig(Request $request, Response $response): Response
     {
         try {
-            $status = $this->service->getStatus();
-            
-            $response->getBody()->write(json_encode([
-                'success' => true,
-                'data' => $status
-            ]));
-            
-            return $response->withHeader('Content-Type', 'application/json');
-            
-        } catch (\Exception $e) {
-            $this->logger->error('[CronMonitorController] Failed to get status', [
-                'exception' => $e->getMessage()
-            ]);
-            
-            $response->getBody()->write(json_encode([
-                'success' => false,
-                'error' => $e->getMessage()
-            ]));
-            
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(500);
-        }
-    }
-    
-    /**
-     * GET /api/admin/cron/history
-     * Get execution history
-     */
-    public function getHistory(Request $request, Response $response): Response
-    {
-        try {
-            $params = $request->getQueryParams();
-            $limit = isset($params['limit']) ? (int)$params['limit'] : 20;
-            
-            $history = $this->service->getHistory($limit);
-            
-            $response->getBody()->write(json_encode([
-                'success' => true,
-                'data' => $history
-            ]));
-            
-            return $response->withHeader('Content-Type', 'application/json');
-            
-        } catch (\Exception $e) {
-            $this->logger->error('[CronMonitorController] Failed to get history', [
-                'exception' => $e->getMessage()
-            ]);
-            
-            $response->getBody()->write(json_encode([
-                'success' => false,
-                'error' => $e->getMessage()
-            ]));
-            
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(500);
-        }
-    }
-    
-    /**
-     * GET /api/admin/cron/statistics
-     * Get cron execution statistics
-     */
-    public function getStatistics(Request $request, Response $response): Response
-    {
-        try {
-            $stats = $this->service->getStatistics();
-            
-            $response->getBody()->write(json_encode([
-                'success' => true,
-                'data' => $stats
-            ]));
-            
-            return $response->withHeader('Content-Type', 'application/json');
-            
-        } catch (\Exception $e) {
-            $this->logger->error('[CronMonitorController] Failed to get statistics', [
-                'exception' => $e->getMessage()
-            ]);
-            
-            $response->getBody()->write(json_encode([
-                'success' => false,
-                'error' => $e->getMessage()
-            ]));
-            
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(500);
-        }
-    }
-    
-    /**
-     * GET /api/admin/cron/webhook
-     * Get webhook configuration (URL and token)
-     */
-    public function getWebhook(Request $request, Response $response): Response
-    {
-        try {
-            $config = $this->service->getWebhookConfig();
+            $config = $this->service->getConfig();
             
             $response->getBody()->write(json_encode([
                 'success' => true,
@@ -131,8 +38,8 @@ class CronMonitorController
             return $response->withHeader('Content-Type', 'application/json');
             
         } catch (\Exception $e) {
-            $this->logger->error('[CronMonitorController] Failed to get webhook config', [
-                'exception' => $e->getMessage()
+            $this->logger->error('[OAuthAdminController] getConfig failed', [
+                'error' => $e->getMessage()
             ]);
             
             $response->getBody()->write(json_encode([
@@ -145,28 +52,129 @@ class CronMonitorController
     }
     
     /**
-     * POST /api/admin/cron/webhook/regenerate
-     * Regenerate webhook token
+     * PUT /api/admin/oauth/config
+     * Update global OAuth settings
      */
-    public function regenerateWebhook(Request $request, Response $response): Response
+    public function updateConfig(Request $request, Response $response): Response
     {
         try {
-            $result = $this->service->regenerateWebhookToken();
+            $data = $request->getParsedBody();
+            $config = $this->service->updateGlobalSettings($data);
             
             $response->getBody()->write(json_encode([
-                'success' => $result['success'],
-                'data' => [
-                    'token' => $result['token'],
-                    'url' => $result['url']
-                ],
-                'message' => $result['message']
+                'success' => true,
+                'data' => $config,
+                'message' => 'OAuth settings updated successfully'
             ]));
             
             return $response->withHeader('Content-Type', 'application/json');
             
         } catch (\Exception $e) {
-            $this->logger->error('[CronMonitorController] Failed to regenerate webhook', [
-                'exception' => $e->getMessage()
+            $this->logger->error('[OAuthAdminController] updateConfig failed', [
+                'error' => $e->getMessage()
+            ]);
+            
+            $response->getBody()->write(json_encode([
+                'success' => false,
+                'error' => $e->getMessage()
+            ]));
+            
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(500);
+        }
+    }
+    
+    /**
+     * PUT /api/admin/oauth/providers/{provider}
+     * Update specific provider configuration
+     */
+    public function updateProvider(Request $request, Response $response, array $args): Response
+    {
+        try {
+            $provider = $args['provider'] ?? '';
+            $data = $request->getParsedBody();
+            
+            if (empty($provider)) {
+                $response->getBody()->write(json_encode([
+                    'success' => false,
+                    'error' => 'Provider not specified'
+                ]));
+                return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+            }
+            
+            $config = $this->service->updateProvider($provider, $data);
+            
+            $response->getBody()->write(json_encode([
+                'success' => true,
+                'data' => $config,
+                'message' => ucfirst($provider) . ' provider updated successfully'
+            ]));
+            
+            return $response->withHeader('Content-Type', 'application/json');
+            
+        } catch (\Exception $e) {
+            $this->logger->error('[OAuthAdminController] updateProvider failed', [
+                'provider' => $args['provider'] ?? 'unknown',
+                'error' => $e->getMessage()
+            ]);
+            
+            $response->getBody()->write(json_encode([
+                'success' => false,
+                'error' => $e->getMessage()
+            ]));
+            
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(500);
+        }
+    }
+    
+    /**
+     * GET /api/admin/oauth/stats
+     * Get OAuth statistics
+     */
+    public function getStats(Request $request, Response $response): Response
+    {
+        try {
+            $stats = $this->service->getStats();
+            
+            $response->getBody()->write(json_encode([
+                'success' => true,
+                'data' => $stats
+            ]));
+            
+            return $response->withHeader('Content-Type', 'application/json');
+            
+        } catch (\Exception $e) {
+            $this->logger->error('[OAuthAdminController] getStats failed', [
+                'error' => $e->getMessage()
+            ]);
+            
+            $response->getBody()->write(json_encode([
+                'success' => false,
+                'error' => $e->getMessage()
+            ]));
+            
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(500);
+        }
+    }
+    
+    /**
+     * GET /api/admin/oauth/users
+     * Get users with OAuth connections
+     */
+    public function getUsers(Request $request, Response $response): Response
+    {
+        try {
+            $users = $this->service->getOAuthUsers();
+            
+            $response->getBody()->write(json_encode([
+                'success' => true,
+                'data' => $users
+            ]));
+            
+            return $response->withHeader('Content-Type', 'application/json');
+            
+        } catch (\Exception $e) {
+            $this->logger->error('[OAuthAdminController] getUsers failed', [
+                'error' => $e->getMessage()
             ]);
             
             $response->getBody()->write(json_encode([

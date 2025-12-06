@@ -50,15 +50,19 @@ class SystemSettingRepository
     }
     
     /**
-     * Set setting value
+     * Set setting value (creates if not exists)
      */
-    public function set(string $key, mixed $value): SystemSetting
+    public function set(string $key, mixed $value, bool $encrypt = false, string $type = 'string'): SystemSetting
     {
         try {
             $setting = SystemSetting::where('setting_key', $key)->first();
             
             if (!$setting) {
-                throw new \Exception("Setting key '{$key}' not found");
+                // Create new setting
+                $setting = new SystemSetting();
+                $setting->setting_key = $key;
+                $setting->setting_type = $type;
+                $setting->is_encrypted = $encrypt;
             }
             
             $setting->setTypedValue($value);

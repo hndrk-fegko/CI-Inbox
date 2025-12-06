@@ -882,6 +882,148 @@ return function (App $app) {
             $controller = $container->get(\CiInbox\App\Controllers\CronMonitorController::class);
             return $controller->getStatistics($request, $response);
         });
+        
+        // Get webhook configuration
+        $app->get('/webhook', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\CronMonitorController::class);
+            return $controller->getWebhook($request, $response);
+        });
+        
+        // Regenerate webhook token
+        $app->post('/webhook/regenerate', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\CronMonitorController::class);
+            return $controller->regenerateWebhook($request, $response);
+        });
+    });
+    
+    // Database Admin API Routes
+    $app->group('/api/admin/database', function ($app) {
+        // Get database status
+        $app->get('/status', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\DatabaseAdminController::class);
+            return $controller->getStatus($request, $response);
+        });
+        
+        // Get tables list
+        $app->get('/tables', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\DatabaseAdminController::class);
+            return $controller->getTables($request, $response);
+        });
+        
+        // Optimize tables
+        $app->post('/optimize', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\DatabaseAdminController::class);
+            return $controller->optimize($request, $response);
+        });
+        
+        // Analyze tables
+        $app->post('/analyze', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\DatabaseAdminController::class);
+            return $controller->analyze($request, $response);
+        });
+        
+        // Check orphaned data
+        $app->get('/orphaned', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\DatabaseAdminController::class);
+            return $controller->checkOrphaned($request, $response);
+        });
+        
+        // Get migration status
+        $app->get('/migrations', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\DatabaseAdminController::class);
+            return $controller->getMigrations($request, $response);
+        });
+    });
+    
+    // Logger Admin API Routes
+    $app->group('/api/admin/logger', function ($app) {
+        // Get current log level
+        $app->get('/level', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\LoggerAdminController::class);
+            return $controller->getLevel($request, $response);
+        });
+        
+        // Set log level
+        $app->put('/level', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\LoggerAdminController::class);
+            return $controller->setLevel($request, $response);
+        });
+        
+        // Get log stream
+        $app->get('/stream', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\LoggerAdminController::class);
+            return $controller->getStream($request, $response);
+        });
+        
+        // Get log statistics
+        $app->get('/stats', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\LoggerAdminController::class);
+            return $controller->getStats($request, $response);
+        });
+        
+        // Clear logs
+        $app->post('/clear', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\LoggerAdminController::class);
+            return $controller->clearLogs($request, $response);
+        });
+        
+        // Download logs
+        $app->post('/download', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\LoggerAdminController::class);
+            return $controller->downloadLogs($request, $response);
+        });
+    });
+    
+    // OAuth Admin API Routes
+    $app->group('/api/admin/oauth', function ($app) {
+        // Get OAuth configuration
+        $app->get('/config', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\OAuthAdminController::class);
+            return $controller->getConfig($request, $response);
+        });
+        
+        // Update global OAuth settings
+        $app->put('/config', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\OAuthAdminController::class);
+            return $controller->updateConfig($request, $response);
+        });
+        
+        // Update specific provider
+        $app->put('/providers/{provider}', function (Request $request, Response $response, array $args) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\OAuthAdminController::class);
+            return $controller->updateProvider($request, $response, $args);
+        });
+        
+        // Get OAuth statistics
+        $app->get('/stats', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\OAuthAdminController::class);
+            return $controller->getStats($request, $response);
+        });
+        
+        // Get OAuth users
+        $app->get('/users', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\OAuthAdminController::class);
+            return $controller->getUsers($request, $response);
+        });
     });
     
     // Backup API Routes (Admin only)
@@ -1039,6 +1181,304 @@ return function (App $app) {
                 
             } catch (\Exception $e) {
                 $logger->error('Backup cleanup failed', ['error' => $e->getMessage()]);
+                
+                $response->getBody()->write(json_encode([
+                    'success' => false,
+                    'error' => $e->getMessage()
+                ]));
+                
+                return $response
+                    ->withHeader('Content-Type', 'application/json')
+                    ->withStatus(500);
+            }
+        });
+        
+        // Get backup schedule
+        $app->get('/schedule', function (Request $request, Response $response) use ($container, $logger) {
+            try {
+                $backupService = $container->get(\CiInbox\App\Services\BackupService::class);
+                $schedule = $backupService->getSchedule();
+                
+                $response->getBody()->write(json_encode([
+                    'success' => true,
+                    'data' => $schedule
+                ]));
+                
+                return $response->withHeader('Content-Type', 'application/json');
+                
+            } catch (\Exception $e) {
+                $logger->error('Get schedule failed', ['error' => $e->getMessage()]);
+                
+                $response->getBody()->write(json_encode([
+                    'success' => false,
+                    'error' => $e->getMessage()
+                ]));
+                
+                return $response
+                    ->withHeader('Content-Type', 'application/json')
+                    ->withStatus(500);
+            }
+        });
+        
+        // Update backup schedule
+        $app->put('/schedule', function (Request $request, Response $response) use ($container, $logger) {
+            try {
+                $body = $request->getParsedBody();
+                $backupService = $container->get(\CiInbox\App\Services\BackupService::class);
+                $schedule = $backupService->updateSchedule($body);
+                
+                $response->getBody()->write(json_encode([
+                    'success' => true,
+                    'data' => $schedule,
+                    'message' => 'Schedule updated successfully'
+                ]));
+                
+                return $response->withHeader('Content-Type', 'application/json');
+                
+            } catch (\Exception $e) {
+                $logger->error('Update schedule failed', ['error' => $e->getMessage()]);
+                
+                $response->getBody()->write(json_encode([
+                    'success' => false,
+                    'error' => $e->getMessage()
+                ]));
+                
+                return $response
+                    ->withHeader('Content-Type', 'application/json')
+                    ->withStatus(500);
+            }
+        });
+        
+        // Get storage usage
+        $app->get('/usage', function (Request $request, Response $response) use ($container, $logger) {
+            try {
+                $backupService = $container->get(\CiInbox\App\Services\BackupService::class);
+                $usage = $backupService->getStorageUsage();
+                
+                $response->getBody()->write(json_encode([
+                    'success' => true,
+                    'data' => $usage
+                ]));
+                
+                return $response->withHeader('Content-Type', 'application/json');
+                
+            } catch (\Exception $e) {
+                $logger->error('Get storage usage failed', ['error' => $e->getMessage()]);
+                
+                $response->getBody()->write(json_encode([
+                    'success' => false,
+                    'error' => $e->getMessage()
+                ]));
+                
+                return $response
+                    ->withHeader('Content-Type', 'application/json')
+                    ->withStatus(500);
+            }
+        });
+        
+        // Get external storage configuration
+        $app->get('/storage', function (Request $request, Response $response) use ($container, $logger) {
+            try {
+                $backupService = $container->get(\CiInbox\App\Services\BackupService::class);
+                $storage = $backupService->getExternalStorage();
+                
+                $response->getBody()->write(json_encode([
+                    'success' => true,
+                    'data' => $storage
+                ]));
+                
+                return $response->withHeader('Content-Type', 'application/json');
+                
+            } catch (\Exception $e) {
+                $logger->error('Get external storage failed', ['error' => $e->getMessage()]);
+                
+                $response->getBody()->write(json_encode([
+                    'success' => false,
+                    'error' => $e->getMessage()
+                ]));
+                
+                return $response
+                    ->withHeader('Content-Type', 'application/json')
+                    ->withStatus(500);
+            }
+        });
+        
+        // Update external storage configuration
+        $app->put('/storage', function (Request $request, Response $response) use ($container, $logger) {
+            try {
+                $body = $request->getParsedBody();
+                $backupService = $container->get(\CiInbox\App\Services\BackupService::class);
+                $storage = $backupService->updateExternalStorage($body);
+                
+                $response->getBody()->write(json_encode([
+                    'success' => true,
+                    'data' => $storage,
+                    'message' => 'External storage configuration updated'
+                ]));
+                
+                return $response->withHeader('Content-Type', 'application/json');
+                
+            } catch (\Exception $e) {
+                $logger->error('Update external storage failed', ['error' => $e->getMessage()]);
+                
+                $response->getBody()->write(json_encode([
+                    'success' => false,
+                    'error' => $e->getMessage()
+                ]));
+                
+                return $response
+                    ->withHeader('Content-Type', 'application/json')
+                    ->withStatus(400);
+            }
+        });
+        
+        // Test external storage connection
+        $app->post('/storage/test', function (Request $request, Response $response) use ($container, $logger) {
+            try {
+                $body = $request->getParsedBody();
+                $backupService = $container->get(\CiInbox\App\Services\BackupService::class);
+                $result = $backupService->testExternalStorage($body);
+                
+                $response->getBody()->write(json_encode($result));
+                
+                return $response->withHeader('Content-Type', 'application/json')
+                    ->withStatus($result['success'] ? 200 : 400);
+                
+            } catch (\Exception $e) {
+                $logger->error('Test external storage failed', ['error' => $e->getMessage()]);
+                
+                $response->getBody()->write(json_encode([
+                    'success' => false,
+                    'error' => $e->getMessage()
+                ]));
+                
+                return $response
+                    ->withHeader('Content-Type', 'application/json')
+                    ->withStatus(500);
+            }
+        });
+        
+        // Delete external storage configuration
+        $app->delete('/storage', function (Request $request, Response $response) use ($container, $logger) {
+            try {
+                $backupService = $container->get(\CiInbox\App\Services\BackupService::class);
+                $success = $backupService->deleteExternalStorage();
+                
+                $response->getBody()->write(json_encode([
+                    'success' => $success,
+                    'message' => $success ? 'External storage configuration removed' : 'Failed to remove configuration'
+                ]));
+                
+                return $response->withHeader('Content-Type', 'application/json');
+                
+            } catch (\Exception $e) {
+                $logger->error('Delete external storage failed', ['error' => $e->getMessage()]);
+                
+                $response->getBody()->write(json_encode([
+                    'success' => false,
+                    'error' => $e->getMessage()
+                ]));
+                
+                return $response
+                    ->withHeader('Content-Type', 'application/json')
+                    ->withStatus(500);
+            }
+        });
+    });
+    
+    // Health Admin API Routes
+    $app->group('/api/admin/health', function ($app) {
+        // Get health summary
+        $app->get('/summary', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\HealthAdminController::class);
+            return $controller->getSummary($request, $response);
+        });
+        
+        // Get detailed status
+        $app->get('/status', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\HealthAdminController::class);
+            return $controller->getStatus($request, $response);
+        });
+        
+        // Get schedule
+        $app->get('/schedule', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\HealthAdminController::class);
+            return $controller->getSchedule($request, $response);
+        });
+        
+        // Update schedule
+        $app->put('/schedule', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\HealthAdminController::class);
+            return $controller->updateSchedule($request, $response);
+        });
+        
+        // Run specific test
+        $app->post('/test/{testName}', function (Request $request, Response $response, array $args) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\HealthAdminController::class);
+            return $controller->runTest($request, $response, $args);
+        });
+        
+        // Get test reports
+        $app->get('/reports', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\HealthAdminController::class);
+            return $controller->getReports($request, $response);
+        });
+        
+        // Self-healing action
+        $app->post('/heal/{healType}', function (Request $request, Response $response, array $args) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\HealthAdminController::class);
+            return $controller->selfHeal($request, $response, $args);
+        });
+        
+        // Get healing log
+        $app->get('/healing-log', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\HealthAdminController::class);
+            return $controller->getHealingLog($request, $response);
+        });
+        
+        // Clear healing log
+        $app->delete('/healing-log', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\HealthAdminController::class);
+            return $controller->clearHealingLog($request, $response);
+        });
+        
+        // Export report
+        $app->get('/export', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\HealthAdminController::class);
+            return $controller->exportReport($request, $response);
+        });
+    });
+    
+    // Admin Users API Routes
+    $app->group('/api/admin/users', function ($app) {
+        $container = Container::getInstance();
+        $logger = $container->get(LoggerInterface::class);
+        
+        // Get user statistics
+        $app->get('/stats', function (Request $request, Response $response) use ($container, $logger) {
+            try {
+                $userService = $container->get(\CiInbox\App\Services\UserService::class);
+                $stats = $userService->getUserStats();
+                
+                $response->getBody()->write(json_encode([
+                    'success' => true,
+                    'data' => $stats
+                ]));
+                
+                return $response->withHeader('Content-Type', 'application/json');
+                
+            } catch (\Exception $e) {
+                $logger->error('Get user stats failed', ['error' => $e->getMessage()]);
                 
                 $response->getBody()->write(json_encode([
                     'success' => false,
