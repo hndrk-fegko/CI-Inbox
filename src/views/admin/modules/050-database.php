@@ -212,15 +212,15 @@ return [
             
             async loadStatus() {
                 try {
-                    // Use health endpoint for basic info
-                    const response = await fetch('/api/system/health');
+                    // Load database status from new API
+                    const response = await fetch('/api/admin/database/status');
                     const data = await response.json();
                     
                     if (data.success) {
                         this.updateStatusDisplay(data.data);
                     }
                     
-                    // Load table info from database
+                    // Load table info
                     this.loadTableInfo();
                     
                 } catch (error) {
@@ -234,18 +234,41 @@ return [
                 const badge = document.getElementById('db-connection-badge');
                 const sizeCard = document.getElementById('db-size-card');
                 
-                if (badge) {
-                    badge.className = 'c-status-badge c-status-badge--success';
-                    badge.innerHTML = '<span class="status-dot"></span>Connected';
+                if (data.connected) {
+                    if (badge) {
+                        badge.className = 'c-status-badge c-status-badge--success';
+                        badge.innerHTML = '<span class="status-dot"></span>Connected';
+                    }
+                    document.getElementById('db-status-detail').textContent = 'Connected';
+                    document.getElementById('db-status-detail').style.color = '#4CAF50';
+                } else {
+                    if (badge) {
+                        badge.className = 'c-status-badge c-status-badge--error';
+                        badge.innerHTML = '<span class="status-dot"></span>Disconnected';
+                    }
+                    document.getElementById('db-status-detail').textContent = 'Disconnected';
+                    document.getElementById('db-status-detail').style.color = '#f44336';
                 }
                 
-                // Detail status
-                document.getElementById('db-status-detail').textContent = 'Connected';
-                document.getElementById('db-status-detail').style.color = '#4CAF50';
+                // Size
+                const sizeMb = data.size_mb || 0;
+                const sizeDisplay = sizeMb < 1 ? `${Math.round(sizeMb * 1024)} KB` : `${sizeMb} MB`;
+                if (sizeCard) sizeCard.textContent = sizeDisplay;
+                document.getElementById('db-size-detail').textContent = sizeDisplay;
                 
-                // Server version display (uses PHP version from health endpoint as proxy)
-                if (data.php_version) {
-                    document.getElementById('db-version').textContent = 'MySQL 8.0+';
+                // Server version
+                if (data.server_version) {
+                    document.getElementById('db-version').textContent = data.server_version;
+                }
+                
+                // Database name
+                if (data.database_name) {
+                    document.getElementById('db-name').textContent = data.database_name;
+                }
+                
+                // Table count
+                if (data.table_count !== undefined) {
+                    document.getElementById('db-tables-count').textContent = data.table_count;
                 }
             },
             
@@ -253,25 +276,20 @@ return [
                 const container = document.getElementById('db-tables-container');
                 
                 try {
-                    // Simulate table data based on known schema
-                    // In production, this would come from an API endpoint
-                    const tables = [
-                        { name: 'users', rows: '~', size: '—' },
-                        { name: 'threads', rows: '~', size: '—' },
-                        { name: 'emails', rows: '~', size: '—' },
-                        { name: 'labels', rows: '~', size: '—' },
-                        { name: 'imap_accounts', rows: '~', size: '—' },
-                        { name: 'signatures', rows: '~', size: '—' },
-                        { name: 'system_settings', rows: '~', size: '—' },
-                        { name: 'cron_executions', rows: '~', size: '—' },
-                        { name: 'migrations', rows: '~', size: '—' }
-                    ];
+                    const response = await fetch('/api/admin/database/tables');
+                    const data = await response.json();
                     
-                    this.tables = tables;
-                    this.renderTables();
-                    
-                    // Update counts
-                    document.getElementById('db-tables-count').textContent = tables.length;
+                    if (data.success && data.data) {
+                        this.tables = data.data;
+                        this.renderTables();
+                        
+                        // Update total records count
+                        const totalRows = this.tables.reduce((sum, t) => sum + (parseInt(t.rows) || 0), 0);
+                        document.getElementById('db-records-count').textContent = totalRows.toLocaleString();
+                    } else {
+                        this.tables = [];
+                        this.renderTables();
+                    }
                     
                 } catch (error) {
                     console.error('[Database] Failed to load tables:', error);
@@ -307,13 +325,13 @@ return [
                                             </code>
                                         </td>
                                         <td style="padding: 0.75rem 1rem; border-bottom: 1px solid #eee; font-size: 0.875rem;">
-                                            ${table.rows || '—'}
+                                            ${table.rows !== undefined ? table.rows.toLocaleString() : '—'}
                                         </td>
                                         <td style="padding: 0.75rem 1rem; border-bottom: 1px solid #eee; font-size: 0.875rem;">
-                                            ${table.size || '—'}
+                                            ${table.size_mb !== undefined ? `${table.size_mb} MB` : '—'}
                                         </td>
                                         <td style="padding: 0.75rem 1rem; border-bottom: 1px solid #eee; font-size: 0.875rem;">
-                                            InnoDB
+                                            ${table.engine || 'InnoDB'}
                                         </td>
                                     </tr>
                                 `).join('')}
@@ -329,11 +347,19 @@ return [
                 btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Optimizing...';
                 
                 try {
-                    // Simulate optimization (in production, this would call an API)
-                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    const response = await fetch('/api/admin/database/optimize', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
                     
-                    this.showAlert('db-alert', 'Tables optimized successfully!', 'success');
-                    this.loadStatus();
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.showAlert('db-alert', data.message || 'Tables optimized successfully!', 'success');
+                        this.loadStatus();
+                    } else {
+                        this.showAlert('db-alert', data.error || 'Optimization failed', 'error');
+                    }
                     
                 } catch (error) {
                     console.error('[Database] Optimize failed:', error);
@@ -350,11 +376,19 @@ return [
                 btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Analyzing...';
                 
                 try {
-                    // Simulate analysis (in production, this would call an API)
-                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    const response = await fetch('/api/admin/database/analyze', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
                     
-                    this.showAlert('db-alert', 'Table analysis complete!', 'success');
-                    this.loadStatus();
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.showAlert('db-alert', data.message || 'Table analysis complete!', 'success');
+                        this.loadStatus();
+                    } else {
+                        this.showAlert('db-alert', data.error || 'Analysis failed', 'error');
+                    }
                     
                 } catch (error) {
                     console.error('[Database] Analyze failed:', error);

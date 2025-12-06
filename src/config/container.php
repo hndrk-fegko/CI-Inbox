@@ -497,6 +497,41 @@ return [
         );
     },
     
+    // ========== DATABASE ADMIN ==========
+    
+    // Database Admin Service
+    \CiInbox\App\Services\DatabaseAdminService::class => function($container) {
+        return new \CiInbox\App\Services\DatabaseAdminService(
+            $container->get(LoggerService::class)
+        );
+    },
+    
+    // Database Admin Controller
+    \CiInbox\App\Controllers\DatabaseAdminController::class => function($container) {
+        return new \CiInbox\App\Controllers\DatabaseAdminController(
+            $container->get(\CiInbox\App\Services\DatabaseAdminService::class),
+            $container->get(LoggerService::class)
+        );
+    },
+    
+    // ========== LOGGER ADMIN ==========
+    
+    // Logger Admin Service
+    \CiInbox\App\Services\LoggerAdminService::class => function($container) {
+        return new \CiInbox\App\Services\LoggerAdminService(
+            $container->get(LoggerService::class),
+            $container->get(\CiInbox\App\Repositories\SystemSettingRepository::class)
+        );
+    },
+    
+    // Logger Admin Controller
+    \CiInbox\App\Controllers\LoggerAdminController::class => function($container) {
+        return new \CiInbox\App\Controllers\LoggerAdminController(
+            $container->get(\CiInbox\App\Services\LoggerAdminService::class),
+            $container->get(LoggerService::class)
+        );
+    },
+    
     // ========== THEME MODULE ==========
     
     // Theme Service

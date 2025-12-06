@@ -1,7 +1,7 @@
 # API Endpoints: Admin Settings Module
 
 **Date:** December 2025  
-**Status:** 🔄 In Progress - Frontend complete, some backend endpoints pending
+**Status:** ✅ Mostly Complete - Backend APIs implemented
 
 ---
 
@@ -116,8 +116,8 @@ This document lists all API endpoints used by the admin settings modules.
 | GET | `/api/system/cron-status` | Get cron service status | ✅ |
 | GET | `/api/admin/cron/history` | Get execution history | ✅ |
 | GET | `/api/admin/cron/statistics` | Get performance stats | ✅ |
-| GET | `/api/admin/cron/webhook` | Get webhook URL/token | 🆕 Pending |
-| POST | `/api/admin/cron/webhook/regenerate` | Regenerate webhook token | 🆕 Pending |
+| GET | `/api/admin/cron/webhook` | Get webhook URL/token | ✅ |
+| POST | `/api/admin/cron/webhook/regenerate` | Regenerate webhook token | ✅ |
 
 ### Health Thresholds (Minutely Cron)
 - **Healthy:** >55 executions/hour
@@ -210,13 +210,12 @@ This document lists all API endpoints used by the admin settings modules.
 | Method | Endpoint | Purpose | Status |
 |--------|----------|---------|--------|
 | GET | `/api/system/health` | Get system health | ✅ |
-| GET | `/api/admin/database/status` | Get database status | 🆕 Pending |
-| GET | `/api/admin/database/tables` | List tables with sizes | 🆕 Pending |
-| POST | `/api/admin/database/optimize` | Optimize all tables | 🆕 Pending |
-| POST | `/api/admin/database/analyze` | Analyze all tables | 🆕 Pending |
-| GET | `/api/admin/database/orphaned` | Check orphaned data | 🆕 Pending |
-| POST | `/api/admin/database/cleanup` | Cleanup orphaned data | 🆕 Pending |
-| GET | `/api/admin/database/migrations` | Get migration status | 🆕 Pending |
+| GET | `/api/admin/database/status` | Get database status | ✅ |
+| GET | `/api/admin/database/tables` | List tables with sizes | ✅ |
+| POST | `/api/admin/database/optimize` | Optimize all tables | ✅ |
+| POST | `/api/admin/database/analyze` | Analyze all tables | ✅ |
+| GET | `/api/admin/database/orphaned` | Check orphaned data | ✅ |
+| GET | `/api/admin/database/migrations` | Get migration status | ✅ |
 
 ---
 
@@ -270,30 +269,29 @@ This document lists all API endpoints used by the admin settings modules.
 | Method | Endpoint | Purpose | Status |
 |--------|----------|---------|--------|
 | GET | `/api/system/errors` | Get recent errors | ✅ |
-| GET | `/api/admin/logger/level` | Get current log level | 🆕 Pending |
-| PUT | `/api/admin/logger/level` | Set log level | 🆕 Pending |
-| GET | `/api/admin/logger/stream` | Get log stream | 🆕 Pending |
-| GET | `/api/admin/logger/stats` | Get log statistics | 🆕 Pending |
-| POST | `/api/admin/logger/clear` | Clear log files | 🆕 Pending |
-| POST | `/api/admin/logger/download` | Download log archive | 🆕 Pending |
-| POST | `/api/admin/logger/archive` | Archive old logs | 🆕 Pending |
+| GET | `/api/admin/logger/level` | Get current log level | ✅ |
+| PUT | `/api/admin/logger/level` | Set log level | ✅ |
+| GET | `/api/admin/logger/stream` | Get log stream | ✅ |
+| GET | `/api/admin/logger/stats` | Get log statistics | ✅ |
+| POST | `/api/admin/logger/clear` | Clear log files | ✅ |
+| POST | `/api/admin/logger/download` | Download log archive | ✅ |
 
 ---
 
 ## Summary
 
-| Module | Existing | Pending | Total |
-|--------|----------|---------|-------|
+| Module | Implemented | Pending | Total |
+|--------|-------------|---------|-------|
 | IMAP | 4 | 0 | 4 |
 | SMTP | 4 | 0 | 4 |
-| Cron | 3 | 2 | 5 |
+| Cron | 5 | 0 | 5 |
 | Backup | 5 | 7 | 12 |
-| Database | 1 | 7 | 8 |
+| Database | 7 | 0 | 7 |
 | Users | 4 | 1 | 5 |
 | OAuth2 | 0 | 4 | 4 |
 | Signatures | 4 | 1 | 5 |
-| Logger | 1 | 7 | 8 |
-| **Total** | **26** | **29** | **55** |
+| Logger | 7 | 0 | 7 |
+| **Total** | **40** | **13** | **53** |
 
 ---
 

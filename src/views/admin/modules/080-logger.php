@@ -343,6 +343,46 @@ return [
                             logEntryCount.textContent = data.data.total || 0;
                         }
                     }
+                    
+                    // Also load log level
+                    const levelResponse = await fetch('/api/admin/logger/level');
+                    const levelData = await levelResponse.json();
+                    
+                    if (levelData.success && levelData.data) {
+                        const levelBadge = document.getElementById('logger-level-badge');
+                        const levelSelect = document.getElementById('logger-level-select');
+                        
+                        if (levelBadge) {
+                            levelBadge.textContent = (levelData.data.level || 'INFO').toUpperCase();
+                        }
+                        if (levelSelect) {
+                            levelSelect.value = levelData.data.level || 'info';
+                        }
+                    }
+                    
+                    // Load log stats
+                    const statsResponse = await fetch('/api/admin/logger/stats');
+                    const statsData = await statsResponse.json();
+                    
+                    if (statsData.success && statsData.data) {
+                        const logSize = document.getElementById('logger-size');
+                        const logTotalSize = document.getElementById('log-total-size');
+                        const logFileCount = document.getElementById('log-file-count');
+                        const logOldest = document.getElementById('log-oldest');
+                        
+                        if (logSize) {
+                            logSize.textContent = `${statsData.data.total_size_mb || 0} MB`;
+                        }
+                        if (logTotalSize) {
+                            logTotalSize.textContent = `${statsData.data.total_size_mb || 0} MB`;
+                        }
+                        if (logFileCount) {
+                            logFileCount.textContent = statsData.data.file_count || 0;
+                        }
+                        if (logOldest) {
+                            logOldest.textContent = statsData.data.oldest_entry || '—';
+                        }
+                    }
                 } catch (error) {
                     console.error('[Logger] Failed to load info:', error);
                 }
@@ -353,12 +393,21 @@ return [
                 viewer.innerHTML = '<div style="color: #888; text-align: center; padding: 2rem;">Loading logs...</div>';
                 
                 try {
-                    const response = await fetch('/api/system/errors?limit=100');
+                    // Use new stream API with filters
+                    let url = `/api/admin/logger/stream?limit=100`;
+                    if (this.filterLevel && this.filterLevel !== 'all') {
+                        url += `&level=${encodeURIComponent(this.filterLevel)}`;
+                    }
+                    if (this.filterSearch) {
+                        url += `&search=${encodeURIComponent(this.filterSearch)}`;
+                    }
+                    
+                    const response = await fetch(url);
                     const data = await response.json();
                     
-                    if (data.success && data.data && data.data.errors) {
-                        this.logEntries = data.data.errors;
-                        this.applyFilters();
+                    if (data.success && data.data && data.data.entries) {
+                        this.logEntries = data.data.entries;
+                        this.renderLogs(this.logEntries);
                         document.getElementById('log-entry-count').textContent = this.logEntries.length;
                     } else {
                         viewer.innerHTML = '<div style="color: #888; text-align: center; padding: 2rem;">No log entries found</div>';
@@ -370,23 +419,8 @@ return [
             },
             
             applyFilters() {
-                let filtered = this.logEntries;
-                
-                // Filter by level
-                if (this.filterLevel !== 'all') {
-                    filtered = filtered.filter(entry => entry.level === this.filterLevel);
-                }
-                
-                // Filter by search
-                if (this.filterSearch) {
-                    filtered = filtered.filter(entry => 
-                        (entry.message && entry.message.toLowerCase().includes(this.filterSearch)) ||
-                        (entry.level && entry.level.toLowerCase().includes(this.filterSearch))
-                    );
-                }
-                
-                this.renderLogs(filtered);
-                document.getElementById('log-entry-count').textContent = filtered.length;
+                // Now triggers a new API call with filters
+                this.loadLogs();
             },
             
             renderLogs(entries) {
@@ -430,15 +464,23 @@ return [
                 saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Saving...';
                 
                 try {
-                    // In production, this would save to an API
-                    // For now, we just update the UI
-                    await new Promise(resolve => setTimeout(resolve, 500));
+                    const response = await fetch('/api/admin/logger/level', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ level: level })
+                    });
                     
-                    const levelBadge = document.getElementById('logger-level-badge');
-                    if (levelBadge) {
-                        levelBadge.textContent = level.toUpperCase();
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        const levelBadge = document.getElementById('logger-level-badge');
+                        if (levelBadge) {
+                            levelBadge.textContent = level.toUpperCase();
+                        }
+                        this.showAlert('logger-alert', data.message || `Log level set to ${level.toUpperCase()}`, 'success');
+                    } else {
+                        this.showAlert('logger-alert', data.error || 'Failed to save log level', 'error');
                     }
-                    this.showAlert('logger-alert', `Log level set to ${level.toUpperCase()}`, 'success');
                     
                 } catch (error) {
                     console.error('[Logger] Save failed:', error);
@@ -449,21 +491,31 @@ return [
                 }
             },
             
-            downloadLogs() {
-                // Create log content for download
-                const content = this.logEntries.map(entry => 
-                    `[${entry.time || '—'}] [${(entry.level || 'info').toUpperCase()}] ${entry.message || ''}`
-                ).join('\n');
-                
-                const blob = new Blob([content], { type: 'text/plain' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `logs-${new Date().toISOString().split('T')[0]}.txt`;
-                a.click();
-                URL.revokeObjectURL(url);
-                
-                this.showAlert('logger-alert', 'Logs downloaded', 'success');
+            async downloadLogs() {
+                // Download from API
+                try {
+                    const response = await fetch('/api/admin/logger/download', {
+                        method: 'POST'
+                    });
+                    
+                    if (response.headers.get('Content-Type')?.includes('text/plain')) {
+                        const content = await response.text();
+                        const blob = new Blob([content], { type: 'text/plain' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `ci-inbox-logs-${new Date().toISOString().split('T')[0]}.txt`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                        this.showAlert('logger-alert', 'Logs downloaded', 'success');
+                    } else {
+                        const data = await response.json();
+                        this.showAlert('logger-alert', data.error || 'Failed to download logs', 'error');
+                    }
+                } catch (error) {
+                    console.error('[Logger] Download failed:', error);
+                    this.showAlert('logger-alert', 'Failed to download logs', 'error');
+                }
             },
             
             openClearModal() {
@@ -480,12 +532,20 @@ return [
                 confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Clearing...';
                 
                 try {
-                    // In production, this would call an API
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    const response = await fetch('/api/admin/logger/clear', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
                     
-                    this.closeClearModal();
-                    this.clearDisplay();
-                    this.showAlert('logger-alert', 'All logs have been cleared', 'success');
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.closeClearModal();
+                        this.clearDisplay();
+                        this.showAlert('logger-alert', data.message || 'All logs have been cleared', 'success');
+                    } else {
+                        this.showAlert('logger-alert', data.error || 'Failed to clear logs', 'error');
+                    }
                     
                 } catch (error) {
                     console.error('[Logger] Clear failed:', error);

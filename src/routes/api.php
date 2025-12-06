@@ -882,6 +882,110 @@ return function (App $app) {
             $controller = $container->get(\CiInbox\App\Controllers\CronMonitorController::class);
             return $controller->getStatistics($request, $response);
         });
+        
+        // Get webhook configuration
+        $app->get('/webhook', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\CronMonitorController::class);
+            return $controller->getWebhook($request, $response);
+        });
+        
+        // Regenerate webhook token
+        $app->post('/webhook/regenerate', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\CronMonitorController::class);
+            return $controller->regenerateWebhook($request, $response);
+        });
+    });
+    
+    // Database Admin API Routes
+    $app->group('/api/admin/database', function ($app) {
+        // Get database status
+        $app->get('/status', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\DatabaseAdminController::class);
+            return $controller->getStatus($request, $response);
+        });
+        
+        // Get tables list
+        $app->get('/tables', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\DatabaseAdminController::class);
+            return $controller->getTables($request, $response);
+        });
+        
+        // Optimize tables
+        $app->post('/optimize', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\DatabaseAdminController::class);
+            return $controller->optimize($request, $response);
+        });
+        
+        // Analyze tables
+        $app->post('/analyze', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\DatabaseAdminController::class);
+            return $controller->analyze($request, $response);
+        });
+        
+        // Check orphaned data
+        $app->get('/orphaned', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\DatabaseAdminController::class);
+            return $controller->checkOrphaned($request, $response);
+        });
+        
+        // Get migration status
+        $app->get('/migrations', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\DatabaseAdminController::class);
+            return $controller->getMigrations($request, $response);
+        });
+    });
+    
+    // Logger Admin API Routes
+    $app->group('/api/admin/logger', function ($app) {
+        // Get current log level
+        $app->get('/level', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\LoggerAdminController::class);
+            return $controller->getLevel($request, $response);
+        });
+        
+        // Set log level
+        $app->put('/level', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\LoggerAdminController::class);
+            return $controller->setLevel($request, $response);
+        });
+        
+        // Get log stream
+        $app->get('/stream', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\LoggerAdminController::class);
+            return $controller->getStream($request, $response);
+        });
+        
+        // Get log statistics
+        $app->get('/stats', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\LoggerAdminController::class);
+            return $controller->getStats($request, $response);
+        });
+        
+        // Clear logs
+        $app->post('/clear', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\LoggerAdminController::class);
+            return $controller->clearLogs($request, $response);
+        });
+        
+        // Download logs
+        $app->post('/download', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\LoggerAdminController::class);
+            return $controller->downloadLogs($request, $response);
+        });
     });
     
     // Backup API Routes (Admin only)
