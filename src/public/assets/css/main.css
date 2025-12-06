@@ -38,6 +38,8 @@
 @import url('6-components/_email-composer.css');
 @import url('6-components/_toast.css');
 @import url('6-components/_fab.css');
+@import url('6-components/_admin.css');
+@import url('6-components/_settings.css');
 
 /* 7. Utilities - Helper classes */
 @import url('7-utilities/_utilities.css');
