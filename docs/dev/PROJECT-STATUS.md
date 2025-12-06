@@ -1,6 +1,8 @@
 # CI-Inbox: Project Status & Documentation Index
 
-**Last Updated:** 4. December 2025  
+**Last Updated:** 6. Dezember 2025  
+**Lead Developer:** Hendrik Dreis ([hendrik.dreis@feg-koblenz.de](mailto:hendrik.dreis@feg-koblenz.de))  
+**Lizenz:** MIT License  
 **Current Milestone:** M3 - MVP UI (In Progress)
 
 ---

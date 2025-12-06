@@ -2,6 +2,11 @@
 
 **Automatic Email Polling System**
 
+**Version:** 1.0.0  
+**Status:** ✅ Production Ready  
+**Autor:** Hendrik Dreis  
+**Lizenz:** MIT License
+
 ---
 
 ## Overview

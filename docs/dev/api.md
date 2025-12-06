@@ -1,8 +1,10 @@
 # CI-Inbox REST API Documentation
 
-**Version:** 0.1.0  
+**Version:** 0.3.0  
 **Base URL:** `http://ci-inbox.local/api`  
-**Last Updated:** November 18, 2025
+**Last Updated:** 6. Dezember 2025  
+**Autor:** Hendrik Dreis ([hendrik.dreis@feg-koblenz.de](mailto:hendrik.dreis@feg-koblenz.de))  
+**Lizenz:** MIT License
 
 This document provides a complete reference for all REST API endpoints in CI-Inbox.
 

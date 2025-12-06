@@ -2,6 +2,15 @@
 
 **Welcome!** This guide gets you up and running in 30 minutes.
 
+---
+
+**Projekt:** CI-Inbox - Collaborative IMAP Inbox Management  
+**Autor:** Hendrik Dreis ([hendrik.dreis@feg-koblenz.de](mailto:hendrik.dreis@feg-koblenz.de))  
+**Lizenz:** MIT License  
+**Repository:** [github.com/hndrk-fegko/C-IMAP](https://github.com/hndrk-fegko/C-IMAP)
+
+---
+
 ## Prerequisites
 
 - **PHP** 8.1+ with extensions: pdo_mysql, imap, openssl, mbstring

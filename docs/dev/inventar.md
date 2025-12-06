@@ -1,6 +1,8 @@
 # Feature-Inventar: Collaborative IMAP Inbox (CI-Inbox)
 
-**Letzte Aktualisierung:** 17. November 2025  
+**Letzte Aktualisierung:** 6. Dezember 2025  
+**Autor:** Hendrik Dreis ([hendrik.dreis@feg-koblenz.de](mailto:hendrik.dreis@feg-koblenz.de))  
+**Lizenz:** MIT License  
 **Basis:** `vision.md` - Workflows A, B, C
 
 Dies ist eine vollständige, priorisierte Auflistung aller Features für die CI-Inbox unter Berücksichtigung der Zielgruppe (3-7 Nutzer, kleine Teams) und Technologie (PHP/JavaScript, Webcron, Shared Hosting).
