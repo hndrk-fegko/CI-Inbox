@@ -76,7 +76,7 @@ output("TEST 1: Create User", COLOR_YELLOW);
 output("-----------------------------------------------------------");
 
 $result = httpRequest('POST', "{$baseUrl}/api/users", [
-    'email' => 'testuser@c-imap.local',
+    'email' => 'testuser@ci-inbox.local',
     'name' => 'Test User',
     'password' => 'testpassword123',
     'role' => 'user',
@@ -234,7 +234,7 @@ output("TEST 8: Validation Test (Duplicate email)", COLOR_YELLOW);
 output("-----------------------------------------------------------");
 
 $result = httpRequest('POST', "{$baseUrl}/api/users", [
-    'email' => 'testuser@c-imap.local', // Already exists
+    'email' => 'testuser@ci-inbox.local', // Already exists
     'password' => 'test123456'
 ]);
 

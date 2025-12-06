@@ -58,7 +58,7 @@ try {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Settings - C-IMAP</title>
+    <title>Settings - CI-Inbox</title>
     
     <!-- Main CSS with all components -->
     <link rel="stylesheet" href="/assets/css/main.css<?= asset_version() ?>">

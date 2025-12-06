@@ -406,7 +406,7 @@ SMTP: Nicht konfiguriert
 ```
 ✅ Installation abgeschlossen!
 
-C-IMAP wurde erfolgreich installiert.
+CI-Inbox wurde erfolgreich installiert.
 Sie können sich jetzt mit Ihrem Administrator-Account anmelden.
 
 [Zur Anmeldung →]

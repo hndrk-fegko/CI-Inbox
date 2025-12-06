@@ -20,7 +20,7 @@ try {
     
     // Test admin user
     $stmt = $pdo->prepare('SELECT id, email, name, password_hash, role FROM users WHERE email = ?');
-    $stmt->execute(['admin@c-imap.local']);
+    $stmt->execute(['admin@ci-inbox.local']);
     $admin = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if ($admin) {
@@ -36,7 +36,7 @@ try {
     }
     
     // Test demo user
-    $stmt->execute(['demo@c-imap.local']);
+    $stmt->execute(['demo@ci-inbox.local']);
     $demo = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if ($demo) {

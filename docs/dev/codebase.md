@@ -1,7 +1,9 @@
 # CI-Inbox: Codebase-Dokumentation
 
 **Version:** 0.3.0 (M2/M3 - Thread & Email API)  
-**Datum:** 28.11.2025  
+**Datum:** 6. Dezember 2025  
+**Autor:** Hendrik Dreis ([hendrik.dreis@feg-koblenz.de](mailto:hendrik.dreis@feg-koblenz.de))  
+**Lizenz:** MIT License  
 **Status:** ✅ M0-M2 Complete | 🔄 M3 In Progress
 
 > **Hinweis:** Diese Dokumentation ist die **maßgebliche Quelle** für die aktuelle Code-Struktur. 

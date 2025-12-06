@@ -2,8 +2,10 @@
 
 **Version:** 1.0.0  
 **Status:** ✅ M1 Sprint 1.1 Complete  
+**Autor:** Hendrik Dreis  
+**Lizenz:** MIT License  
 **Dependencies:** Logger, Config  
-**Last Updated:** 17. November 2025
+**Last Updated:** 6. Dezember 2025
 
 PHP wrapper for `php-imap` extension with clean OOP interface.
 

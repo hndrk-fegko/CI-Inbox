@@ -23,7 +23,7 @@ echo "🌱 Seeding test data...\n\n";
 // 1. Create test user
 echo "👤 Creating test user...\n";
 $user = User::firstOrCreate(
-    ['email' => 'demo@c-imap.local'],
+    ['email' => 'demo@ci-inbox.local'],
     [
         'name' => 'Demo User',
         'password_hash' => password_hash('demo123', PASSWORD_BCRYPT),
@@ -165,5 +165,5 @@ echo "   Threads: " . Thread::count() . "\n";
 echo "   Emails: " . Email::count() . "\n";
 echo "   Labels: " . Label::count() . "\n";
 echo "\n🔑 Login credentials:\n";
-echo "   Email: demo@c-imap.local\n";
+echo "   Email: demo@ci-inbox.local\n";
 echo "   Password: demo123\n";

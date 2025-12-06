@@ -2,6 +2,8 @@
 
 **Version:** 0.1.0  
 **Status:** ✅ Production Ready  
+**Autor:** Hendrik Dreis  
+**Lizenz:** MIT License  
 **Pfad:** `src/modules/imap/`
 
 ## Übersicht

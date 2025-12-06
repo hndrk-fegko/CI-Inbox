@@ -71,7 +71,7 @@ $logger->debug('Admin settings loaded', [
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>System Settings - C-IMAP</title>
+    <title>System Settings - CI-Inbox</title>
     <link rel="stylesheet" href="/assets/css/main.css">
     
     <!-- Theme Module -->
@@ -191,9 +191,9 @@ $logger->debug('Admin settings loaded', [
             
             // Update page title
             const titles = {
-                'overview': 'System Settings - C-IMAP'<?php if (!empty($modules)): ?>,
+                'overview': 'System Settings - CI-Inbox'<?php if (!empty($modules)): ?>,
                 <?php foreach ($modules as $i => $module): ?>
-                '<?= $module['id'] ?>': '<?= addslashes($module['title']) ?> - C-IMAP'<?= ($i < count($modules) - 1) ? ',' : '' ?>
+                '<?= $module['id'] ?>': '<?= addslashes($module['title']) ?> - CI-Inbox'<?= ($i < count($modules) - 1) ? ',' : '' ?>
                 <?php endforeach; ?>
                 <?php endif; ?>
             };

@@ -1,6 +1,8 @@
 # Roadmap: Collaborative IMAP Inbox (CI-Inbox)
 
-**Letzte Aktualisierung:** 17. November 2025  
+**Letzte Aktualisierung:** 6. Dezember 2025  
+**Autor:** Hendrik Dreis ([hendrik.dreis@feg-koblenz.de](mailto:hendrik.dreis@feg-koblenz.de))  
+**Lizenz:** MIT License  
 **Basis:** `vision.md`, `inventar.md`, `basics.txt`
 
 Diese Roadmap ist optimiert für **KI-gestützte Entwicklung**: Jeder Meilenstein baut auf **standalone-testbaren Komponenten** auf, die klare Schnittstellen haben und unabhängig entwickelt werden können.
