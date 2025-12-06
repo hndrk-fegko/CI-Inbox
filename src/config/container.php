@@ -549,6 +549,23 @@ return [
         );
     },
     
+    // ========== HEALTH MODULE ==========
+    
+    // Health Admin Service
+    \CiInbox\App\Services\HealthAdminService::class => function($container) {
+        return new \CiInbox\App\Services\HealthAdminService(
+            $container->get(LoggerService::class),
+            $container->get(ConfigService::class)
+        );
+    },
+    
+    // Health Admin Controller
+    \CiInbox\App\Controllers\HealthAdminController::class => function($container) {
+        return new \CiInbox\App\Controllers\HealthAdminController(
+            $container->get(\CiInbox\App\Services\HealthAdminService::class)
+        );
+    },
+    
     // ========== THEME MODULE ==========
     
     // Theme Service

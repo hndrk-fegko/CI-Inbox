@@ -1386,6 +1386,79 @@ return function (App $app) {
         });
     });
     
+    // Health Admin API Routes
+    $app->group('/api/admin/health', function ($app) {
+        // Get health summary
+        $app->get('/summary', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\HealthAdminController::class);
+            return $controller->getSummary($request, $response);
+        });
+        
+        // Get detailed status
+        $app->get('/status', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\HealthAdminController::class);
+            return $controller->getStatus($request, $response);
+        });
+        
+        // Get schedule
+        $app->get('/schedule', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\HealthAdminController::class);
+            return $controller->getSchedule($request, $response);
+        });
+        
+        // Update schedule
+        $app->put('/schedule', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\HealthAdminController::class);
+            return $controller->updateSchedule($request, $response);
+        });
+        
+        // Run specific test
+        $app->post('/test/{testName}', function (Request $request, Response $response, array $args) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\HealthAdminController::class);
+            return $controller->runTest($request, $response, $args);
+        });
+        
+        // Get test reports
+        $app->get('/reports', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\HealthAdminController::class);
+            return $controller->getReports($request, $response);
+        });
+        
+        // Self-healing action
+        $app->post('/heal/{healType}', function (Request $request, Response $response, array $args) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\HealthAdminController::class);
+            return $controller->selfHeal($request, $response, $args);
+        });
+        
+        // Get healing log
+        $app->get('/healing-log', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\HealthAdminController::class);
+            return $controller->getHealingLog($request, $response);
+        });
+        
+        // Clear healing log
+        $app->delete('/healing-log', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\HealthAdminController::class);
+            return $controller->clearHealingLog($request, $response);
+        });
+        
+        // Export report
+        $app->get('/export', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\HealthAdminController::class);
+            return $controller->exportReport($request, $response);
+        });
+    });
+    
     // Admin Users API Routes
     $app->group('/api/admin/users', function ($app) {
         $container = Container::getInstance();
