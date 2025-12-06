@@ -1275,6 +1275,148 @@ return function (App $app) {
                     ->withStatus(500);
             }
         });
+        
+        // Get external storage configuration
+        $app->get('/storage', function (Request $request, Response $response) use ($container, $logger) {
+            try {
+                $backupService = $container->get(\CiInbox\App\Services\BackupService::class);
+                $storage = $backupService->getExternalStorage();
+                
+                $response->getBody()->write(json_encode([
+                    'success' => true,
+                    'data' => $storage
+                ]));
+                
+                return $response->withHeader('Content-Type', 'application/json');
+                
+            } catch (\Exception $e) {
+                $logger->error('Get external storage failed', ['error' => $e->getMessage()]);
+                
+                $response->getBody()->write(json_encode([
+                    'success' => false,
+                    'error' => $e->getMessage()
+                ]));
+                
+                return $response
+                    ->withHeader('Content-Type', 'application/json')
+                    ->withStatus(500);
+            }
+        });
+        
+        // Update external storage configuration
+        $app->put('/storage', function (Request $request, Response $response) use ($container, $logger) {
+            try {
+                $body = $request->getParsedBody();
+                $backupService = $container->get(\CiInbox\App\Services\BackupService::class);
+                $storage = $backupService->updateExternalStorage($body);
+                
+                $response->getBody()->write(json_encode([
+                    'success' => true,
+                    'data' => $storage,
+                    'message' => 'External storage configuration updated'
+                ]));
+                
+                return $response->withHeader('Content-Type', 'application/json');
+                
+            } catch (\Exception $e) {
+                $logger->error('Update external storage failed', ['error' => $e->getMessage()]);
+                
+                $response->getBody()->write(json_encode([
+                    'success' => false,
+                    'error' => $e->getMessage()
+                ]));
+                
+                return $response
+                    ->withHeader('Content-Type', 'application/json')
+                    ->withStatus(400);
+            }
+        });
+        
+        // Test external storage connection
+        $app->post('/storage/test', function (Request $request, Response $response) use ($container, $logger) {
+            try {
+                $body = $request->getParsedBody();
+                $backupService = $container->get(\CiInbox\App\Services\BackupService::class);
+                $result = $backupService->testExternalStorage($body);
+                
+                $response->getBody()->write(json_encode($result));
+                
+                return $response->withHeader('Content-Type', 'application/json')
+                    ->withStatus($result['success'] ? 200 : 400);
+                
+            } catch (\Exception $e) {
+                $logger->error('Test external storage failed', ['error' => $e->getMessage()]);
+                
+                $response->getBody()->write(json_encode([
+                    'success' => false,
+                    'error' => $e->getMessage()
+                ]));
+                
+                return $response
+                    ->withHeader('Content-Type', 'application/json')
+                    ->withStatus(500);
+            }
+        });
+        
+        // Delete external storage configuration
+        $app->delete('/storage', function (Request $request, Response $response) use ($container, $logger) {
+            try {
+                $backupService = $container->get(\CiInbox\App\Services\BackupService::class);
+                $success = $backupService->deleteExternalStorage();
+                
+                $response->getBody()->write(json_encode([
+                    'success' => $success,
+                    'message' => $success ? 'External storage configuration removed' : 'Failed to remove configuration'
+                ]));
+                
+                return $response->withHeader('Content-Type', 'application/json');
+                
+            } catch (\Exception $e) {
+                $logger->error('Delete external storage failed', ['error' => $e->getMessage()]);
+                
+                $response->getBody()->write(json_encode([
+                    'success' => false,
+                    'error' => $e->getMessage()
+                ]));
+                
+                return $response
+                    ->withHeader('Content-Type', 'application/json')
+                    ->withStatus(500);
+            }
+        });
+    });
+    
+    // Admin Users API Routes
+    $app->group('/api/admin/users', function ($app) {
+        $container = Container::getInstance();
+        $logger = $container->get(LoggerInterface::class);
+        
+        // Get user statistics
+        $app->get('/stats', function (Request $request, Response $response) use ($container, $logger) {
+            try {
+                $userService = $container->get(\CiInbox\App\Services\UserService::class);
+                $stats = $userService->getUserStats();
+                
+                $response->getBody()->write(json_encode([
+                    'success' => true,
+                    'data' => $stats
+                ]));
+                
+                return $response->withHeader('Content-Type', 'application/json');
+                
+            } catch (\Exception $e) {
+                $logger->error('Get user stats failed', ['error' => $e->getMessage()]);
+                
+                $response->getBody()->write(json_encode([
+                    'success' => false,
+                    'error' => $e->getMessage()
+                ]));
+                
+                return $response
+                    ->withHeader('Content-Type', 'application/json')
+                    ->withStatus(500);
+            }
+        });
     });
     
     // Webhook API Routes

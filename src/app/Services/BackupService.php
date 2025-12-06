@@ -392,6 +392,10 @@ class BackupService
                 }
             }
             
+            // Check external storage configuration
+            $externalConfig = $this->getExternalStorage();
+            $externalConfigured = !empty($externalConfig['type']) && $externalConfig['type'] !== 'none';
+            
             return [
                 'local' => [
                     'count' => count($backups),
@@ -399,7 +403,9 @@ class BackupService
                     'size_mb' => round($localSize / 1024 / 1024, 2)
                 ],
                 'external' => [
-                    'configured' => false,
+                    'configured' => $externalConfigured,
+                    'type' => $externalConfig['type'] ?? 'none',
+                    // External count/size require querying remote storage - placeholder for future implementation
                     'count' => 0,
                     'size_mb' => 0
                 ],
@@ -419,6 +425,402 @@ class BackupService
                 'monthly_count' => 0,
                 'error' => $e->getMessage()
             ];
+        }
+    }
+    
+    /**
+     * Get external storage configuration
+     * 
+     * @return array External storage config
+     */
+    public function getExternalStorage(): array
+    {
+        try {
+            $settingsFile = __DIR__ . '/../../../data/backup-external-storage.json';
+            
+            if (file_exists($settingsFile)) {
+                $config = json_decode(file_get_contents($settingsFile), true);
+                if ($config) {
+                    // Mask sensitive data
+                    if (isset($config['password'])) {
+                        $config['password'] = '********';
+                    }
+                    return $config;
+                }
+            }
+            
+            // Default configuration (not configured)
+            return [
+                'type' => 'none',
+                'host' => '',
+                'port' => '',
+                'username' => '',
+                'password' => '',
+                'path' => '/backups',
+                'ssl' => true
+            ];
+            
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to get external storage config', [
+                'error' => $e->getMessage()
+            ]);
+            
+            return [
+                'type' => 'none',
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Update external storage configuration
+     * 
+     * @param array $config External storage configuration
+     * @return array Updated configuration
+     */
+    public function updateExternalStorage(array $config): array
+    {
+        try {
+            // Validate type
+            $validTypes = ['none', 'ftp', 'webdav'];
+            if (!isset($config['type']) || !in_array($config['type'], $validTypes)) {
+                throw new \InvalidArgumentException('Invalid storage type. Must be: none, ftp, or webdav');
+            }
+            
+            // Get current config to preserve password if not provided
+            $current = $this->getExternalStorageRaw();
+            
+            $updated = [
+                'type' => $config['type'],
+                'host' => $config['host'] ?? '',
+                'port' => $config['port'] ?? ($config['type'] === 'ftp' ? 21 : 443),
+                'username' => $config['username'] ?? '',
+                'password' => ($config['password'] ?? '') !== '********' 
+                    ? ($config['password'] ?? '') 
+                    : ($current['password'] ?? ''),
+                'path' => $config['path'] ?? '/backups',
+                'ssl' => $config['ssl'] ?? true
+            ];
+            
+            // Save to file
+            $settingsFile = __DIR__ . '/../../../data/backup-external-storage.json';
+            $dataDir = dirname($settingsFile);
+            
+            if (!is_dir($dataDir)) {
+                mkdir($dataDir, 0755, true);
+            }
+            
+            file_put_contents($settingsFile, json_encode($updated, JSON_PRETTY_PRINT));
+            
+            $this->logger->info('[SUCCESS] External storage configuration updated', [
+                'type' => $updated['type'],
+                'host' => $updated['host']
+            ]);
+            
+            // Mask password before returning
+            $updated['password'] = '********';
+            
+            return $updated;
+            
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to update external storage config', [
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
+    }
+    
+    /**
+     * Get raw external storage configuration (with password)
+     * 
+     * @return array Raw config with password
+     */
+    private function getExternalStorageRaw(): array
+    {
+        $settingsFile = __DIR__ . '/../../../data/backup-external-storage.json';
+        
+        if (file_exists($settingsFile)) {
+            $config = json_decode(file_get_contents($settingsFile), true);
+            if ($config) {
+                return $config;
+            }
+        }
+        
+        return [
+            'type' => 'none',
+            'host' => '',
+            'port' => '',
+            'username' => '',
+            'password' => '',
+            'path' => '/backups',
+            'ssl' => true
+        ];
+    }
+    
+    /**
+     * Test external storage connection
+     * 
+     * @param array $config Optional config to test (uses saved config if not provided)
+     * @return array Test result
+     */
+    public function testExternalStorage(?array $config = null): array
+    {
+        try {
+            // Use provided config or get saved config
+            if ($config === null) {
+                $config = $this->getExternalStorageRaw();
+            } else {
+                // If password is masked, get the real password from saved config
+                if (isset($config['password']) && $config['password'] === '********') {
+                    $saved = $this->getExternalStorageRaw();
+                    $config['password'] = $saved['password'] ?? '';
+                }
+            }
+            
+            if (empty($config['type']) || $config['type'] === 'none') {
+                return [
+                    'success' => false,
+                    'error' => 'No external storage configured'
+                ];
+            }
+            
+            if (empty($config['host'])) {
+                return [
+                    'success' => false,
+                    'error' => 'Host is required'
+                ];
+            }
+            
+            if ($config['type'] === 'ftp') {
+                return $this->testFtpConnection($config);
+            } elseif ($config['type'] === 'webdav') {
+                return $this->testWebDavConnection($config);
+            }
+            
+            return [
+                'success' => false,
+                'error' => 'Unknown storage type: ' . $config['type']
+            ];
+            
+        } catch (\Exception $e) {
+            $this->logger->error('External storage test failed', [
+                'error' => $e->getMessage()
+            ]);
+            
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Test FTP connection
+     * 
+     * @param array $config FTP configuration
+     * @return array Test result
+     */
+    private function testFtpConnection(array $config): array
+    {
+        $host = $config['host'];
+        $port = (int)($config['port'] ?? 21);
+        $username = $config['username'] ?? '';
+        $password = $config['password'] ?? '';
+        $ssl = $config['ssl'] ?? false;
+        $path = $config['path'] ?? '/backups';
+        
+        try {
+            // Connect to FTP server
+            if ($ssl) {
+                $connection = @ftp_ssl_connect($host, $port, 30);
+            } else {
+                $connection = @ftp_connect($host, $port, 30);
+            }
+            
+            if (!$connection) {
+                return [
+                    'success' => false,
+                    'error' => "Cannot connect to FTP server: {$host}:{$port}"
+                ];
+            }
+            
+            // Login
+            if (!empty($username)) {
+                $loginResult = @ftp_login($connection, $username, $password);
+                if (!$loginResult) {
+                    ftp_close($connection);
+                    return [
+                        'success' => false,
+                        'error' => 'FTP login failed. Check username and password.'
+                    ];
+                }
+            }
+            
+            // Enable passive mode
+            ftp_pasv($connection, true);
+            
+            // Try to change to backup directory
+            if (!empty($path) && $path !== '/') {
+                $dirExists = @ftp_chdir($connection, $path);
+                if (!$dirExists) {
+                    // Try to create the directory
+                    $created = @ftp_mkdir($connection, $path);
+                    if (!$created) {
+                        ftp_close($connection);
+                        // Connection works but directory needs manual creation
+                        return [
+                            'success' => true,
+                            'connected' => true,
+                            'directory_ready' => false,
+                            'message' => "FTP connection successful. Directory '{$path}' does not exist and could not be created automatically. Please create it manually on the server."
+                        ];
+                    }
+                }
+            }
+            
+            // Get server info
+            $sysType = @ftp_systype($connection);
+            
+            ftp_close($connection);
+            
+            $this->logger->info('[SUCCESS] FTP connection test passed', [
+                'host' => $host,
+                'path' => $path
+            ]);
+            
+            return [
+                'success' => true,
+                'connected' => true,
+                'directory_ready' => true,
+                'message' => 'FTP connection successful',
+                'server_type' => $sysType ?: 'Unknown'
+            ];
+            
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'error' => 'FTP connection error: ' . $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Test WebDAV connection
+     * 
+     * @param array $config WebDAV configuration
+     * @return array Test result
+     */
+    private function testWebDavConnection(array $config): array
+    {
+        $host = $config['host'];
+        $port = (int)($config['port'] ?? 443);
+        $username = $config['username'] ?? '';
+        $password = $config['password'] ?? '';
+        $ssl = $config['ssl'] ?? true;
+        $path = $config['path'] ?? '/backups';
+        
+        try {
+            // Build URL
+            $protocol = $ssl ? 'https' : 'http';
+            $url = "{$protocol}://{$host}:{$port}" . $path;
+            
+            // Try PROPFIND request (WebDAV directory listing)
+            $ch = curl_init();
+            curl_setopt_array($ch, [
+                CURLOPT_URL => $url,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_CUSTOMREQUEST => 'PROPFIND',
+                CURLOPT_HTTPHEADER => [
+                    'Depth: 0',
+                    'Content-Type: application/xml'
+                ],
+                CURLOPT_TIMEOUT => 30,
+                CURLOPT_SSL_VERIFYPEER => $ssl,
+                CURLOPT_SSL_VERIFYHOST => $ssl ? 2 : 0
+            ]);
+            
+            // Add authentication if provided
+            if (!empty($username)) {
+                curl_setopt($ch, CURLOPT_USERPWD, "{$username}:{$password}");
+            }
+            
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $error = curl_error($ch);
+            curl_close($ch);
+            
+            if (!empty($error)) {
+                return [
+                    'success' => false,
+                    'error' => "WebDAV connection error: {$error}"
+                ];
+            }
+            
+            // Check HTTP response codes
+            if ($httpCode === 207 || $httpCode === 200) {
+                $this->logger->info('[SUCCESS] WebDAV connection test passed', [
+                    'host' => $host,
+                    'path' => $path
+                ]);
+                
+                return [
+                    'success' => true,
+                    'connected' => true,
+                    'directory_ready' => true,
+                    'message' => 'WebDAV connection successful',
+                    'http_code' => $httpCode
+                ];
+            } elseif ($httpCode === 401) {
+                return [
+                    'success' => false,
+                    'error' => 'WebDAV authentication failed. Check username and password.'
+                ];
+            } elseif ($httpCode === 404) {
+                // Connection works but directory doesn't exist yet
+                return [
+                    'success' => true,
+                    'connected' => true,
+                    'directory_ready' => false,
+                    'message' => "WebDAV connection successful. Directory '{$path}' does not exist but will be created during the first backup."
+                ];
+            } else {
+                return [
+                    'success' => false,
+                    'error' => "WebDAV request failed with HTTP {$httpCode}"
+                ];
+            }
+            
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'error' => 'WebDAV connection error: ' . $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Delete external storage configuration
+     * 
+     * @return bool Success status
+     */
+    public function deleteExternalStorage(): bool
+    {
+        try {
+            $settingsFile = __DIR__ . '/../../../data/backup-external-storage.json';
+            
+            if (file_exists($settingsFile)) {
+                unlink($settingsFile);
+            }
+            
+            $this->logger->info('[SUCCESS] External storage configuration removed');
+            
+            return true;
+            
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to delete external storage config', [
+                'error' => $e->getMessage()
+            ]);
+            return false;
         }
     }
 }

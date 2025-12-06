@@ -329,4 +329,79 @@ class UserService
 
         return $user;
     }
+    
+    /**
+     * Get user statistics
+     * 
+     * @return array User statistics
+     */
+    public function getUserStats(): array
+    {
+        $this->logger->debug('Fetching user statistics');
+        
+        try {
+            // Total users
+            $totalUsers = User::count();
+            
+            // Active users
+            $activeUsers = User::where('is_active', true)->count();
+            
+            // Inactive users
+            $inactiveUsers = User::where('is_active', false)->count();
+            
+            // Admin count
+            $adminCount = User::where('role', 'admin')->count();
+            
+            // Regular user count
+            $userCount = User::where('role', 'user')->count();
+            
+            // New users in last 7 days
+            $sevenDaysAgo = now()->subDays(7);
+            $newUsersLast7Days = User::where('created_at', '>=', $sevenDaysAgo)->count();
+            
+            // New users in last 30 days
+            $thirtyDaysAgo = now()->subDays(30);
+            $newUsersLast30Days = User::where('created_at', '>=', $thirtyDaysAgo)->count();
+            
+            // Recent logins (last 24 hours)
+            $oneDayAgo = now()->subDay();
+            $recentLogins = User::where('last_login_at', '>=', $oneDayAgo)->count();
+            
+            // Recent logins (last 7 days)
+            $loginsLast7Days = User::where('last_login_at', '>=', $sevenDaysAgo)->count();
+            
+            // Never logged in
+            $neverLoggedIn = User::whereNull('last_login_at')->count();
+            
+            $stats = [
+                'total' => $totalUsers,
+                'active' => $activeUsers,
+                'inactive' => $inactiveUsers,
+                'by_role' => [
+                    'admin' => $adminCount,
+                    'user' => $userCount
+                ],
+                'new_users' => [
+                    'last_7_days' => $newUsersLast7Days,
+                    'last_30_days' => $newUsersLast30Days
+                ],
+                'activity' => [
+                    'logged_in_24h' => $recentLogins,
+                    'logged_in_7d' => $loginsLast7Days,
+                    'never_logged_in' => $neverLoggedIn
+                ]
+            ];
+            
+            $this->logger->info('User statistics fetched', $stats);
+            
+            return $stats;
+            
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to fetch user statistics', [
+                'error' => $e->getMessage()
+            ]);
+            
+            throw $e;
+        }
+    }
 }

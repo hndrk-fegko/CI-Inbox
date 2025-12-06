@@ -1,7 +1,7 @@
 # API Endpoints: Admin Settings Module
 
 **Date:** December 2025  
-**Status:** ✅ Mostly Complete - Backend APIs implemented
+**Status:** ✅ Complete - All 54 API endpoints implemented
 
 ---
 
@@ -163,13 +163,13 @@ This document lists all API endpoints used by the admin settings modules.
 | GET | `/api/admin/backup/download/{filename}` | Download backup | ✅ |
 | DELETE | `/api/admin/backup/delete/{filename}` | Delete backup | ✅ |
 | POST | `/api/admin/backup/cleanup` | Bulk delete old backups | ✅ |
-| GET | `/api/admin/backup/schedule` | Get auto-backup schedule | 🆕 Pending |
-| PUT | `/api/admin/backup/schedule` | Update schedule | 🆕 Pending |
-| GET | `/api/admin/backup/storage` | Get external storage config | 🆕 Pending |
-| PUT | `/api/admin/backup/storage` | Update storage config | 🆕 Pending |
-| POST | `/api/admin/backup/storage/test` | Test storage connection | 🆕 Pending |
-| DELETE | `/api/admin/backup/storage` | Remove storage config | 🆕 Pending |
-| GET | `/api/admin/backup/usage` | Get storage usage stats | 🆕 Pending |
+| GET | `/api/admin/backup/schedule` | Get auto-backup schedule | ✅ |
+| PUT | `/api/admin/backup/schedule` | Update schedule | ✅ |
+| GET | `/api/admin/backup/storage` | Get external storage config | ✅ |
+| PUT | `/api/admin/backup/storage` | Update storage config | ✅ |
+| POST | `/api/admin/backup/storage/test` | Test storage connection | ✅ |
+| DELETE | `/api/admin/backup/storage` | Remove storage config | ✅ |
+| GET | `/api/admin/backup/usage` | Get storage usage stats | ✅ |
 
 ### Request/Response Examples
 
@@ -227,7 +227,7 @@ This document lists all API endpoints used by the admin settings modules.
 | POST | `/api/users` | Create user | ✅ |
 | PUT | `/api/users/{id}` | Update user | ✅ |
 | DELETE | `/api/users/{id}` | Delete user | ✅ |
-| GET | `/api/admin/users/stats` | Get user statistics | 🆕 Pending |
+| GET | `/api/admin/users/stats` | Get user statistics | ✅ |
 
 ---
 
@@ -257,7 +257,7 @@ This document lists all API endpoints used by the admin settings modules.
 | POST | `/api/admin/signatures` | Create signature | ✅ |
 | PUT | `/api/admin/signatures/{id}` | Update signature | ✅ |
 | DELETE | `/api/admin/signatures/{id}` | Delete signature | ✅ |
-| PUT | `/api/admin/signatures/default` | Set default signature | 🆕 Pending |
+| POST | `/api/admin/signatures/{id}/set-default` | Set default signature | ✅ |
 
 ### Signature Types
 - **Shared Inbox:** Global signatures for team inbox
@@ -286,13 +286,13 @@ This document lists all API endpoints used by the admin settings modules.
 | IMAP | 4 | 0 | 4 |
 | SMTP | 4 | 0 | 4 |
 | Cron | 5 | 0 | 5 |
-| Backup | 8 | 4 | 12 |
+| Backup | 12 | 0 | 12 |
 | Database | 7 | 0 | 7 |
-| Users | 4 | 1 | 5 |
+| Users | 5 | 0 | 5 |
 | OAuth2 | 5 | 0 | 5 |
-| Signatures | 4 | 1 | 5 |
+| Signatures | 5 | 0 | 5 |
 | Logger | 7 | 0 | 7 |
-| **Total** | **48** | **6** | **54** |
+| **Total** | **54** | **0** | **54** |
 
 ---
 
