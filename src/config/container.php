@@ -532,6 +532,23 @@ return [
         );
     },
     
+    // ========== OAUTH ADMIN ==========
+    
+    // OAuth Admin Service
+    \CiInbox\App\Services\OAuthAdminService::class => function($container) {
+        return new \CiInbox\App\Services\OAuthAdminService(
+            $container->get(LoggerService::class)
+        );
+    },
+    
+    // OAuth Admin Controller
+    \CiInbox\App\Controllers\OAuthAdminController::class => function($container) {
+        return new \CiInbox\App\Controllers\OAuthAdminController(
+            $container->get(\CiInbox\App\Services\OAuthAdminService::class),
+            $container->get(LoggerService::class)
+        );
+    },
+    
     // ========== THEME MODULE ==========
     
     // Theme Service

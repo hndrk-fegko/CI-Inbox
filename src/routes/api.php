@@ -988,6 +988,44 @@ return function (App $app) {
         });
     });
     
+    // OAuth Admin API Routes
+    $app->group('/api/admin/oauth', function ($app) {
+        // Get OAuth configuration
+        $app->get('/config', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\OAuthAdminController::class);
+            return $controller->getConfig($request, $response);
+        });
+        
+        // Update global OAuth settings
+        $app->put('/config', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\OAuthAdminController::class);
+            return $controller->updateConfig($request, $response);
+        });
+        
+        // Update specific provider
+        $app->put('/providers/{provider}', function (Request $request, Response $response, array $args) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\OAuthAdminController::class);
+            return $controller->updateProvider($request, $response, $args);
+        });
+        
+        // Get OAuth statistics
+        $app->get('/stats', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\OAuthAdminController::class);
+            return $controller->getStats($request, $response);
+        });
+        
+        // Get OAuth users
+        $app->get('/users', function (Request $request, Response $response) {
+            $container = Container::getInstance();
+            $controller = $container->get(\CiInbox\App\Controllers\OAuthAdminController::class);
+            return $controller->getUsers($request, $response);
+        });
+    });
+    
     // Backup API Routes (Admin only)
     $app->group('/api/admin/backup', function ($app) {
         $container = Container::getInstance();

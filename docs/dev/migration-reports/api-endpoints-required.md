@@ -235,10 +235,11 @@ This document lists all API endpoints used by the admin settings modules.
 
 | Method | Endpoint | Purpose | Status |
 |--------|----------|---------|--------|
-| GET | `/api/admin/oauth/config` | Get OAuth configuration | 🆕 Pending |
-| PUT | `/api/admin/oauth/config` | Update global settings | 🆕 Pending |
-| PUT | `/api/admin/oauth/providers` | Update provider config | 🆕 Pending |
-| GET | `/api/admin/oauth/users` | List OAuth-linked users | 🆕 Pending |
+| GET | `/api/admin/oauth/config` | Get OAuth configuration | ✅ |
+| PUT | `/api/admin/oauth/config` | Update global settings | ✅ |
+| PUT | `/api/admin/oauth/providers/{provider}` | Update provider config | ✅ |
+| GET | `/api/admin/oauth/stats` | Get OAuth statistics | ✅ |
+| GET | `/api/admin/oauth/users` | List OAuth-linked users | ✅ |
 
 ### Supported Providers
 - Google
@@ -285,13 +286,13 @@ This document lists all API endpoints used by the admin settings modules.
 | IMAP | 4 | 0 | 4 |
 | SMTP | 4 | 0 | 4 |
 | Cron | 5 | 0 | 5 |
-| Backup | 5 | 7 | 12 |
+| Backup | 8 | 4 | 12 |
 | Database | 7 | 0 | 7 |
 | Users | 4 | 1 | 5 |
-| OAuth2 | 0 | 4 | 4 |
+| OAuth2 | 5 | 0 | 5 |
 | Signatures | 4 | 1 | 5 |
 | Logger | 7 | 0 | 7 |
-| **Total** | **40** | **13** | **53** |
+| **Total** | **48** | **6** | **54** |
 
 ---
 
