@@ -436,10 +436,13 @@ return [
         const BackupModule = {
             backups: [],
             deleteFilename: null,
+            schedule: null,
             
             init() {
                 console.log('[Backup] Initializing module...');
                 this.loadBackups();
+                this.loadSchedule();
+                this.loadStorageUsage();
                 this.bindEvents();
             },
             
@@ -475,6 +478,166 @@ return [
                 if (deleteClose) deleteClose.addEventListener('click', () => this.closeDeleteModal());
                 if (deleteCancel) deleteCancel.addEventListener('click', () => this.closeDeleteModal());
                 if (deleteSubmit) deleteSubmit.addEventListener('click', () => this.confirmDelete());
+                
+                // Schedule events
+                const autoEnabledCheckbox = document.getElementById('backup-auto-enabled');
+                const scheduleOptions = document.getElementById('backup-schedule-options');
+                const saveScheduleBtn = document.getElementById('backup-save-schedule-btn');
+                
+                if (autoEnabledCheckbox && scheduleOptions) {
+                    autoEnabledCheckbox.addEventListener('change', (e) => {
+                        scheduleOptions.style.display = e.target.checked ? 'block' : 'none';
+                    });
+                }
+                
+                if (saveScheduleBtn) {
+                    saveScheduleBtn.addEventListener('click', () => this.saveSchedule());
+                }
+                
+                // Storage type toggle
+                const storageTypeSelect = document.getElementById('backup-storage-type');
+                if (storageTypeSelect) {
+                    storageTypeSelect.addEventListener('change', (e) => this.toggleStorageConfig(e.target.value));
+                }
+            },
+            
+            async loadSchedule() {
+                try {
+                    const response = await fetch('/api/admin/backup/schedule');
+                    const data = await response.json();
+                    
+                    if (data.success && data.data) {
+                        this.schedule = data.data;
+                        this.updateScheduleUI();
+                    }
+                } catch (error) {
+                    console.error('[Backup] Failed to load schedule:', error);
+                }
+            },
+            
+            updateScheduleUI() {
+                if (!this.schedule) return;
+                
+                const autoEnabled = document.getElementById('backup-auto-enabled');
+                const scheduleOptions = document.getElementById('backup-schedule-options');
+                const frequencySelect = document.getElementById('backup-schedule-frequency');
+                const timeInput = document.getElementById('backup-schedule-time');
+                const retentionInput = document.getElementById('backup-schedule-retention');
+                const keepMonthly = document.getElementById('backup-keep-monthly');
+                
+                if (autoEnabled) {
+                    autoEnabled.checked = this.schedule.enabled;
+                }
+                if (scheduleOptions) {
+                    scheduleOptions.style.display = this.schedule.enabled ? 'block' : 'none';
+                }
+                if (frequencySelect) {
+                    frequencySelect.value = this.schedule.frequency || 'daily';
+                }
+                if (timeInput) {
+                    timeInput.value = this.schedule.time || '03:00';
+                }
+                if (retentionInput) {
+                    retentionInput.value = this.schedule.retention_days || 30;
+                }
+                if (keepMonthly) {
+                    keepMonthly.checked = this.schedule.keep_monthly || false;
+                }
+            },
+            
+            async saveSchedule() {
+                const saveBtn = document.getElementById('backup-save-schedule-btn');
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Saving...';
+                
+                try {
+                    const scheduleData = {
+                        enabled: document.getElementById('backup-auto-enabled')?.checked || false,
+                        frequency: document.getElementById('backup-schedule-frequency')?.value || 'daily',
+                        time: document.getElementById('backup-schedule-time')?.value || '03:00',
+                        retention_days: parseInt(document.getElementById('backup-schedule-retention')?.value) || 30,
+                        location: document.getElementById('backup-schedule-location')?.value || 'local',
+                        keep_monthly: document.getElementById('backup-keep-monthly')?.checked || false
+                    };
+                    
+                    const response = await fetch('/api/admin/backup/schedule', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(scheduleData)
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.schedule = data.data;
+                        this.showAlert('backup-alert', 'Schedule saved successfully!', 'success');
+                    } else {
+                        this.showAlert('backup-alert', data.error || 'Failed to save schedule', 'error');
+                    }
+                } catch (error) {
+                    console.error('[Backup] Save schedule failed:', error);
+                    this.showAlert('backup-alert', 'Failed to save schedule', 'error');
+                } finally {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" style="margin-right: 0.25rem;"><path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6h5a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2h5v5.586l-1.293-1.293zM9 4a1 1 0 012 0v2H9V4z"/></svg> Save Schedule';
+                }
+            },
+            
+            async loadStorageUsage() {
+                try {
+                    const response = await fetch('/api/admin/backup/usage');
+                    const data = await response.json();
+                    
+                    if (data.success && data.data) {
+                        this.updateStorageUsageUI(data.data);
+                    }
+                } catch (error) {
+                    console.error('[Backup] Failed to load storage usage:', error);
+                }
+            },
+            
+            updateStorageUsageUI(usage) {
+                const localUsage = document.getElementById('backup-local-usage');
+                const externalUsage = document.getElementById('backup-external-usage');
+                const monthlyCount = document.getElementById('backup-monthly-count');
+                const oldestBackup = document.getElementById('backup-oldest');
+                
+                if (localUsage) {
+                    localUsage.textContent = `${usage.local?.count || 0} files (${usage.local?.size_mb || 0} MB)`;
+                }
+                if (externalUsage) {
+                    externalUsage.textContent = usage.external?.configured 
+                        ? `${usage.external?.count || 0} files` 
+                        : 'Not configured';
+                }
+                if (monthlyCount) {
+                    monthlyCount.textContent = usage.monthly_count || 0;
+                }
+                if (oldestBackup) {
+                    oldestBackup.textContent = usage.oldest_backup || '—';
+                }
+                
+                // Update card status
+                const externalStatus = document.getElementById('backup-external-status');
+                if (externalStatus) {
+                    if (usage.external?.configured) {
+                        externalStatus.className = 'c-status-badge c-status-badge--success';
+                        externalStatus.innerHTML = '<span class="status-dot"></span>Configured';
+                    } else {
+                        externalStatus.className = 'c-status-badge c-status-badge--warning';
+                        externalStatus.innerHTML = '<span class="status-dot"></span>Not Configured';
+                    }
+                }
+            },
+            
+            toggleStorageConfig(type) {
+                const ftpConfig = document.getElementById('backup-ftp-config');
+                const webdavConfig = document.getElementById('backup-webdav-config');
+                const storageActions = document.getElementById('backup-storage-actions');
+                
+                if (ftpConfig) ftpConfig.style.display = type === 'ftp' ? 'block' : 'none';
+                if (webdavConfig) webdavConfig.style.display = type === 'webdav' ? 'block' : 'none';
+                if (storageActions) storageActions.style.display = type ? 'block' : 'none';
             },
             
             async loadBackups() {

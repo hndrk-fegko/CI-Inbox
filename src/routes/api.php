@@ -1154,6 +1154,89 @@ return function (App $app) {
                     ->withStatus(500);
             }
         });
+        
+        // Get backup schedule
+        $app->get('/schedule', function (Request $request, Response $response) use ($container, $logger) {
+            try {
+                $backupService = $container->get(\CiInbox\App\Services\BackupService::class);
+                $schedule = $backupService->getSchedule();
+                
+                $response->getBody()->write(json_encode([
+                    'success' => true,
+                    'data' => $schedule
+                ]));
+                
+                return $response->withHeader('Content-Type', 'application/json');
+                
+            } catch (\Exception $e) {
+                $logger->error('Get schedule failed', ['error' => $e->getMessage()]);
+                
+                $response->getBody()->write(json_encode([
+                    'success' => false,
+                    'error' => $e->getMessage()
+                ]));
+                
+                return $response
+                    ->withHeader('Content-Type', 'application/json')
+                    ->withStatus(500);
+            }
+        });
+        
+        // Update backup schedule
+        $app->put('/schedule', function (Request $request, Response $response) use ($container, $logger) {
+            try {
+                $body = $request->getParsedBody();
+                $backupService = $container->get(\CiInbox\App\Services\BackupService::class);
+                $schedule = $backupService->updateSchedule($body);
+                
+                $response->getBody()->write(json_encode([
+                    'success' => true,
+                    'data' => $schedule,
+                    'message' => 'Schedule updated successfully'
+                ]));
+                
+                return $response->withHeader('Content-Type', 'application/json');
+                
+            } catch (\Exception $e) {
+                $logger->error('Update schedule failed', ['error' => $e->getMessage()]);
+                
+                $response->getBody()->write(json_encode([
+                    'success' => false,
+                    'error' => $e->getMessage()
+                ]));
+                
+                return $response
+                    ->withHeader('Content-Type', 'application/json')
+                    ->withStatus(500);
+            }
+        });
+        
+        // Get storage usage
+        $app->get('/usage', function (Request $request, Response $response) use ($container, $logger) {
+            try {
+                $backupService = $container->get(\CiInbox\App\Services\BackupService::class);
+                $usage = $backupService->getStorageUsage();
+                
+                $response->getBody()->write(json_encode([
+                    'success' => true,
+                    'data' => $usage
+                ]));
+                
+                return $response->withHeader('Content-Type', 'application/json');
+                
+            } catch (\Exception $e) {
+                $logger->error('Get storage usage failed', ['error' => $e->getMessage()]);
+                
+                $response->getBody()->write(json_encode([
+                    'success' => false,
+                    'error' => $e->getMessage()
+                ]));
+                
+                return $response
+                    ->withHeader('Content-Type', 'application/json')
+                    ->withStatus(500);
+            }
+        });
     });
     
     // Webhook API Routes

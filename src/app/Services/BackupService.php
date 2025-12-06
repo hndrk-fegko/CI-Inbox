@@ -269,4 +269,156 @@ class BackupService
             'compression_ratio' => round((1 - filesize($destination) / filesize($source)) * 100, 1) . '%'
         ]);
     }
+    
+    /**
+     * Get backup schedule configuration
+     * 
+     * @return array Schedule configuration
+     */
+    public function getSchedule(): array
+    {
+        try {
+            // Try to load from settings database
+            $settingsFile = __DIR__ . '/../../../data/backup-schedule.json';
+            
+            if (file_exists($settingsFile)) {
+                $config = json_decode(file_get_contents($settingsFile), true);
+                if ($config) {
+                    return $config;
+                }
+            }
+            
+            // Default configuration
+            return [
+                'enabled' => false,
+                'frequency' => 'daily',
+                'time' => '03:00',
+                'retention_days' => 30,
+                'location' => 'local',
+                'keep_monthly' => false,
+                'last_backup' => null
+            ];
+            
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to get backup schedule', [
+                'error' => $e->getMessage()
+            ]);
+            
+            return [
+                'enabled' => false,
+                'frequency' => 'daily',
+                'time' => '03:00',
+                'retention_days' => 30,
+                'location' => 'local',
+                'keep_monthly' => false
+            ];
+        }
+    }
+    
+    /**
+     * Update backup schedule configuration
+     * 
+     * @param array $config Schedule configuration
+     * @return array Updated configuration
+     */
+    public function updateSchedule(array $config): array
+    {
+        try {
+            $current = $this->getSchedule();
+            
+            // Merge with current config
+            $updated = array_merge($current, [
+                'enabled' => $config['enabled'] ?? false,
+                'frequency' => $config['frequency'] ?? 'daily',
+                'time' => $config['time'] ?? '03:00',
+                'retention_days' => (int)($config['retention_days'] ?? 30),
+                'location' => $config['location'] ?? 'local',
+                'keep_monthly' => $config['keep_monthly'] ?? false
+            ]);
+            
+            // Save to file
+            $settingsFile = __DIR__ . '/../../../data/backup-schedule.json';
+            $dataDir = dirname($settingsFile);
+            
+            if (!is_dir($dataDir)) {
+                mkdir($dataDir, 0755, true);
+            }
+            
+            file_put_contents($settingsFile, json_encode($updated, JSON_PRETTY_PRINT));
+            
+            $this->logger->info('[SUCCESS] Backup schedule updated', $updated);
+            
+            return $updated;
+            
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to update backup schedule', [
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
+    }
+    
+    /**
+     * Get storage usage statistics
+     * 
+     * @return array Storage statistics
+     */
+    public function getStorageUsage(): array
+    {
+        try {
+            $backups = $this->listBackups();
+            
+            $localSize = 0;
+            $monthlyCount = 0;
+            $oldestBackup = null;
+            $newestBackup = null;
+            
+            foreach ($backups as $backup) {
+                $localSize += $backup['size'];
+                
+                // Check if it's a monthly backup (first of month)
+                $backupDate = date('Y-m-d', $backup['created_at']);
+                $firstOfMonth = date('Y-m-01', $backup['created_at']);
+                if ($backupDate === $firstOfMonth) {
+                    $monthlyCount++;
+                }
+                
+                // Track oldest and newest
+                if ($oldestBackup === null || $backup['created_at'] < $oldestBackup['created_at']) {
+                    $oldestBackup = $backup;
+                }
+                if ($newestBackup === null || $backup['created_at'] > $newestBackup['created_at']) {
+                    $newestBackup = $backup;
+                }
+            }
+            
+            return [
+                'local' => [
+                    'count' => count($backups),
+                    'size_bytes' => $localSize,
+                    'size_mb' => round($localSize / 1024 / 1024, 2)
+                ],
+                'external' => [
+                    'configured' => false,
+                    'count' => 0,
+                    'size_mb' => 0
+                ],
+                'monthly_count' => $monthlyCount,
+                'oldest_backup' => $oldestBackup ? $oldestBackup['created_at_human'] : null,
+                'newest_backup' => $newestBackup ? $newestBackup['created_at_human'] : null
+            ];
+            
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to get storage usage', [
+                'error' => $e->getMessage()
+            ]);
+            
+            return [
+                'local' => ['count' => 0, 'size_bytes' => 0, 'size_mb' => 0],
+                'external' => ['configured' => false, 'count' => 0, 'size_mb' => 0],
+                'monthly_count' => 0,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
 }
