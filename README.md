@@ -2,27 +2,30 @@
 
 **Leichtgewichtige IMAP-Inbox-Verwaltung für kleine autonome Teams (3-7 Personen).**
 
-[![Status](https://img.shields.io/badge/Status-M3%20In%20Progress-yellow)](https://github.com/your-repo)
+CI-Inbox verwandelt gemeinsam genutzte IMAP-Postfächer in kollaborative Aufgaben-Warteschlangen mit klarer Zuständigkeit, internen Notizen und vollständiger Nachvollziehbarkeit – ohne die Komplexität eines Ticketsystems.
+
+[![Status](https://img.shields.io/badge/Status-M3%20In%20Progress-yellow)](https://github.com/hndrk-fegko/C-IMAP)
 [![PHP](https://img.shields.io/badge/PHP-8.1%2B-blue)](https://php.net)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 ---
 
 ## 🎯 Projektziel
 
-CI-Inbox löst das Problem chaotischer Shared-Inbox-Verwaltung für kleine Teams ohne Budget/Bedarf für komplexe Ticketing-Systeme. Entwickelt für autonome Teams mit flexiblen Arbeitszeiten (z.B. Vereine, Kirchengemeinden, kleine NGOs).
+CI-Inbox löst das Problem chaotischer Shared-Inbox-Verwaltung für kleine Teams ohne Budget oder Bedarf für komplexe Ticketing-Systeme. Entwickelt für autonome Teams mit flexiblen Arbeitszeiten (z.B. Vereine, Kirchengemeinden, kleine NGOs, Startups).
 
 **Kernfunktionen:**
-- 📧 Thread-basierte E-Mail-Gruppierung (✅ M1)
-- 🏷️ Label-System für Organisation (✅ M1)
-- 🔍 IMAP Keywords für Performance (✅ M1 Bonus)
-- 🔄 Automatisches E-Mail-Polling (✅ M1.5 - Webcron)
-- 🎯 Thread Management API (✅ M2.1 - 10 Endpoints)
-- 📧 Email Send API (✅ M2.2 - SMTP Integration)
-- 🔗 Webhook Integration (✅ M2.3 - External Systems)
-- 📝 Interne Notizen für Kontext-Weitergabe (⏳ M3)
-- 🔄 Persönliche IMAP-Übernahme für sensible Themen (⏳ M4)
-- 📊 100% Nachvollziehbarkeit (Activity-Log) (⏳ M4)
+- ✅ **Thread-basierte E-Mail-Gruppierung** (M1) - Automatische Konversations-Erkennung
+- ✅ **Label-System** (M1) - Flexible Organisation mit System- und Custom-Labels
+- ✅ **IMAP Keywords** (M1 Bonus) - Performance-Optimierung via Server-Keywords
+- ✅ **Automatisches E-Mail-Polling** (M1.5) - Webcron-basiertes Polling
+- ✅ **Thread Management API** (M2.1) - 10 REST-Endpoints für CRUD-Operationen
+- ✅ **Email Send API** (M2.2) - SMTP-Integration für Senden/Antworten/Weiterleiten
+- ✅ **Webhook Integration** (M2.3) - Integration mit externen Systemen
+- ⏳ **Interne Notizen** (M3) - Kontext-Weitergabe im Team
+- ⏳ **Persönliche IMAP-Übernahme** (M4) - Für sensible Themen
+- ⏳ **100% Nachvollziehbarkeit** (M4) - Vollständiges Activity-Log
 
 ---
 
@@ -61,17 +64,17 @@ CI-Inbox löst das Problem chaotischer Shared-Inbox-Verwaltung für kleine Teams
 
 ## 📚 Dokumentation
 
-**🆕 New to CI-Inbox?** Start with [Getting Started Guide](docs/GETTING-STARTED.md)!
+**🆕 Neu bei CI-Inbox?** Starten Sie mit dem [Getting Started Guide](docs/GETTING-STARTED.md)!
 
-Alle Entwickler-Dokumentation findest du in `docs/dev/`:
+Die vollständige Entwicklerdokumentation finden Sie in `docs/dev/`:
 
 | Dokument | Beschreibung |
 |----------|--------------|
-| [`GETTING-STARTED.md`](docs/GETTING-STARTED.md) | **Start here!** Quick setup (5 min) |
-| [`vision.md`](docs/dev/vision.md) | Projektziele, Workflows (A/B/C), Use Cases |
+| [`GETTING-STARTED.md`](docs/GETTING-STARTED.md) | **Start here!** Schnellstart-Anleitung (5 Min.) |
+| [`vision.md`](docs/dev/vision.md) | Projektziele, Workflows (A/B/C), Anwendungsfälle |
 | [`inventar.md`](docs/dev/inventar.md) | Feature-Liste mit Prioritäten (MUST/SHOULD/COULD) |
 | [`roadmap.md`](docs/dev/roadmap.md) | Entwicklungs-Timeline (M0-M5, 16 Wochen) |
-| [`architecture.md`](docs/dev/architecture.md) | Technische Architektur, Datenmodell, Security |
+| [`architecture.md`](docs/dev/architecture.md) | Technische Architektur, Datenmodell, Sicherheit |
 | [`codebase.md`](docs/dev/codebase.md) | Entwicklungsumgebung, Code-Konventionen, Testing |
 | [`PROJECT-STATUS.md`](docs/dev/PROJECT-STATUS.md) | Aktueller Projektstatus |
 
@@ -89,7 +92,7 @@ Alle Entwickler-Dokumentation findest du in `docs/dev/`:
 
 ```bash
 # 1. Repository klonen
-git clone <repository-url> ci-inbox
+git clone https://github.com/hndrk-fegko/C-IMAP.git ci-inbox
 cd ci-inbox
 
 # 2. Dependencies installieren
@@ -97,34 +100,53 @@ composer install
 
 # 3. Environment konfigurieren
 cp .env.example .env
-# Bearbeite .env: DB-Credentials, Encryption-Key setzen
+# Bearbeiten Sie .env mit Ihren Datenbank-Credentials
+# Generieren Sie einen Encryption-Key: php -r "echo bin2hex(random_bytes(32));"
 
 # 4. Datenbank einrichten
 mysql -u root -p -e "CREATE DATABASE ci_inbox CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-php scripts/setup-database.php
+php database/migrate.php
 
 # 5. Development-Server starten
 php -S localhost:8080 -t src/public
 ```
 
-**Oder mit XAMPP:**
-- vHost auf `src/public` zeigen lassen
-- URL: `http://ci-inbox.local`
+**Oder mit XAMPP/Apache:**
+- DocumentRoot auf `src/public/` zeigen lassen
+- Virtual Host einrichten: `http://ci-inbox.local`
 
-**Detaillierte Anleitung:** Siehe [`docs/dev/codebase.md`](docs/dev/codebase.md) → Abschnitt 2
+**📖 Detaillierte Installationsanleitung:** Siehe [`docs/dev/codebase.md`](docs/dev/codebase.md) → Abschnitt 2
 
 ---
 
 ## 🏗️ Technologie-Stack
 
-- **Backend:** PHP 8.1+, Slim Framework 4, Eloquent ORM (standalone)
-- **Frontend:** Vanilla JS (ES6+), Bootstrap 5, Quill.js
-- **Datenbank:** MySQL 8.0 / MariaDB 10.6
-- **Security:** AES-256-CBC, HTML Purifier, CSRF-Tokens
-- **Logging:** Monolog (PSR-3)
-- **Deployment:** Shared Hosting kompatibel
+**Backend:**
+- **PHP 8.1+** mit modernen Features (Property Promotion, Enums, Union Types)
+- **Slim Framework 4** - Leichtgewichtiges HTTP-Framework
+- **Eloquent ORM** (Standalone) - Datenbankabstraktion ohne Laravel
+- **Monolog** - PSR-3 konformes Logging
+- **PHP-DI** - Dependency Injection Container
 
-**Begründung:** Siehe [`docs/dev/architecture.md`](docs/dev/architecture.md) → Abschnitt 1.3
+**Frontend:**
+- **Vanilla JavaScript (ES6+)** - Kein Framework-Lock-in
+- **Bootstrap 5** - Responsives UI-Framework
+- **Quill.js** - Rich-Text-Editor (geplant)
+
+**Datenbank:**
+- **MySQL 8.0+** / **MariaDB 10.6+** mit utf8mb4
+
+**Sicherheit:**
+- **AES-256-CBC** - Verschlüsselung sensibler Daten
+- **HTML Purifier** - XSS-Schutz
+- **Prepared Statements** - SQL Injection Prevention
+
+**Deployment:**
+- Shared Hosting kompatibel (kein Node.js/Build-Step erforderlich)
+- `.htaccess` Support für Apache
+- Nginx-Konfiguration verfügbar
+
+**Begründung der Technologie-Wahl:** Siehe [`docs/dev/architecture.md`](docs/dev/architecture.md) → Abschnitt 1.3
 
 ---
 
@@ -173,37 +195,89 @@ php src/modules/imap/tests/setup-autodiscover.php
 
 ---
 
+## 🔒 Sicherheit
+
+CI-Inbox implementiert mehrere Sicherheitsebenen:
+
+- **Verschlüsselung:** AES-256-CBC für sensible Daten (IMAP-Passwörter)
+- **XSS-Schutz:** HTML Purifier für E-Mail-Content
+- **CSRF-Schutz:** Token-basierte Absicherung (geplant M3)
+- **SQL Injection:** Eloquent ORM mit Prepared Statements
+- **Session-Security:** Sichere Session-Verwaltung (geplant M3)
+- **Webhook-Security:** HMAC-SHA256 Signaturverifizierung
+
+**Sicherheitslücke melden:**  
+Bitte senden Sie Sicherheitsprobleme vertraulich an [hendrik.dreis@feg-koblenz.de](mailto:hendrik.dreis@feg-koblenz.de).
+
+Mehr Details: [`docs/dev/architecture.md`](docs/dev/architecture.md) → Abschnitt 5 (Security)
+
+---
+
 ## 🤝 Contributing
 
-Contributions sind willkommen! Siehe [CONTRIBUTING.md](CONTRIBUTING.md) für Guidelines.
+Contributions sind willkommen! Siehe [CONTRIBUTING.md](CONTRIBUTING.md) für ausführliche Guidelines.
 
-**Kurzfassung:**
-1. Fork das Repository
-2. Feature-Branch erstellen (`git checkout -b feature/my-feature`)
-3. Committen (`git commit -m 'feat(scope): Add feature'`)
-4. Push (`git push origin feature/my-feature`)
+**Kurzanleitung:**
+1. Repository forken
+2. Feature-Branch erstellen (`git checkout -b feature/mein-feature`)
+3. Änderungen committen (`git commit -m 'feat(scope): Beschreibung'`)
+4. Branch pushen (`git push origin feature/mein-feature`)
 5. Pull Request erstellen
 
-**Code-Standards:** PSR-12, siehe [`docs/dev/codebase.md`](docs/dev/codebase.md) → Abschnitt 4
+**Code-Standards:**  
+- PSR-12 Coding Style
+- Strict Types in allen PHP-Dateien
+- Vollständiges Logging aller Operationen
+- Layer-Abstraktion (Service → Repository Pattern)
+
+Weitere Details: [`docs/dev/codebase.md`](docs/dev/codebase.md) → Abschnitt 4
 
 ---
 
 ## 📝 Lizenz
 
-[MIT License](LICENSE) - Details folgen
+MIT License - Siehe [LICENSE](LICENSE) für Details.
+
+Copyright (c) 2025 Hendrik Dreis
 
 ---
 
-## 👥 Team
+## 👥 Team & Entwicklung
 
-- **Entwickler:** [Dein Name]
-- **KI-Unterstützung:** GitHub Copilot
+**Hauptentwickler:**  
+Hendrik Dreis ([hendrik.dreis@feg-koblenz.de](mailto:hendrik.dreis@feg-koblenz.de))
+
+**KI-Unterstützung:**  
+GitHub Copilot
 
 ---
 
-## 📧 Kontakt
+## 📦 Open Source Dependencies
 
-Fragen? Siehe [`docs/dev/workflow.md`](docs/dev/workflow.md) oder öffne ein Issue.
+CI-Inbox nutzt folgende Open-Source-Bibliotheken:
+
+| Bibliothek | Lizenz | Verwendung |
+|------------|--------|------------|
+| Slim Framework | MIT | HTTP Routing & Middleware |
+| Eloquent ORM | MIT | Datenbank-Abstraktionsschicht |
+| Monolog | MIT | Logging (PSR-3) |
+| PHP-DI | MIT | Dependency Injection Container |
+| PHPMailer | LGPL 2.1+ | E-Mail-Versand (SMTP) |
+| HTML Purifier | LGPL 2.1+ | XSS-Schutz |
+| phpdotenv | BSD-3-Clause | Umgebungsvariablen |
+| Sabre/DAV | BSD-3-Clause | WebDAV/CardDAV (geplant) |
+| Bootstrap 5 | MIT | Frontend-Framework (via CDN) |
+
+Alle Lizenzen sind MIT-kompatibel.
+
+---
+
+## 📧 Kontakt & Support
+
+**Fragen oder Probleme?**
+- 📖 Konsultieren Sie die [Dokumentation](docs/dev/)
+- 🐛 Öffnen Sie ein [Issue](https://github.com/hndrk-fegko/C-IMAP/issues)
+- 💬 Kontakt: [hendrik.dreis@feg-koblenz.de](mailto:hendrik.dreis@feg-koblenz.de)
 
 ---
 
