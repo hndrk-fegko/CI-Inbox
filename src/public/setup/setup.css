@@ -506,11 +506,16 @@ code {
 .vendor-missing-help ul {
     margin-left: 20px;
     text-align: left;
+    margin-top: 10px;
 }
 
 .vendor-missing-help li {
     margin: 8px 0;
     color: var(--color-text-primary);
+}
+
+.vendor-missing-help .doc-link {
+    margin-top: 15px;
 }
 
 /* Loading Overlay (Vendor Auto-Install) */
@@ -577,21 +582,6 @@ code {
     font-size: 0.9em;
     color: var(--color-text-secondary);
     margin-top: 10px;
-}
-
-.vendor-missing-help ul {
-    margin-left: 20px;
-    text-align: left;
-    margin-top: 10px;
-}
-
-.vendor-missing-help li {
-    margin: 8px 0;
-    color: var(--color-text-primary);
-}
-
-.vendor-missing-help .doc-link {
-    margin-top: 15px;
 }
 
 /* Small devices */
