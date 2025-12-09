@@ -8,6 +8,8 @@ on:
 jobs:
   build-vendor:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required for uploading release assets
     
     steps:
       - name: Checkout code
