@@ -55,6 +55,23 @@ function getPhpExecutable(): string
  * 
  * @return string Base path without trailing slash
  */
+/**
+ * Get project root filesystem path
+ * 
+ * @return string Absolute filesystem path to project root
+ */
+function getProjectRoot(): string
+{
+    // This file is in: /src/public/setup/includes/functions.php
+    // Project root is: 4 levels up
+    return realpath(__DIR__ . '/../../../../') ?: __DIR__ . '/../../../../';
+}
+
+/**
+ * Get base web path for redirects
+ * 
+ * @return string Web path (e.g., "/src/public" or "")
+ */
 function getBasePath(): string
 {
     $scriptName = $_SERVER['SCRIPT_NAME']; // e.g., "/src/public/setup/index.php"
@@ -531,8 +548,8 @@ function checkHostingEnvironment(): array
     ];
     
     // 5. Composer/Vendor Directory
-    $basePath = getBasePath();
-    $vendorExists = is_dir($basePath . '/vendor');
+    $projectRoot = getProjectRoot();
+    $vendorExists = is_dir($projectRoot . '/vendor');
     
     // Check if exec functions are disabled
     $disabledFunctions = explode(',', ini_get('disable_functions'));
@@ -541,7 +558,7 @@ function checkHostingEnvironment(): array
     
     $composerExists = false;
     if (!$execDisabled) {
-        $composerExists = file_exists($basePath . '/composer.phar') || 
+        $composerExists = file_exists($projectRoot . '/composer.phar') || 
                           @shell_exec('which composer 2>/dev/null') || 
                           @shell_exec('where composer 2>nul');
     }
@@ -564,7 +581,7 @@ function checkHostingEnvironment(): array
     ];
     
     // 6. Writable Directories
-    $logsWritable = is_dir($basePath . '/logs') && is_writable($basePath . '/logs');
+    $logsWritable = is_dir($projectRoot . '/logs') && is_writable($projectRoot . '/logs');
     $checks['writable_logs'] = [
         'name' => 'Logs Verzeichnis beschreibbar',
         'status' => $logsWritable ? 'ok' : 'warning',

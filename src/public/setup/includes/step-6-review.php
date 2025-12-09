@@ -12,16 +12,11 @@ declare(strict_types=1);
  */
 function handleStep6Submit(): void
 {
-    $basePath = getBasePath();
+    $projectRoot = getProjectRoot();
     $sessionData = getSessionData();
     
     try {
-        // Generate .env file
-        if (!generateEnvFile($sessionData, $basePath)) {
-            throw new Exception('Fehler beim Erstellen der .env-Datei');
-        }
-        
-        // Database connection
+        // Database connection (BEFORE .env creation to prevent race condition)
         $dsn = "mysql:host={$sessionData['db_host']};port={$sessionData['db_port']};charset=utf8mb4";
         $pdo = new PDO($dsn, $sessionData['db_user'], $sessionData['db_password']);
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -35,7 +30,7 @@ function handleStep6Submit(): void
         $pdo->exec("USE `{$sessionData['db_name']}`");
         
         // Run migrations
-        $migrationsPath = $basePath . '/database/migrations';
+        $migrationsPath = $projectRoot . '/database/migrations';
         $migrations = glob($migrationsPath . '/*.php');
         sort($migrations);
         
@@ -146,8 +141,14 @@ function handleStep6Submit(): void
         $stmt->execute(['email_retention_days', '0']);
         
         // Write .htaccess for production
-        if (!writeProductionHtaccess($basePath)) {
+        if (!writeProductionHtaccess($projectRoot)) {
             throw new Exception('Fehler beim Erstellen der .htaccess-Datei');
+        }
+        
+        // IMPORTANT: Generate .env file as LAST step (atomic installation marker)
+        // This prevents race conditions where .env exists but DB is incomplete
+        if (!generateEnvFile($sessionData, $projectRoot)) {
+            throw new Exception('Fehler beim Erstellen der .env-Datei');
         }
         
         updateSessionStep(7);

@@ -15,7 +15,15 @@ declare(strict_types=1);
  */
 function renderStep7(array $sessionData): void
 {
-    // K4: Clear session after successful installation
+    // Try to delete ROOT/index.php (installation router)
+    // This is optional - if it fails, index.php doesn't hurt because .htaccess takes over
+    $rootIndexPhp = __DIR__ . '/../../../../index.php';
+    if (file_exists($rootIndexPhp)) {
+        @unlink($rootIndexPhp);
+        // Silently ignore if deletion fails (file permissions, etc.)
+    }
+    
+    // Clear session after successful installation
     session_destroy();
     
     ?>
