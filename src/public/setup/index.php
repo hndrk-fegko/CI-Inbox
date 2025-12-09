@@ -141,108 +141,70 @@ if (!$vendorExists) {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Dependencies fehlen - CI-Inbox Setup</title>
         <link rel="stylesheet" href="setup.css">
-        <style>
-        /* Loading Overlay */
-        .loading-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 9999;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-        }
-        .loading-overlay.active {
-            display: flex;
-        }
-        .loading-spinner {
-            border: 5px solid #f3f3f3;
-            border-top: 5px solid #10b981;
-            border-radius: 50%;
-            width: 60px;
-            height: 60px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .loading-text {
-            color: white;
-            font-size: 18px;
-            margin-top: 20px;
-            text-align: center;
-        }
-        .loading-warning {
-            color: #fbbf24;
-            font-size: 14px;
-            margin-top: 10px;
-            max-width: 400px;
-            text-align: center;
-        }
-        </style>
     </head>
-    <body class="vendor-missing-page">
-        <div class="vendor-missing-container">
-            <div class="vendor-missing-icon">📦</div>
-            <h1>Dependencies fehlen</h1>
-            <p class="vendor-missing-desc">
-                Das <code>vendor/</code> Verzeichnis wurde nicht gefunden. 
-                CI-Inbox benötigt externe PHP-Bibliotheken (Composer Dependencies), um zu funktionieren.
-            </p>
-            
-            <div class="vendor-missing-options">
-                <div class="option-card">
-                    <h3>🚀 Option 1: Automatische Installation (Empfohlen)</h3>
-                    <p>Wenn Composer auf Ihrem Server verfügbar ist, installieren wir die Dependencies automatisch (Linux-optimiert, ~5 Minuten).</p>
-                    <button id="autoInstallBtn" class="btn btn-primary">Dependencies jetzt installieren</button>
-                    <div id="installStatus" style="margin-top: 15px; display: none;"></div>
-                    <p style="font-size: 0.9em; color: #666; margin-top: 10px;">
-                        <strong>Hinweis:</strong> Dies lädt ca. 50 MB Dependencies herunter und installiert diese für Ihr System optimiert.
-                    </p>
-                </div>
-                
-                <div class="option-card">
-                    <h3>📥 Option 2: Manuelle vendor.zip Installation</h3>
-                    <p>Falls Composer nicht verfügbar ist, laden Sie das vorbereitete <code>vendor.zip</code> herunter:</p>
-                    <ol style="text-align: left; margin: 15px 0;">
-                        <li><strong>Linux-Server:</strong> <a href="https://github.com/hndrk-fegko/CI-Inbox/releases/latest/download/vendor.zip" target="_blank">vendor.zip herunterladen</a> (~50 MB)</li>
-                        <li><strong>Windows-Server (XAMPP/WAMP):</strong> Verwenden Sie <code>vendor-windows.zip</code> (falls verfügbar) oder erstellen Sie es lokal</li>
-                        <li>Entpacken Sie das Archiv im Root-Verzeichnis (neben <code>src/</code>)</li>
-                        <li>Stellen Sie sicher, dass <code>vendor/autoload.php</code> existiert</li>
-                        <li><button onclick="window.location.reload()" class="btn btn-secondary">Seite neu laden</button></li>
-                    </ol>
-                    <p style="font-size: 0.9em; color: #666;">
-                        <strong>Platform-Hinweis:</strong> Verwenden Sie das passende vendor.zip für Ihr System (Linux vs. Windows), 
-                        da Dependencies platform-spezifische Binaries enthalten können.
-                    </p>
-                </div>
-                
-                <div class="option-card">
-                    <h3>💻 Option 3: Composer per SSH ausführen</h3>
-                    <p>Falls Sie SSH-Zugriff haben, können Sie Composer manuell ausführen:</p>
-                    <pre style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin: 10px 0; text-align: left;">cd /pfad/zu/ci-inbox
-composer install --no-dev --optimize-autoloader</pre>
-                    <p style="font-size: 0.9em; color: #666;">
-                        Dies installiert die Dependencies optimiert für Ihr aktuelles System.
-                    </p>
-                </div>
+    <body>
+        <div class="container">
+            <div class="header header-warning">
+                <h1>📦 CI-Inbox Setup</h1>
+                <p>Dependencies werden benötigt</p>
             </div>
             
-            <div class="vendor-missing-help">
-                <strong>💡 Hilfe benötigt?</strong><br>
-                <ul style="text-align: left; margin-top: 10px;">
-                    <li><strong>Shared Hosting:</strong> Option 2 (vendor.zip) ist meist die einfachste Lösung</li>
-                    <li><strong>VPS/Dedicated:</strong> Option 1 (automatisch) oder Option 3 (SSH) empfohlen</li>
-                    <li><strong>Windows-Server:</strong> Erstellen Sie vendor-windows.zip lokal mit <code>php scripts\create-vendor-zip-windows.php</code></li>
-                </ul>
-                <p style="margin-top: 15px;">
-                    📚 <a href="https://github.com/hndrk-fegko/CI-Inbox/blob/main/DEPLOYMENT.md" target="_blank">Ausführliche Deployment-Dokumentation</a>
+            <div class="content">
+                <h2 class="section-title">Dependencies fehlen</h2>
+                <p class="section-desc">
+                    Das <code>vendor/</code> Verzeichnis wurde nicht gefunden. 
+                    CI-Inbox benötigt externe PHP-Bibliotheken (Composer Dependencies), um zu funktionieren.
                 </p>
+                
+                <div class="vendor-missing-options">
+                    <div class="option-card">
+                        <h3>🚀 Option 1: Automatische Installation (Empfohlen)</h3>
+                        <p>Wenn Composer auf Ihrem Server verfügbar ist, installieren wir die Dependencies automatisch (Linux-optimiert, ~5 Minuten).</p>
+                        <button id="autoInstallBtn" class="btn btn-primary">Dependencies jetzt installieren</button>
+                        <div id="installStatus" style="display: none;"></div>
+                        <p style="font-size: 0.9em; color: var(--color-text-secondary); margin-top: 10px;">
+                            <strong>Hinweis:</strong> Dies lädt ca. 50 MB Dependencies herunter und installiert diese für Ihr System optimiert.
+                        </p>
+                    </div>
+                    
+                    <div class="option-card">
+                        <h3>📥 Option 2: Manuelle vendor.zip Installation</h3>
+                        <p>Falls Composer nicht verfügbar ist, laden Sie das vorbereitete <code>vendor.zip</code> herunter:</p>
+                        <ol>
+                            <li><strong>Linux-Server:</strong> <a href="https://github.com/hndrk-fegko/CI-Inbox/releases/latest/download/vendor.zip" target="_blank">vendor.zip herunterladen</a> (~50 MB)</li>
+                            <li><strong>Windows-Server (XAMPP/WAMP):</strong> Verwenden Sie <code>vendor-windows.zip</code> (falls verfügbar) oder erstellen Sie es lokal</li>
+                            <li>Entpacken Sie das Archiv im Root-Verzeichnis (neben <code>src/</code>)</li>
+                            <li>Stellen Sie sicher, dass <code>vendor/autoload.php</code> existiert</li>
+                            <li><button onclick="window.location.reload()" class="btn btn-secondary">Seite neu laden</button></li>
+                        </ol>
+                        <p style="font-size: 0.9em; color: var(--color-text-secondary);">
+                            <strong>Platform-Hinweis:</strong> Verwenden Sie das passende vendor.zip für Ihr System (Linux vs. Windows), 
+                            da Dependencies platform-spezifische Binaries enthalten können.
+                        </p>
+                    </div>
+                    
+                    <div class="option-card">
+                        <h3>💻 Option 3: Composer per SSH ausführen</h3>
+                        <p>Falls Sie SSH-Zugriff haben, können Sie Composer manuell ausführen:</p>
+                        <pre>cd /pfad/zu/ci-inbox
+composer install --no-dev --optimize-autoloader</pre>
+                        <p style="font-size: 0.9em; color: var(--color-text-secondary);">
+                            Dies installiert die Dependencies optimiert für Ihr aktuelles System.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="vendor-missing-help">
+                    <strong>💡 Hilfe benötigt?</strong><br>
+                    <ul style="margin-top: 10px;">
+                        <li><strong>Shared Hosting:</strong> Option 2 (vendor.zip) ist meist die einfachste Lösung</li>
+                        <li><strong>VPS/Dedicated:</strong> Option 1 (automatisch) oder Option 3 (SSH) empfohlen</li>
+                        <li><strong>Windows-Server:</strong> Erstellen Sie vendor-windows.zip lokal mit <code>php scripts\create-vendor-zip-windows.php</code></li>
+                    </ul>
+                    <p style="margin-top: 15px;">
+                        📚 <a href="https://github.com/hndrk-fegko/CI-Inbox/blob/main/DEPLOYMENT.md" target="_blank">Ausführliche Deployment-Dokumentation</a>
+                    </p>
+                </div>
             </div>
         </div>
         
