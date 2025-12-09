@@ -8,6 +8,78 @@
 
 ## 🔴 KRITISCH - Sofort beheben
 
+### [KRITISCH] - Bug #0: POST-Daten werden nicht an Handler übergeben
+**Status:** 🔍 Neu gefunden  
+**Datum:** 2025-12-09  
+**Kategorie:** Installer / Fatal Error
+
+**Problem:**
+- `handleStep3Submit()`, `handleStep4Submit()`, `handleStep5Submit()` erwarten Parameter `array $post`
+- In index.php (Zeilen 342-348) werden sie OHNE Parameter aufgerufen
+- PHP Fatal Error: "Too few arguments to function handleStep3Submit()"
+- Steps 3, 4, 5 schlagen IMMER fehl
+
+**Reproduktion:**
+1. Setup bis Step 3 durchlaufen
+2. Datenbankdaten eingeben und "Weiter" klicken
+3. **Erwartetes Verhalten:** Daten werden gespeichert, Redirect zu Step 4
+4. **Tatsächliches Verhalten:** PHP Fatal Error, Setup bricht ab
+
+**Betroffene Dateien:**
+- `src/public/setup/index.php` (Zeilen 342, 345, 348)
+- `src/public/setup/includes/step-3-database.php` (Zeile 17)
+- `src/public/setup/includes/step-4-admin.php` (Zeile 17)
+- `src/public/setup/includes/step-5-imap-smtp.php` (Zeile 16)
+
+**Lösung:**
+```php
+// In src/public/setup/index.php - POST Routing:
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    try {
+        switch ($currentStep) {
+            case 1:
+                handleStep1Submit();
+                break;
+            case 2:
+                handleStep2Submit();
+                break;
+            case 3:
+                handleStep3Submit($_POST);  // ✅ Pass $_POST
+                break;
+            case 4:
+                handleStep4Submit($_POST);  // ✅ Pass $_POST
+                break;
+            case 5:
+                handleStep5Submit($_POST);  // ✅ Pass $_POST
+                break;
+            case 6:
+                handleStep6Submit();
+                break;
+            default:
+                redirectToStep(1);
+        }
+    } catch (Exception $e) {
+        $error = $e->getMessage();
+    }
+}
+```
+
+**Alternative:** Handler-Signaturen ändern (weniger empfohlen):
+```php
+// In step-3-database.php, step-4-admin.php, step-5-imap-smtp.php:
+function handleStep3Submit(array $post = null): void
+{
+    $post = $post ?? $_POST;  // Fallback to global $_POST
+    // ... rest of logic
+}
+```
+
+**Risiko-Bewertung:**
+- **Wahrscheinlichkeit:** Hoch (100% - passiert bei jedem Setup ab Step 3)
+- **Impact:** Kritisch (Setup schlägt komplett fehl, keine Installation möglich)
+
+---
+
 ### [KRITISCH] - Bug #1: generateEnvFile() Parameter-Mismatch
 **Status:** 🔍 Neu gefunden  
 **Datum:** 2025-12-09  
@@ -1007,18 +1079,19 @@ $migrations = glob($migrationsPath . DIRECTORY_SEPARATOR . '*.php');
 
 ## Zusammenfassung
 
-**Neu gefundene Bugs:** 13  
-**Kritische Bugs:** 4 (müssen vor nächstem Release gefixt werden)  
+**Neu gefundene Bugs:** 14  
+**Kritische Bugs:** 5 (müssen vor nächstem Release gefixt werden)  
 **Hohe Bugs:** 3 (sollten in nächster Iteration gefixt werden)  
 **Mittlere Bugs:** 3 (Sicherheit - können später gefixt werden)  
 **Niedrige Bugs:** 3 (UX/Edge Cases - optional)  
 **Gefixte Bugs:** 6 (dokumentiert als ✅)
 
 **Dringendste Fixes:**
-1. Bug #1 - generateEnvFile() Parameter-Mismatch (KRITISCH - Setup schlägt IMMER fehl)
-2. Bug #2 - Session-Datenstruktur inkonsistent (KRITISCH - undefined array keys)
-3. Bug #4 - Encryption Key fehlt (KRITISCH - Security Risk)
-4. Bug #3 - writeProductionHtaccess() Error Handling (KRITISCH - Silent Fail)
+1. Bug #0 - POST-Daten nicht übergeben (KRITISCH - Steps 3/4/5 schlagen IMMER fehl)
+2. Bug #1 - generateEnvFile() Parameter-Mismatch (KRITISCH - Setup schlägt IMMER fehl)
+3. Bug #2 - Session-Datenstruktur inkonsistent (KRITISCH - undefined array keys)
+4. Bug #4 - Encryption Key fehlt (KRITISCH - Security Risk)
+5. Bug #3 - writeProductionHtaccess() Error Handling (KRITISCH - Silent Fail)
 
 ---
 
