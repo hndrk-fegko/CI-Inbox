@@ -50,7 +50,7 @@ body {
 
 /* Header */
 .header {
-    background: #1f2937;
+    background: var(--color-bg-dark);
     color: white;
     padding: 30px;
     text-align: center;
@@ -81,8 +81,8 @@ body {
 .steps {
     display: flex;
     padding: 20px 30px;
-    background: #f9fafb;
-    border-bottom: 1px solid #e5e7eb;
+    background: var(--color-bg-light);
+    border-bottom: 1px solid var(--color-border);
     overflow-x: auto;
 }
 
@@ -91,17 +91,17 @@ body {
     text-align: center;
     padding: 10px;
     font-size: 12px;
-    color: #9ca3af;
+    color: var(--color-text-light);
     position: relative;
 }
 
 .step.active {
-    color: #3b82f6;
+    color: var(--color-primary);
     font-weight: 600;
 }
 
 .step.completed {
-    color: #10b981;
+    color: var(--color-success);
 }
 
 .step-number {
@@ -111,19 +111,19 @@ body {
     width: 28px;
     height: 28px;
     border-radius: 50%;
-    background: #e5e7eb;
-    color: #6b7280;
+    background: var(--color-border);
+    color: var(--color-text-secondary);
     font-weight: 600;
     margin-bottom: 6px;
 }
 
 .step.active .step-number {
-    background: #3b82f6;
+    background: var(--color-primary);
     color: white;
 }
 
 .step.completed .step-number {
-    background: #10b981;
+    background: var(--color-success);
     color: white;
 }
 
@@ -136,12 +136,12 @@ body {
 .section-title {
     font-size: 18px;
     font-weight: 600;
-    color: #1f2937;
+    color: var(--color-bg-dark);
     margin-bottom: 20px;
 }
 
 .section-desc {
-    color: #6b7280;
+    color: var(--color-text-secondary);
     margin-bottom: 20px;
     font-size: 14px;
 }
@@ -155,7 +155,7 @@ body {
     display: block;
     margin-bottom: 6px;
     font-weight: 500;
-    color: #374151;
+    color: var(--color-text-primary);
 }
 
 .form-group input,
@@ -163,7 +163,7 @@ body {
 .form-group textarea {
     width: 100%;
     padding: 12px 16px;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--color-border-dark);
     border-radius: 8px;
     font-size: 15px;
     transition: border-color 0.2s, box-shadow 0.2s;
@@ -173,7 +173,7 @@ body {
 .form-group select:focus,
 .form-group textarea:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: var(--color-primary);
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
@@ -211,39 +211,39 @@ body {
 }
 
 .btn-primary {
-    background: #3b82f6;
+    background: var(--color-primary);
     color: white;
 }
 
 .btn-primary:hover {
-    background: #2563eb;
+    background: var(--color-primary-hover);
 }
 
 .btn-secondary {
     background: #f3f4f6;
-    color: #374151;
+    color: var(--color-text-primary);
 }
 
 .btn-secondary:hover {
-    background: #e5e7eb;
+    background: var(--color-border);
 }
 
 .btn-success {
-    background: #10b981;
+    background: var(--color-success);
     color: white;
 }
 
 .btn-success:hover {
-    background: #059669;
+    background: var(--color-success-hover);
 }
 
 .btn-danger {
-    background: #ef4444;
+    background: var(--color-error);
     color: white;
 }
 
 .btn-danger:hover {
-    background: #dc2626;
+    background: var(--color-error-hover);
 }
 
 .btn:disabled {
@@ -271,7 +271,7 @@ body {
     justify-content: space-between;
     margin-top: 30px;
     padding-top: 20px;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--color-border);
 }
 
 /* Alerts */
@@ -311,26 +311,26 @@ body {
 .requirements-table td {
     padding: 12px;
     text-align: left;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--color-border);
 }
 
 .requirements-table th {
     font-weight: 600;
-    color: #374151;
+    color: var(--color-text-primary);
 }
 
 .status-ok {
-    color: #10b981;
+    color: var(--color-success);
     font-weight: 600;
 }
 
 .status-warning {
-    color: #f59e0b;
+    color: var(--color-warning);
     font-weight: 600;
 }
 
 .status-error {
-    color: #ef4444;
+    color: var(--color-error);
     font-weight: 600;
 }
 
@@ -338,7 +338,7 @@ body {
 .success-icon {
     width: 80px;
     height: 80px;
-    background: #10b981;
+    background: var(--color-success);
     border-radius: 50%;
     margin: 0 auto 20px;
     display: flex;
@@ -351,7 +351,7 @@ body {
 .error-icon {
     width: 80px;
     height: 80px;
-    background: #ef4444;
+    background: var(--color-error);
     border-radius: 50%;
     margin: 0 auto 20px;
     display: flex;
@@ -364,7 +364,7 @@ body {
 /* Info Boxes */
 .info-box {
     background: #eff6ff;
-    border-left: 4px solid #3b82f6;
+    border-left: 4px solid var(--color-primary);
     padding: 15px;
     margin: 15px 0;
     border-radius: 4px;
@@ -372,7 +372,7 @@ body {
 
 .error-box {
     background: #fef2f2;
-    border-left: 4px solid #ef4444;
+    border-left: 4px solid var(--color-error);
     padding: 15px;
     margin: 15px 0;
     border-radius: 4px;
@@ -380,8 +380,8 @@ body {
 
 /* Code */
 code {
-    background: #1f2937;
-    color: #10b981;
+    background: var(--color-bg-dark);
+    color: var(--color-success);
     padding: 2px 6px;
     border-radius: 4px;
     font-family: 'Courier New', monospace;
@@ -389,8 +389,8 @@ code {
 
 /* Migration Log */
 .migration-log {
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
+    background: var(--color-bg-light);
+    border: 1px solid var(--color-border);
     border-radius: 8px;
     padding: 20px;
     margin-top: 20px;
@@ -399,7 +399,7 @@ code {
 }
 
 .migration-log h4 {
-    color: #374151;
+    color: var(--color-text-primary);
     margin-bottom: 10px;
 }
 
@@ -407,21 +407,21 @@ code {
     font-family: 'Courier New', monospace;
     font-size: 13px;
     line-height: 1.5;
-    color: #1f2937;
+    color: var(--color-bg-dark);
     white-space: pre-wrap;
     word-wrap: break-word;
 }
 
 /* Vendor Missing Page Styles */
 .steps.vendor-missing {
-    background: #f9fafb;
+    background: var(--color-bg-light);
     border-radius: 8px;
     padding: 20px;
     margin: 20px 0;
 }
 
 .steps.vendor-missing h3 {
-    color: #1f2937;
+    color: var(--color-bg-dark);
     margin-bottom: 15px;
 }
 
@@ -431,7 +431,7 @@ code {
 
 .steps.vendor-missing li {
     margin: 10px 0;
-    color: #374151;
+    color: var(--color-text-primary);
 }
 
 /* Option Cards (Vendor-Missing-Page) */
