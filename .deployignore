@@ -1,0 +1,87 @@
+# CI-Inbox Production Deployment Ignore List
+# Diese Dateien/Ordner werden NICHT ins Production-Release-Paket aufgenommen
+
+# Development Documentation
+/docs/dev/
+/basics.txt
+/.github/
+
+# Development Tools & Scripts
+/tests/
+/scripts/debug/
+/scripts/create-vendor-zip.php
+/scripts/create-vendor-zip.ps1
+
+# Git Files
+/.git/
+/.gitignore
+/.gitattributes
+
+# IDE & Editor Files
+/.vscode/
+/.idea/
+*.sublime-*
+
+# Development Configuration
+/phpunit.xml
+/phpunit.xml.dist
+/.phpunit.result.cache
+
+# CI/CD Files
+/.github/
+/CONTRIBUTING.md
+
+# Documentation (keep only user-facing docs)
+/VENDOR-INSTALLATION.md
+/INSTALLATION-COMPARISON.md
+/INSTALLATION-REVIEW-IONOS.md
+/INSTALLATION-REVIEW.md
+
+# Keep Essential Files:
+# ✅ README.md (user installation guide)
+# ✅ LICENSE
+# ✅ DEPLOYMENT.md (deployment instructions)
+# ✅ docs/user/ (user documentation)
+# ✅ docs/admin/ (admin documentation)
+# ✅ GETTING-STARTED.md
+
+# Runtime Data (never in releases anyway)
+/data/cache/*
+/data/sessions/*
+/data/uploads/*
+/data/backups/*
+!/data/cache/.gitkeep
+!/data/sessions/.gitkeep
+!/data/uploads/.gitkeep
+!/data/backups/.gitkeep
+
+# Logs
+/logs/*.log
+/logs/*.txt
+!/logs/.gitkeep
+
+# Environment Files (users create their own)
+/.env
+/.env.example
+
+# Composer (vendor is platform-specific, installed on target system)
+/vendor/
+/composer.lock
+
+# Temporary Files
+*.tmp
+*.bak
+~*
+*.swp
+*.swo
+
+# OS Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Build Artifacts
+/build/
+/dist/
+vendor.zip
+ci-inbox-production.zip

@@ -6,22 +6,60 @@
 
 ## 📦 Schritt 1: Projekt vorbereiten
 
-### Option A: Lokal vorbereiten (empfohlen)
+### Option A: Production-Release herunterladen ⭐ EMPFOHLEN
+
+**Sauberes, deployment-bereites Paket ohne Dev-Dateien:**
+
+1. **Download von GitHub Releases:**
+   - Gehen Sie zu: https://github.com/hndrk-fegko/CI-Inbox/releases/latest
+   - Laden Sie `ci-inbox-production.zip` herunter (~5-8 MB ohne vendor/)
+   
+2. **Entpacken Sie das Archiv lokal**
+
+3. **Hochladen auf Server** (FTP/SFTP)
+
+4. **Setup-Wizard aufrufen** (domain.com)
+   - Wizard prüft automatisch Dependencies
+   - **Happy Path:** Wizard installiert `vendor/` via `composer install` (Linux-optimiert)
+   - **Fallback:** Manueller vendor.zip Download (falls Composer nicht verfügbar)
+
+**Was ist drin?**
+- ✅ Vollständige Anwendung (`src/`)
+- ✅ Migrations-System (`database/`)
+- ✅ User-Dokumentation (`docs/user/`, `docs/admin/`)
+- ✅ `composer.json` (für Server-seitige Installation)
+- ❌ **KEIN** `vendor/` (wird auf Ziel-Server installiert, platform-spezifisch)
+
+**Was ist NICHT drin?**
+- Keine `vendor/` (wird auf Server installiert - Linux vs. Windows)
+- Keine `docs/dev/` (Development-Dokumentation)
+- Keine `tests/` (PHPUnit-Tests)
+- Keine `.github/` (CI/CD-Workflows)
+- Keine `basics.txt` (interne Dev-Notizen)
+- Kein Git-Repository (`.git/`)
+
+---
+
+### Option B: Lokal vorbereiten (für Entwickler)
 
 ```bash
 # 1. Repository klonen
 git clone <repository-url> ci-inbox
 cd ci-inbox
 
-# 2. Composer Dependencies installieren
-composer install --no-dev --optimize-autoloader
+# 2. Optional: Production-Release lokal erstellen
+php scripts/create-production-release.php
+# Erstellt: ci-inbox-production.zip (ohne vendor/)
 
-# 3. Projekt ist jetzt bereit zum Upload
+# 3. Auf Server hochladen
+# 4. Setup-Wizard installiert vendor/ automatisch
 ```
 
-**Wichtig:** `composer install` muss **vor** dem Upload ausgeführt werden, da die meisten Shared-Hosting-Anbieter keinen Composer haben!
+**Hinweis:** `vendor/` wird NICHT vorab installiert, da platform-spezifisch (Windows vs. Linux)!
 
-### Option B: Automatische Installation durch Setup-Wizard ⭐ NEU
+---
+
+### Option C: Automatische Installation durch Setup-Wizard
 
 Der Setup-Wizard kann automatisch versuchen, die Dependencies zu installieren:
 1. Laden Sie das Projekt **ohne** `vendor/` hoch
@@ -36,15 +74,30 @@ Der Setup-Wizard kann automatisch versuchen, die Dependencies zu installieren:
 - Composer global installiert ist ODER
 - Der Wizard kann composer.phar herunterladen
 
-### Option C: vendor.zip manuell herunterladen
+---
 
-Falls weder Option A noch B funktionieren:
+### Option D: vendor.zip manuell herunterladen (Fallback)
+
+**Nur noch für spezielle Fälle notwendig - Option A ist einfacher!**
+
+Falls der Setup-Wizard `composer install` nicht ausführen kann:
+
+**Linux-Server (Standard):**
 1. Laden Sie `vendor.zip` herunter:
    - **GitHub Release:** https://github.com/hndrk-fegko/CI-Inbox/releases/latest
-   - **Direktlink:** Im Setup-Wizard unter "📦 Manuelle Installation"
+   - Suchen Sie nach: `vendor.zip` (Linux-optimiert, ~50 MB)
 2. Entpacken Sie `vendor.zip` im Projekt-Root
 3. Das Verzeichnis `vendor/` sollte nun existieren
-4. Laden Sie diese per FTP hoch (falls noch nicht geschehen)
+4. Setup-Wizard fortsetzen
+
+**Windows-Server (XAMPP/WAMP/IIS):**
+1. Download: `vendor-windows.zip` (falls verfügbar)
+2. ODER: Lokal erstellen:
+   ```powershell
+   php scripts\create-vendor-zip-windows.php
+   ```
+3. `vendor-windows.zip` ins Projekt-Root entpacken
+4. Setup-Wizard fortsetzen
 
 **vendor.zip erstellen (für Entwickler):**
 ```bash

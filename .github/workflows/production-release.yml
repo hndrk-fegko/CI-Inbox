@@ -1,0 +1,87 @@
+name: Create Production Release
+
+on:
+  release:
+    types: [created, published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v1.0.0)'
+        required: false
+        default: 'latest'
+
+jobs:
+  build-production-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: zip, pdo_mysql, imap, openssl, mbstring
+          tools: composer
+      
+      - name: Install Composer dependencies (Linux-optimized for production)
+        run: composer install --no-dev --optimize-autoloader --no-interaction
+      
+      - name: Create vendor.zip (Linux dependencies)
+        run: php scripts/create-vendor-zip.php
+      
+      - name: Create production release package (without vendor/)
+        run: php scripts/create-production-release.php
+      
+      - name: Verify packages exist
+        run: |
+          if [ ! -f ci-inbox-production.zip ]; then
+            echo "❌ Error: ci-inbox-production.zip not created!"
+            exit 1
+          fi
+          if [ ! -f vendor.zip ]; then
+            echo "❌ Error: vendor.zip not created!"
+            exit 1
+          fi
+          echo "✅ Both packages created successfully"
+          ls -lh ci-inbox-production.zip vendor.zip
+      
+      # Upload to GitHub Release (when triggered by release event)
+      - name: Upload to GitHub Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            ci-inbox-production.zip
+            vendor.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      # Upload as artifact (when triggered manually)
+      - name: Upload as workflow artifact
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-inbox-release-${{ github.event.inputs.version }}
+          path: |
+            ci-inbox-production.zip
+            vendor.zip
+          retention-days: 90
+      
+      - name: Summary
+        run: |
+          echo "### 🚀 Production Release Created" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Packages:**" >> $GITHUB_STEP_SUMMARY
+          echo "- ci-inbox-production.zip: $(du -h ci-inbox-production.zip | cut -f1)" >> $GITHUB_STEP_SUMMARY
+          echo "- vendor.zip (Linux): $(du -h vendor.zip | cut -f1)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Clean production build without development files" >> $GITHUB_STEP_SUMMARY
+          echo "- No vendor/ in production.zip (installed on target system)" >> $GITHUB_STEP_SUMMARY
+          echo "- No dev documentation" >> $GITHUB_STEP_SUMMARY
+          echo "- No test files" >> $GITHUB_STEP_SUMMARY
+          echo "- No .github folder" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📦 **Deployment Path 1 (Happy):** Setup wizard runs composer install on target server" >> $GITHUB_STEP_SUMMARY
+          echo "📦 **Deployment Path 2 (Fallback):** Manual vendor.zip download (Linux-optimized)" >> $GITHUB_STEP_SUMMARY

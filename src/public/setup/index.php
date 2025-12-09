@@ -197,33 +197,52 @@ if (!$vendorExists) {
             
             <div class="vendor-missing-options">
                 <div class="option-card">
-                    <h3>🚀 Option 1: Automatische Installation</h3>
-                    <p>Wenn Composer auf Ihrem Server verfügbar ist, können wir die Dependencies automatisch installieren.</p>
+                    <h3>🚀 Option 1: Automatische Installation (Empfohlen)</h3>
+                    <p>Wenn Composer auf Ihrem Server verfügbar ist, installieren wir die Dependencies automatisch (Linux-optimiert, ~5 Minuten).</p>
                     <button id="autoInstallBtn" class="btn btn-primary">Dependencies jetzt installieren</button>
                     <div id="installStatus" style="margin-top: 15px; display: none;"></div>
+                    <p style="font-size: 0.9em; color: #666; margin-top: 10px;">
+                        <strong>Hinweis:</strong> Dies lädt ca. 50 MB Dependencies herunter und installiert diese für Ihr System optimiert.
+                    </p>
                 </div>
                 
                 <div class="option-card">
-                    <h3>📥 Option 2: Manuelle Installation</h3>
-                    <p>Laden Sie das vorbereitete <code>vendor.zip</code> herunter und entpacken Sie es im Projekt-Root:</p>
+                    <h3>📥 Option 2: Manuelle vendor.zip Installation</h3>
+                    <p>Falls Composer nicht verfügbar ist, laden Sie das vorbereitete <code>vendor.zip</code> herunter:</p>
                     <ol style="text-align: left; margin: 15px 0;">
-                        <li>Download: <a href="https://github.com/your-repo/ci-inbox/releases/latest/vendor.zip">vendor.zip</a></li>
+                        <li><strong>Linux-Server:</strong> <a href="https://github.com/hndrk-fegko/CI-Inbox/releases/latest/download/vendor.zip" target="_blank">vendor.zip herunterladen</a> (~50 MB)</li>
+                        <li><strong>Windows-Server (XAMPP/WAMP):</strong> Verwenden Sie <code>vendor-windows.zip</code> (falls verfügbar) oder erstellen Sie es lokal</li>
                         <li>Entpacken Sie das Archiv im Root-Verzeichnis (neben <code>src/</code>)</li>
                         <li>Stellen Sie sicher, dass <code>vendor/autoload.php</code> existiert</li>
-                        <li>Laden Sie diese Seite neu</li>
+                        <li><button onclick="window.location.reload()" class="btn btn-secondary">Seite neu laden</button></li>
                     </ol>
+                    <p style="font-size: 0.9em; color: #666;">
+                        <strong>Platform-Hinweis:</strong> Verwenden Sie das passende vendor.zip für Ihr System (Linux vs. Windows), 
+                        da Dependencies platform-spezifische Binaries enthalten können.
+                    </p>
                 </div>
                 
                 <div class="option-card">
-                    <h3>💻 Option 3: Composer lokal ausführen</h3>
-                    <p>Falls Sie lokalen Shell-Zugriff haben:</p>
-                    <pre style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin: 10px 0;">cd /path/to/ci-inbox
-composer install --no-dev</pre>
+                    <h3>💻 Option 3: Composer per SSH ausführen</h3>
+                    <p>Falls Sie SSH-Zugriff haben, können Sie Composer manuell ausführen:</p>
+                    <pre style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin: 10px 0; text-align: left;">cd /pfad/zu/ci-inbox
+composer install --no-dev --optimize-autoloader</pre>
+                    <p style="font-size: 0.9em; color: #666;">
+                        Dies installiert die Dependencies optimiert für Ihr aktuelles System.
+                    </p>
                 </div>
             </div>
             
             <div class="vendor-missing-help">
-                <strong>💡 Hinweis:</strong> Bei Shared-Hosting-Anbietern ist Option 2 (manuelle Installation) oft die einfachste Lösung.
+                <strong>💡 Hilfe benötigt?</strong><br>
+                <ul style="text-align: left; margin-top: 10px;">
+                    <li><strong>Shared Hosting:</strong> Option 2 (vendor.zip) ist meist die einfachste Lösung</li>
+                    <li><strong>VPS/Dedicated:</strong> Option 1 (automatisch) oder Option 3 (SSH) empfohlen</li>
+                    <li><strong>Windows-Server:</strong> Erstellen Sie vendor-windows.zip lokal mit <code>php scripts\create-vendor-zip-windows.php</code></li>
+                </ul>
+                <p style="margin-top: 15px;">
+                    📚 <a href="https://github.com/hndrk-fegko/CI-Inbox/blob/main/DEPLOYMENT.md" target="_blank">Ausführliche Deployment-Dokumentation</a>
+                </p>
             </div>
         </div>
         
