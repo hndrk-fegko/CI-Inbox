@@ -1,0 +1,217 @@
+<?php
+/**
+ * Setup Wizard - Step 6: Review & Install
+ * 
+ * Final review before installation
+ */
+
+declare(strict_types=1);
+
+/**
+ * Handle Step 6 form submission (starts installation)
+ */
+function handleStep6Submit(): void
+{
+    $basePath = getBasePath();
+    $sessionData = getSessionData();
+    
+    try {
+        // Generate .env file
+        if (!generateEnvFile($sessionData, $basePath)) {
+            throw new Exception('Fehler beim Erstellen der .env-Datei');
+        }
+        
+        // Database connection
+        $dsn = "mysql:host={$sessionData['db_host']};port={$sessionData['db_port']};charset=utf8mb4";
+        $pdo = new PDO($dsn, $sessionData['db_user'], $sessionData['db_password']);
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        
+        // K2: Skip CREATE DATABASE if checkbox checked
+        if (empty($sessionData['db_exists'])) {
+            $pdo->exec("CREATE DATABASE IF NOT EXISTS `{$sessionData['db_name']}`");
+        }
+        
+        // Use database
+        $pdo->exec("USE `{$sessionData['db_name']}`");
+        
+        // Run migrations
+        $migrationsPath = $basePath . '/database/migrations';
+        $migrations = glob($migrationsPath . '/*.php');
+        sort($migrations);
+        
+        foreach ($migrations as $migration) {
+            require_once $migration;
+        }
+        
+        // Create admin user
+        $passwordHash = password_hash($sessionData['admin_password'], PASSWORD_BCRYPT);
+        $avatarColor = '#' . substr(md5($sessionData['admin_email']), 0, 6);
+        
+        $stmt = $pdo->prepare("INSERT INTO users (name, email, password, role, avatar_color, created_at, updated_at) 
+                              VALUES (?, ?, ?, 'admin', ?, NOW(), NOW())");
+        $stmt->execute([
+            $sessionData['admin_name'],
+            $sessionData['admin_email'],
+            $passwordHash,
+            $avatarColor
+        ]);
+        $userId = (int)$pdo->lastInsertId();
+        
+        // K3: Store admin IMAP if enabled
+        if (!empty($sessionData['enable_admin_imap'])) {
+            $encKey = $sessionData['encryption_key'];
+            $encIv = openssl_random_pseudo_bytes(16);
+            $encPassword = openssl_encrypt(
+                $sessionData['admin_imap_password'],
+                'AES-256-CBC',
+                hex2bin($encKey),
+                0,
+                $encIv
+            );
+            
+            $stmt = $pdo->prepare("INSERT INTO imap_accounts 
+                (user_id, email, imap_host, imap_port, imap_username, imap_password, imap_encryption, 
+                 smtp_host, smtp_port, smtp_username, smtp_password, smtp_encryption, encryption_iv, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, '', 0, '', '', 'tls', ?, NOW(), NOW())");
+            $stmt->execute([
+                $userId,
+                $sessionData['admin_email'],
+                $sessionData['admin_imap_host'],
+                $sessionData['admin_imap_port'],
+                $sessionData['admin_imap_username'],
+                $encPassword,
+                $sessionData['admin_imap_encryption'],
+                bin2hex($encIv)
+            ]);
+        }
+        
+        // K5: Store shared IMAP with user_id=NULL
+        $encKey = $sessionData['encryption_key'];
+        $imapIv = openssl_random_pseudo_bytes(16);
+        $smtpIv = openssl_random_pseudo_bytes(16);
+        
+        $encImapPassword = openssl_encrypt(
+            $sessionData['imap_password'],
+            'AES-256-CBC',
+            hex2bin($encKey),
+            0,
+            $imapIv
+        );
+        
+        $encSmtpPassword = openssl_encrypt(
+            $sessionData['smtp_password'],
+            'AES-256-CBC',
+            hex2bin($encKey),
+            0,
+            $smtpIv
+        );
+        
+        $stmt = $pdo->prepare("INSERT INTO imap_accounts 
+            (user_id, email, imap_host, imap_port, imap_username, imap_password, imap_encryption,
+             smtp_host, smtp_port, smtp_username, smtp_password, smtp_encryption, encryption_iv, created_at, updated_at)
+            VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())");
+        $stmt->execute([
+            $sessionData['imap_email'],
+            $sessionData['imap_host'],
+            $sessionData['imap_port'],
+            $sessionData['imap_username'],
+            $encImapPassword,
+            $sessionData['imap_encryption'],
+            $sessionData['smtp_host'],
+            $sessionData['smtp_port'],
+            $sessionData['smtp_username'],
+            $encSmtpPassword,
+            $sessionData['smtp_encryption'],
+            bin2hex($imapIv)
+        ]);
+        
+        // Create system labels
+        $labels = [
+            ['name' => 'Important', 'color' => '#ef4444', 'is_system' => 1],
+            ['name' => 'Follow-up', 'color' => '#f59e0b', 'is_system' => 1],
+            ['name' => 'In Progress', 'color' => '#3b82f6', 'is_system' => 1],
+            ['name' => 'Done', 'color' => '#10b981', 'is_system' => 1]
+        ];
+        
+        foreach ($labels as $label) {
+            $stmt = $pdo->prepare("INSERT INTO labels (name, color, is_system, created_at, updated_at) 
+                                  VALUES (?, ?, ?, NOW(), NOW())");
+            $stmt->execute([$label['name'], $label['color'], $label['is_system']]);
+        }
+        
+        // Seed system settings
+        $stmt = $pdo->prepare("INSERT INTO system_settings (`key`, value, created_at, updated_at) VALUES (?, ?, NOW(), NOW())");
+        $stmt->execute(['app_name', 'CI-Inbox']);
+        $stmt->execute(['threads_per_page', '25']);
+        $stmt->execute(['email_retention_days', '0']);
+        
+        // Write .htaccess for production
+        if (!writeProductionHtaccess($basePath)) {
+            throw new Exception('Fehler beim Erstellen der .htaccess-Datei');
+        }
+        
+        updateSessionStep(7);
+        redirectToStep(7);
+        
+    } catch (Exception $e) {
+        throw new Exception('Installation fehlgeschlagen: ' . $e->getMessage());
+    }
+}
+
+/**
+ * Render Step 6 form (review configuration)
+ * 
+ * @param array $sessionData All session data
+ */
+function renderStep6Form(array $sessionData): void
+{
+    ?>
+    <h2 class="section-title">🔍 Zusammenfassung & Installation</h2>
+    <p class="section-desc">Bitte prüfen Sie Ihre Eingaben. Klicken Sie auf "Installieren", um CI-Inbox einzurichten.</p>
+    
+    <div class="review-section">
+        <h3>🗄️ Datenbank</h3>
+        <table class="review-table">
+            <tr><th>Host:</th><td><?= htmlspecialchars($sessionData['db_host'] ?? '') ?></td></tr>
+            <tr><th>Port:</th><td><?= htmlspecialchars($sessionData['db_port'] ?? '') ?></td></tr>
+            <tr><th>Datenbankname:</th><td><?= htmlspecialchars($sessionData['db_name'] ?? '') ?></td></tr>
+            <tr><th>Benutzer:</th><td><?= htmlspecialchars($sessionData['db_user'] ?? '') ?></td></tr>
+        </table>
+    </div>
+    
+    <div class="review-section">
+        <h3>👤 Administrator</h3>
+        <table class="review-table">
+            <tr><th>Name:</th><td><?= htmlspecialchars($sessionData['admin_name'] ?? '') ?></td></tr>
+            <tr><th>E-Mail:</th><td><?= htmlspecialchars($sessionData['admin_email'] ?? '') ?></td></tr>
+            <?php if (!empty($sessionData['enable_admin_imap'])): ?>
+            <tr><th>Persönlicher IMAP:</th><td><?= htmlspecialchars($sessionData['admin_imap_host'] ?? '') ?>:<?= htmlspecialchars($sessionData['admin_imap_port'] ?? '') ?></td></tr>
+            <?php endif; ?>
+        </table>
+    </div>
+    
+    <div class="review-section">
+        <h3>📧 Gemeinsame Inbox</h3>
+        <table class="review-table">
+            <tr><th>IMAP Host:</th><td><?= htmlspecialchars($sessionData['imap_host'] ?? '') ?></td></tr>
+            <tr><th>IMAP Port:</th><td><?= htmlspecialchars($sessionData['imap_port'] ?? '') ?></td></tr>
+            <tr><th>IMAP Verschlüsselung:</th><td><?= strtoupper(htmlspecialchars($sessionData['imap_encryption'] ?? '')) ?></td></tr>
+            <tr><th>SMTP Host:</th><td><?= htmlspecialchars($sessionData['smtp_host'] ?? '') ?></td></tr>
+            <tr><th>SMTP Port:</th><td><?= htmlspecialchars($sessionData['smtp_port'] ?? '') ?></td></tr>
+            <tr><th>SMTP Verschlüsselung:</th><td><?= strtoupper(htmlspecialchars($sessionData['smtp_encryption'] ?? '')) ?></td></tr>
+        </table>
+    </div>
+    
+    <div class="alert alert-warning" style="margin-top: 20px;">
+        <strong>⚠️ Wichtig:</strong> Nach der Installation wird der Setup-Wizard automatisch deaktiviert. 
+        Sie können sich dann mit Ihren Administrator-Zugangsdaten anmelden.
+    </div>
+    
+    <form method="POST">
+        <div class="actions">
+            <a href="?step=5" class="btn btn-secondary">← Zurück</a>
+            <button type="submit" class="btn btn-primary">🚀 Jetzt installieren</button>
+        </div>
+    </form>
+    <?php
+}

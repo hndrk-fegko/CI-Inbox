@@ -1,0 +1,569 @@
+# Setup Wizard - Implementation Issues & Fixes
+
+**Datum:** 7. Dezember 2025  
+**Testinstallation:** `C:\Users\hendr\Documents\XAMPP_Testordner\src\public\setup\index.php` (2485 Zeilen)  
+**Hauptprojekt:** `d:\Nextcloud - Privat\Private_Dateien\Tools_und_Systeme\C-IMAP\src\public\setup\index.php` (1599 Zeilen)  
+**Status:** Dokumentiert - Schrittweise Integration empfohlen
+
+---
+
+## Übersicht
+
+Der Setup Wizard wurde in der Testinstallation um **IMAP/SMTP Autodiscover** und **SSL-Zertifikat-Detection** erweitert. Dabei wurden mehrere kritische Bugs behoben.
+
+---
+
+## Implementierte Features (Testinstallation)
+
+### 1. SSL Certificate Hostname Detection ✅
+**Funktion:** `extractRealHostFromCertError()` 
+- Extrahiert CN (Common Name) aus SSL-Zertifikaten
+- Verwendet `stream_socket_client()` mit `capture_peer_cert=true`
+- Parst Zertifikat mit `openssl_x509_parse()`
+- **Proaktiver Modus:** Prüft Zertifikat VOR Verbindungsaufbau
+
+**Use Case:** `imap.feg-koblenz.de` → Zertifikat-CN: `psa22.webhoster.ag` → Auto-Redirect
+
+**Code-Referenz:** Testinstallation Zeile 395-433
+
+### 2. IMAP Connection Test mit Autodiscover ✅
+**Funktion:** `testImapConnection()`
+- Testet IMAP-Verbindung mit Email/Passwort
+- Proaktive SSL-Zertifikat-Prüfung
+- Automatischer Hostname-Wechsel bei Zertifikat-Mismatch
+- AJAX-Endpoint: `POST /setup/?ajax=test_imap`
+
+**Code-Referenz:** Testinstallation Zeile 462-497
+
+### 3. SMTP Connection Test mit Port-Detection ✅
+**Funktion:** `testSmtpConnection()`
+- **Port 465:** Direct SSL (`ssl://host:465`)
+- **Port 587/25:** STARTTLS (plain first, dann STARTTLS)
+- Autodiscover-Endpoint: `POST /setup/?ajax=test_smtp`
+
+**Code-Referenz:** Testinstallation Zeile 504-542
+
+### 4. Database Migration Integration ✅
+**Funktion:** `completeSetup()`
+- Führt alle Migrationen aus `database/migrations/` aus
+- Foreign Key Checks deaktiviert während Migration
+- Output Buffering für saubere Display in Step 7
+- Migration-Log in Session gespeichert
+
+**Code-Referenz:** Testinstallation Zeile 917-1036
+
+---
+
+## Behobene Bugs
+
+### Bug #1: Composer Autoinstall - PHP_BINARY Problem ✅ BEREITS IM HAUPTPROJEKT
+**Fehler:** Setup wollte Composer Dependencies installieren, aber `PHP_BINARY` zeigte auf `httpd.exe` statt PHP
+
+**Status:** ✅ Bereits am 2025-12-06 behoben  
+**Dokumentation:** `docs/dev/issue-autosetup-php-binary.txt`
+
+---
+
+### Bug #2: MySQL Aria Log Corruption ⚠️ DEPLOYMENT-ISSUE
+**Fehler:** MySQL startete nicht - `aria_log_control` Datei beschädigt
+
+**Fix:** Aria Logs manuell umbenennen zur Regenerierung
+```powershell
+cd C:\xampp\mysql\data
+Rename-Item aria_log.00000001 aria_log.00000001.bak
+Rename-Item aria_log_control aria_log_control.bak
+```
+
+**Ursache:** Unclean Shutdown von MySQL
+
+**Status:** ⚠️ Kein Code-Fix nötig - Dokumentation in DEPLOYMENT.md
+
+---
+
+### Bug #3: Setup Step 4 wird nicht angezeigt ✅ BEREITS BEHOBEN
+**Fehler:** Nach Step 3 springt Setup zu Step 5, überspringt Step 4 (Admin Account)
+
+**Status:** ✅ Am 2025-12-06 behoben (Zeile 1445: `currentStep == 3` → `currentStep == 4`)
+
+---
+
+### Bug #4: Retry Button lädt Seite neu ⚠️ TODO
+**Fehler:** "Erneut testen" Button in Step 5 lädt komplette Seite neu mit `location.reload()`
+
+**Fix:** Event Listener statt inline onclick
+```javascript
+// ❌ FALSCH
+<button onclick="location.reload()">Erneut testen</button>
+
+// ✅ KORREKT
+document.getElementById('retry-test-btn').addEventListener('click', function(e) {
+    e.preventDefault();
+    testConnection();
+});
+```
+
+**Testinstallation:** Zeile ~2327  
+**Hauptprojekt:** TODO - Implementierung folgt mit AJAX-Integration
+
+---
+
+### Bug #5: Parse Error - Heredoc String Concatenation ✅ KRITISCH - TODO
+**Fehler:** `syntax error, unexpected string content "" on line 1291`
+
+**Problem:**
+```php
+// ❌ FALSCH - Konkatenation INNERHALB Heredoc
+return <<<ENV
+SMTP_FROM_EMAIL=" . ($data['smtp']['from_email'] ?? '') . "
+ENV;
+```
+
+**Fix:**
+```php
+// ✅ KORREKT - Variablen VOR Heredoc definieren
+$smtpFromEmail = $data['smtp']['from_email'] ?? $data['imap']['user'] ?? '';
+$smtpFromName = $data['smtp']['from_name'] ?? 'CI-Inbox';
+
+return <<<ENV
+SMTP_FROM_EMAIL={$smtpFromEmail}
+SMTP_FROM_NAME={$smtpFromName}
+ENV;
+```
+
+**Testinstallation:** Zeile 1264-1300 (Funktion `generateEnvFile()`)  
+**Hauptprojekt:** Zeile ~1180-1220 - **MUSS GEPRÜFT WERDEN**
+
+---
+
+### Bug #6: Undefined Array Keys - SMTP from_email/from_name ✅ KRITISCH - TODO
+**Fehler:** `Undefined array key "from_email"` und `"from_name"`
+
+**Ursache:** Session-Daten aus Step 5 enthielten diese Felder nicht
+
+**Fix:** Fallback-Werte in Session speichern
+```php
+$_SESSION['setup']['data']['smtp'] = [
+    'host' => $_POST['smtp_host'] ?? '',
+    'port' => $_POST['smtp_port'] ?? '587',
+    'user' => $_POST['smtp_user'] ?? '',
+    'pass' => $_POST['smtp_pass'] ?? '',
+    'ssl' => isset($_POST['smtp_ssl']),
+    'from_email' => $_POST['smtp_from_email'] ?? $_SESSION['setup']['data']['imap']['user'] ?? '',
+    'from_name' => $_POST['smtp_from_name'] ?? 'CI-Inbox',
+];
+```
+
+**Testinstallation:** Zeile 886-893 (Case 5 Handler)  
+**Hauptprojekt:** Case 5 Handler - **MUSS ERGÄNZT WERDEN**
+
+---
+
+### Bug #7: EncryptionService Constructor Type Error ✅ KRITISCH - TODO
+**Fehler:** `EncryptionService::__construct(): Argument #1 ($config) must be of type ConfigInterface, string given`
+
+**Ursache:** Setup hatte kein ConfigInterface-Objekt, nur den Encryption Key als String
+
+**Fix:** Anonyme Klasse mit encrypt()-Methode
+```php
+// Simple encryption helper for setup (avoids ConfigInterface dependency)
+$encryptionService = new class($encryptionKey) {
+    private string $key;
+    public function __construct(string $key) { $this->key = $key; }
+    public function encrypt(string $data): string {
+        $iv = random_bytes(16);
+        $encrypted = openssl_encrypt($data, 'AES-256-CBC', $this->key, 0, $iv);
+        return base64_encode($iv . $encrypted);
+    }
+};
+```
+
+**Testinstallation:** Zeile 984-992 (in `completeSetup()`)  
+**Hauptprojekt:** TODO - Implementierung in `completeSetup()` Funktion
+
+---
+
+### Bug #8: parse_ini_file() Syntax Error auf .env ✅ KRITISCH - TODO
+**Fehler:** `Warning: syntax error, unexpected '(' in .env on line 25`
+
+**Ursache:** `parse_ini_file()` ist für INI-Dateien, nicht für `.env`-Dateien (andere Syntax-Regeln)
+
+**Fix:** Manuelle .env-Parser-Funktion
+```php
+function parseEnvFile($filePath) {
+    $env = [];
+    if (!file_exists($filePath)) return $env;
+    
+    $lines = file($filePath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if (empty($line) || $line[0] === '#') continue;
+        
+        $parts = explode('=', $line, 2);
+        if (count($parts) === 2) {
+            $key = trim($parts[0]);
+            $value = trim($parts[1]);
+            // Remove quotes if present
+            if (($value[0] ?? '') === '"' && ($value[strlen($value)-1] ?? '') === '"') {
+                $value = substr($value, 1, -1);
+            }
+            $env[$key] = $value;
+        }
+    }
+    return $env;
+}
+```
+
+**Testinstallation:** Zeile 554-577  
+**Hauptprojekt:** Zeile 364 - `parse_ini_file()` durch `parseEnvFile()` ersetzen
+
+---
+
+### Bug #9: Migration Duplikate - Unvorhersehbare Reihenfolge ⚠️ DATENBANK-ISSUE
+**Fehler:** `Migration 016_create_system_settings_table.php failed: Table 'system_settings' already exists`
+
+**Ursache:** Zwei Migrationen mit gleicher Nummer
+- `008_create_imap_accounts_table.php` (Duplikat von 002)
+- `008_create_internal_notes_table.php`
+- `016_add_theme_mode_to_users.php`
+- `016_create_system_settings_table.php`
+
+**Fix:** Migrationen umbenannt für eindeutige Sortierung
+```
+002_create_imap_accounts_table.php → Bleibt (Original)
+008_create_imap_accounts_table.php → 002a_duplicate_imap_accounts.php.bak (Deaktiviert)
+008_create_internal_notes_table.php → 008a_create_internal_notes_table.php
+016_add_theme_mode_to_users.php → 016a_add_theme_mode_to_users.php
+016_create_system_settings_table.php → 016b_create_system_settings_table.php
+```
+
+**Status:** ⚠️ Prüfung im `database/migrations/` Verzeichnis erforderlich
+
+---
+
+## Offene Architektur-Frage
+
+### Problem: Shared Inbox mit user_id=NULL
+**Aktueller Stand:** Migration `002_create_imap_accounts_table.php` in Testinstallation geändert:
+```php
+$table->foreignId('user_id')->nullable()->constrained('users')->onDelete('cascade');
+```
+
+**Issue:** Mehrere Shared Inboxes nicht unterscheidbar
+- Personal IMAP: `user_id={user_id}` ✅
+- Shared Inbox: `user_id=NULL` ❌ (Mehrere Shared Inboxes nicht möglich)
+
+**Optionen zur Diskussion:**
+
+#### Option 1: System User (Quick Fix)
+```sql
+-- Erstelle System-User mit ID=1 oder ID=0
+-- Alle Shared Inboxes: user_id=1
+-- Unterscheidung über email/imap_host
+```
+**Pro:** Minimal invasiv, funktioniert mit aktuellem Schema  
+**Contra:** Semantisch nicht sauber
+
+#### Option 2: account_type Feld (Empfohlen) ⭐
+```sql
+ALTER TABLE imap_accounts 
+ADD COLUMN account_type ENUM('personal', 'shared') DEFAULT 'personal' AFTER user_id;
+
+-- Dann:
+-- Personal: user_id={id}, account_type='personal'
+-- Shared: user_id=NULL, account_type='shared'
+```
+**Pro:** Klare Trennung, selbst-dokumentierend  
+**Contra:** Neue Migration nötig
+
+#### Option 3: Separate Tabelle shared_inboxes
+```sql
+CREATE TABLE shared_inboxes (
+  id INT PRIMARY KEY,
+  name VARCHAR(255),
+  description TEXT,
+  email VARCHAR(255),
+  imap_host VARCHAR(255),
+  ...
+);
+```
+**Pro:** Sauberste Lösung, kann zusätzliche Felder haben (name, description)  
+**Contra:** Mehr Refactoring, zwei Stellen zu pflegen
+
+**Empfehlung:** Option 2 - `account_type` Feld hinzufügen in neuer Migration `020_add_account_type_to_imap_accounts.php`
+
+---
+
+## Testing-Ergebnisse (Testinstallation)
+
+### Erfolgreiche Tests
+- ✅ SSL-Zertifikat-Detection: `imap.feg-koblenz.de` → `psa22.webhoster.ag`
+- ✅ IMAP Test: `hendrik.dreis@feg-koblenz.de` und `info@feg-koblenz.de`
+- ✅ Certificate Fix Flag: `certificate_fix: true` in Response
+- ✅ Retry Button ohne Page Reload
+- ✅ Migration Output in Terminal-Box auf Success Page
+
+### Fehlgeschlagene Tests
+- ❌ SMTP Test: `Connection failed: (0)` - vermutlich Firewall/Netzwerk
+- ❌ Setup-Completion: Blockiert durch `user_id=NULL` Constraint
+
+---
+
+## Implementierungs-Prioritäten
+
+### 🔴 KRITISCH - Sofort beheben (Verhindert Setup-Completion)
+
+1. **Bug #8 - parseEnvFile() Function** ⚠️
+   - **Datei:** `src/public/setup/index.php` Zeile 364
+   - **Änderung:** Ersetze `parse_ini_file()` mit `parseEnvFile()`
+   - **Funktion hinzufügen:** Vor Zeile 355
+
+2. **Bug #5 - generateEnvFile() Heredoc Fix** ⚠️
+   - **Datei:** `src/public/setup/index.php` Zeile ~1180-1220
+   - **Änderung:** Variablen vor Heredoc definieren
+   - **Betrifft:** `SMTP_FROM_EMAIL` und `SMTP_FROM_NAME`
+
+3. **Bug #6 - SMTP Fallbacks in Case 5** ⚠️
+   - **Datei:** `src/public/setup/index.php` Case 5 Handler
+   - **Änderung:** `from_email` und `from_name` Felder hinzufügen
+
+4. **Bug #7 - EncryptionService Dependency Fix** ⚠️
+   - **Datei:** `src/public/setup/index.php` in `completeSetup()`
+   - **Änderung:** Anonyme Klasse statt EncryptionService
+
+### 🟡 WICHTIG - Nächster Sprint (Verbessert UX)
+
+5. **Feature #1 - SSL Certificate Detection**
+   - **Funktion:** `extractRealHostFromCertError()` hinzufügen
+   - **Integration:** In `testImapConnection()` verwenden
+
+6. **Feature #2-3 - IMAP/SMTP Autodiscover**
+   - **Funktionen:** `testImapConnection()` und `testSmtpConnection()` erweitern
+   - **AJAX-Handler:** Endpoints `/setup/?ajax=test_imap` und `test_smtp`
+
+7. **Feature #4 - Migration Integration**
+   - **Funktion:** `completeSetup()` mit Migration-Ausführung
+   - **Output Buffering:** Migration-Log in Step 7 anzeigen
+
+### 🟢 OPTIONAL - Kann warten
+
+8. **Frontend AJAX Integration**
+   - JavaScript Test-Funktionen
+   - Event-Listener statt inline onclick
+   - Retry Button ohne Page Reload
+
+9. **Bug #9 - Migration Duplikate**
+   - Prüfung `database/migrations/` Verzeichnis
+   - Umbenennung duplizierter Migrationen
+
+---
+
+## Code-Snippets für Integration
+
+### 1. parseEnvFile() Function (Einfügen vor Zeile 355)
+
+```php
+/**
+ * Parse .env file manually (parse_ini_file doesn't handle .env syntax correctly)
+ * 
+ * Handles comments, empty lines, and quoted values properly
+ */
+function parseEnvFile(string $filePath): array
+{
+    $env = [];
+    if (!file_exists($filePath)) {
+        return $env;
+    }
+    
+    $lines = file($filePath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        $line = trim($line);
+        
+        // Skip comments and empty lines
+        if (empty($line) || $line[0] === '#') {
+            continue;
+        }
+        
+        // Parse key=value pairs
+        $parts = explode('=', $line, 2);
+        if (count($parts) === 2) {
+            $key = trim($parts[0]);
+            $value = trim($parts[1]);
+            
+            // Remove quotes if present
+            if (($value[0] ?? '') === '"' && ($value[strlen($value)-1] ?? '') === '"') {
+                $value = substr($value, 1, -1);
+            }
+            
+            $env[$key] = $value;
+        }
+    }
+    
+    return $env;
+}
+```
+
+### 2. generateEnvFile() Heredoc Fix (Zeile ~1180-1220)
+
+```php
+function generateEnvFile(array $data): string
+{
+    // Define variables BEFORE Heredoc (avoids concatenation errors)
+    $smtpEncryption = !empty($data['smtp']['ssl']) ? 'tls' : 'none';
+    $smtpFromEmail = $data['smtp']['from_email'] ?? $data['imap']['user'] ?? '';
+    $smtpFromName = $data['smtp']['from_name'] ?? 'CI-Inbox';
+
+    return <<<ENV
+# CI-Inbox Environment Configuration
+# Generated by Setup Wizard
+
+# Application
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=http://localhost
+
+# Database
+DB_HOST={$data['db']['host']}
+DB_DATABASE={$data['db']['name']}
+DB_USERNAME={$data['db']['user']}
+DB_PASSWORD={$data['db']['pass']}
+
+# Security
+ENCRYPTION_KEY=
+
+# Logging
+LOG_LEVEL=info
+LOG_FILE=logs/app.log
+
+# SMTP (if configured)
+SMTP_HOST={$data['smtp']['host']}
+SMTP_PORT={$data['smtp']['port']}
+SMTP_USERNAME={$data['smtp']['user']}
+SMTP_PASSWORD={$data['smtp']['pass']}
+SMTP_ENCRYPTION={$smtpEncryption}
+SMTP_FROM_EMAIL={$smtpFromEmail}
+SMTP_FROM_NAME={$smtpFromName}
+ENV;
+}
+```
+
+### 3. Case 5 SMTP Fallbacks
+
+```php
+case 5:
+    // IMAP/SMTP configuration (optional)
+    $_SESSION['setup']['data']['imap'] = [
+        'email' => $_POST['imap_email'] ?? '',
+        'host' => $_POST['imap_host'] ?? '',
+        'port' => $_POST['imap_port'] ?? '993',
+        'user' => $_POST['imap_user'] ?? '',
+        'pass' => $_POST['imap_pass'] ?? '',
+        'ssl' => isset($_POST['imap_ssl']),
+    ];
+
+    $_SESSION['setup']['data']['smtp'] = [
+        'host' => $_POST['smtp_host'] ?? '',
+        'port' => $_POST['smtp_port'] ?? '587',
+        'user' => $_POST['smtp_user'] ?? '',
+        'pass' => $_POST['smtp_pass'] ?? '',
+        'ssl' => isset($_POST['smtp_ssl']),
+        // ✅ FIX: Add fallback values
+        'from_email' => $_POST['smtp_from_email'] ?? $_SESSION['setup']['data']['imap']['user'] ?? '',
+        'from_name' => $_POST['smtp_from_name'] ?? 'CI-Inbox',
+    ];
+
+    $_SESSION['setup']['step'] = 6;
+    $basePath = getBasePath();
+    header("Location: {$basePath}/setup/?step=6");
+    exit;
+```
+
+### 4. Encryption Helper (in completeSetup() Function)
+
+```php
+// Simple encryption helper for setup (avoids ConfigInterface dependency)
+$encryptionService = new class($encryptionKey) {
+    private string $key;
+    
+    public function __construct(string $key) { 
+        $this->key = $key; 
+    }
+    
+    public function encrypt(string $data): string {
+        $iv = random_bytes(16);
+        $encrypted = openssl_encrypt($data, 'AES-256-CBC', $this->key, 0, $iv);
+        return base64_encode($iv . $encrypted);
+    }
+};
+
+// Use it:
+$encryptedPassword = $encryptionService->encrypt($data['imap']['pass']);
+```
+
+---
+
+## Nächste Schritte - Action Plan
+
+### Phase 1: Kritische Bugs beheben (TODAY)
+1. ✅ `parseEnvFile()` Funktion hinzufügen
+2. ✅ `generateEnvFile()` Heredoc Fix
+3. ✅ Case 5 SMTP Fallbacks
+4. ✅ EncryptionService Dependency Fix
+5. 🧪 Test kompletter Setup-Flow
+
+### Phase 2: Autodiscover Features (Sprint 2)
+1. SSL Certificate Detection implementieren
+2. IMAP/SMTP Test Funktionen erweitern
+3. AJAX-Handler hinzufügen
+4. Frontend JavaScript Integration
+
+### Phase 3: Migration & Cleanup (Sprint 3)
+1. Migration-Integration in `completeSetup()`
+2. Migration-Duplikate bereinigen
+3. Shared Inbox Architektur-Entscheidung umsetzen
+4. End-to-End Tests
+
+---
+
+## Referenzen
+
+### Dateien
+- **Testinstallation:** `C:\Users\hendr\Documents\XAMPP_Testordner\src\public\setup\index.php` (2485 Zeilen)
+- **Hauptprojekt:** `d:\Nextcloud - Privat\Private_Dateien\Tools_und_Systeme\C-IMAP\src\public\setup\index.php` (1599 Zeilen)
+- **Migration 002:** `database/migrations/002_create_imap_accounts_table.php`
+- **Migrations Verzeichnis:** `database/migrations/`
+
+### Dokumentation
+- **PHP Binary Fix:** `docs/dev/issue-autosetup-php-binary.txt`
+- **Personal IMAP Doku:** `docs/dev/PERSONAL-IMAP-ACCOUNTS.md`
+- **Architecture:** `docs/dev/architecture.md`
+
+### Test-Daten
+- Admin Email: `hendrik.dreis@feg-koblenz.de`
+- Shared Inbox: `info@feg-koblenz.de`
+- Real Host: `psa22.webhoster.ag` (via Certificate)
+
+---
+
+## Changelog
+
+### 2025-12-07 (Testinstallation)
+- ✅ SSL Certificate Detection implementiert (proaktiv)
+- ✅ IMAP/SMTP Autodiscover AJAX-Endpoints
+- ✅ Parse Error in Heredoc behoben
+- ✅ SMTP from_email/from_name Fallbacks
+- ✅ EncryptionService Dependency umgangen
+- ✅ parseEnvFile() Funktion erstellt
+- ✅ Migration Duplikate umbenannt
+- ⚠️ user_id nullable gemacht (Architektur-Frage offen)
+
+### 2025-12-07 (Dokumentation)
+- 📝 Vollständige Issue-Dokumentation erstellt
+- 📝 Alle 9 Bugs kategorisiert und priorisiert
+- 📝 Code-Snippets für Integration vorbereitet
+- 📝 Action Plan für schrittweise Implementierung
+
+---
+
+**Status:** Bereit für Phase 1 Implementation  
+**Verantwortlich:** Entwickler-Team  
+**Deadline Phase 1:** Noch heute (kritische Bugs)

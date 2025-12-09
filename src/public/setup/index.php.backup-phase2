@@ -1,0 +1,2003 @@
+<?php
+/**
+ * Setup Wizard - First-Run Installation
+ * 
+ * Guides administrators through initial setup:
+ * 1. Requirements check
+ * 2. Database configuration
+ * 3. Admin account creation
+ * 4. IMAP/SMTP configuration
+ * 5. Optional: OAuth providers
+ */
+
+// Enable error display for debugging
+ini_set('display_errors', '1');
+ini_set('display_startup_errors', '1');
+error_reporting(E_ALL);
+
+// Check if vendor exists BEFORE trying to load it
+$vendorAutoload = __DIR__ . '/../../../vendor/autoload.php';
+$vendorExists = file_exists($vendorAutoload);
+
+// Handle auto-install request BEFORE showing error page
+if (!$vendorExists && isset($_GET['action']) && $_GET['action'] === 'auto_install_vendor') {
+    // Function must be defined here (can't use autoload without vendor!)
+    function installComposerDependenciesVendorMissing(): array
+    {
+        $rootDir = __DIR__ . '/../../../';
+        $logFile = $rootDir . 'logs/composer-install.log';
+        
+        // Check if exec functions are available
+        $disabledFunctions = explode(',', ini_get('disable_functions'));
+        $disabledFunctions = array_map('trim', $disabledFunctions);
+        
+        if (in_array('exec', $disabledFunctions) || in_array('shell_exec', $disabledFunctions)) {
+            return [
+                'success' => false,
+                'message' => 'PHP exec() und shell_exec() sind deaktiviert.'
+            ];
+        }
+        
+        // Ensure logs directory exists
+        if (!is_dir($rootDir . 'logs')) {
+            @mkdir($rootDir . 'logs', 0755, true);
+        }
+        
+        // Check if composer is available
+        $composerCommand = null;
+        
+        if (file_exists($rootDir . 'composer.phar')) {
+            $composerCommand = 'composer.phar';
+        } else {
+            $whichComposer = @shell_exec('which composer 2>/dev/null');
+            if (!empty($whichComposer)) {
+                $composerCommand = 'composer';
+            } else {
+                $whereComposer = @shell_exec('where composer 2>nul');
+                if (!empty($whereComposer)) {
+                    $composerCommand = 'composer';
+                }
+            }
+        }
+        
+        if (!$composerCommand) {
+            return [
+                'success' => false,
+                'message' => 'Composer nicht verfügbar.'
+            ];
+        }
+        
+        // Run composer install (with proper escaping)
+        $escapedRootDir = escapeshellarg($rootDir);
+        $command = "cd {$escapedRootDir} && ";
+        
+        if ($composerCommand === 'composer.phar') {
+            $command .= "php " . escapeshellarg($rootDir . 'composer.phar');
+        } else {
+            $command .= "composer";
+        }
+        
+        $command .= " install --no-dev --optimize-autoloader --no-interaction 2>&1";
+        
+        $output = [];
+        $returnVar = 0;
+        @exec($command, $output, $returnVar);
+        
+        // Log output
+        $logContent = "=== Composer Install Log ===\n";
+        $logContent .= "Date: " . date('Y-m-d H:i:s') . "\n";
+        $logContent .= "Command: {$command}\n";
+        $logContent .= "Return Code: {$returnVar}\n";
+        $logContent .= "Output:\n" . implode("\n", $output);
+        file_put_contents($logFile, $logContent);
+        
+        if ($returnVar === 0 && is_dir($rootDir . 'vendor') && file_exists($rootDir . 'vendor/autoload.php')) {
+            return [
+                'success' => true,
+                'message' => 'Dependencies erfolgreich installiert!'
+            ];
+        } else {
+            return [
+                'success' => false,
+                'message' => 'Installation fehlgeschlagen. Siehe logs/composer-install.log'
+            ];
+        }
+    }
+    
+    // Execute installation
+    $result = installComposerDependenciesVendorMissing();
+    
+    if ($result['success']) {
+        // Redirect to setup wizard
+        header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?'));
+        exit;
+    } else {
+        // Show error and vendor missing page
+        $autoInstallError = $result['message'];
+    }
+}
+
+if (!$vendorExists) {
+    // Show minimal error page without dependencies
+    showVendorMissingPage();
+    exit;
+}
+
+require_once $vendorAutoload;
+
+/**
+ * Get base path for redirects
+ * Detects if app is running in subdirectory (IONOS) or root (Plesk)
+ * 
+ * Examples:
+ * - Plesk: /src/public/setup/index.php → returns ""
+ * - IONOS: /src/public/setup/index.php → returns "/src/public"
+ */
+function getBasePath(): string
+{
+    // Get current script path relative to document root
+    $scriptName = $_SERVER['SCRIPT_NAME']; // e.g., "/src/public/setup/index.php"
+    
+    // Extract base path (everything before /setup/)
+    if (preg_match('#^(.*?)/setup/#', $scriptName, $matches)) {
+        return $matches[1]; // e.g., "/src/public" or ""
+    }
+    
+    return '';
+}
+
+/**
+ * Show error page when vendor/ is missing
+ * This page works WITHOUT any dependencies
+ */
+function showVendorMissingPage(): void
+{
+    // Check if auto-install is available
+    $disabledFunctions = explode(',', ini_get('disable_functions'));
+    $disabledFunctions = array_map('trim', $disabledFunctions);
+    $execDisabled = in_array('exec', $disabledFunctions) || in_array('shell_exec', $disabledFunctions);
+    
+    $composerExists = false;
+    if (!$execDisabled) {
+        $composerExists = file_exists(__DIR__ . '/../../../composer.phar') || 
+                          @shell_exec('which composer 2>/dev/null') || 
+                          @shell_exec('where composer 2>nul');
+    }
+    
+    // Check if there was an error from auto-install
+    global $autoInstallError;
+    
+    ?>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CI-Inbox Setup - Dependencies fehlen</title>
+    <link rel="stylesheet" href="setup.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚠️ CI-Inbox Setup</h1>
+            <p>Composer Dependencies fehlen</p>
+        </div>
+        
+        <div class="content">
+            <?php if (isset($autoInstallError)): ?>
+                <div class="alert" style="background: #fef2f2; border-color: #ef4444;">
+                    <h2>❌ Automatische Installation fehlgeschlagen</h2>
+                    <p><?= htmlspecialchars($autoInstallError) ?></p>
+                </div>
+            <?php endif; ?>
+            
+            <div class="alert">
+                <h2>Installation kann nicht gestartet werden</h2>
+                <p>
+                    Das Verzeichnis <code>vendor/</code> fehlt oder ist unvollständig. 
+                    CI-Inbox benötigt externe PHP-Bibliotheken (Dependencies), um zu funktionieren.
+                </p>
+            </div>
+            
+            <div class="info-box">
+                <strong>💡 Was sind Dependencies?</strong><br>
+                PHP-Bibliotheken wie Slim Framework, PHPMailer, Eloquent ORM, etc. 
+                Diese werden normalerweise mit dem Tool "Composer" installiert.
+            </div>
+            
+            <div class="steps">
+                <h3>🔧 Lösung: Dependencies installieren</h3>
+                
+                <p><strong>Wählen Sie eine der folgenden Methoden:</strong></p>
+                
+                <?php if ($composerExists && !$execDisabled): ?>
+                <!-- Auto-Fix Option as FIRST Option -->
+                <div style="background: #f0f9ff; border: 2px solid #3b82f6; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                    <h4 style="color: #1e40af; margin-top: 0;">🚀 Automatische Installation (Empfohlen)</h4>
+                    <p style="color: #1e3a8a; margin-bottom: 15px;">
+                        Composer wurde auf diesem Server erkannt. Klicken Sie auf den Button für 
+                        automatische Installation der Dependencies (dauert 2-5 Minuten).
+                    </p>
+                    <form method="GET" action="" style="margin: 0;">
+                        <input type="hidden" name="action" value="auto_install_vendor">
+                        <button type="submit" class="btn" style="background: #10b981; cursor: pointer; border: none; font-family: inherit;">
+                            🚀 Jetzt automatisch installieren
+                        </button>
+                    </form>
+                    <p style="color: #6b7280; font-size: 13px; margin-top: 10px;">
+                        Nach erfolgreicher Installation werden Sie automatisch zum Setup-Wizard weitergeleitet.
+                    </p>
+                </div>
+                <?php elseif ($execDisabled): ?>
+                <div style="background: #fef2f2; border: 2px solid #ef4444; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                    <h4 style="color: #991b1b; margin-top: 0;">⚠️ Automatische Installation nicht möglich</h4>
+                    <p style="color: #7f1d1d;">
+                        Die PHP-Funktionen <code>exec()</code> und <code>shell_exec()</code> sind 
+                        auf diesem Server deaktiviert. Bitte verwenden Sie eine der manuellen Optionen unten.
+                    </p>
+                </div>
+                <?php endif; ?>
+                
+                <h4 style="margin-top: 20px;">📦 Option <?= ($composerExists && !$execDisabled) ? '2' : '1' ?>: vendor.zip herunterladen (Einfachste Methode)</h4>
+                <ol>
+                    <li>Laden Sie <strong>vendor.zip</strong> herunter (~50 MB)</li>
+                    <li>Entpacken Sie die Datei</li>
+                    <li>Laden Sie den Ordner <code>vendor/</code> per FTP ins Projekt-Root hoch</li>
+                    <li>Laden Sie diese Seite neu</li>
+                </ol>
+                <a href="https://github.com/hndrk-fegko/CI-Inbox/releases/latest" class="btn" target="_blank">
+                    📥 vendor.zip von GitHub herunterladen
+                </a>
+                <a href="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>?action=check_vendor" class="btn btn-secondary">
+                    🔄 Erneut prüfen
+                </a>
+                
+                <h4 style="margin-top: 20px;">💻 Option <?= ($composerExists && !$execDisabled) ? '3' : '2' ?>: Lokal mit Composer (Für Entwickler)</h4>
+                <ol>
+                    <li>Öffnen Sie ein Terminal auf Ihrem PC</li>
+                    <li>Navigieren Sie zum Projekt-Verzeichnis</li>
+                    <li>Führen Sie aus: <code>composer install --no-dev</code></li>
+                    <li>Laden Sie das komplette Projekt inkl. <code>vendor/</code> per FTP hoch</li>
+                </ol>
+                
+                <h4 style="margin-top: 20px;">🔌 Option <?= ($composerExists && !$execDisabled) ? '4' : '3' ?>: SSH-Zugang (Falls verfügbar)</h4>
+                <ol>
+                    <li>Verbinden Sie sich per SSH mit Ihrem Server</li>
+                    <li>Navigieren Sie zum Projekt-Verzeichnis</li>
+                    <li>Führen Sie aus: <code>composer install --no-dev --optimize-autoloader</code></li>
+                    <li>Laden Sie diese Seite neu</li>
+                </ol>
+            </div>
+            
+            <div class="info-box">
+                <strong>📖 Detaillierte Anleitung:</strong><br>
+                Siehe <code>VENDOR-INSTALLATION.md</code> im Projekt-Root für eine Schritt-für-Schritt-Anleitung.
+            </div>
+            
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 14px;">
+                <p>Benötigen Sie Hilfe? Kontaktieren Sie Ihren Hosting-Anbieter oder öffnen Sie ein Issue auf GitHub.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+    <?php
+}
+
+/**
+ * Parse .env file manually (parse_ini_file doesn't handle .env syntax correctly)
+ * 
+ * Handles comments, empty lines, and quoted values properly
+ */
+function parseEnvFile(string $filePath): array
+{
+    $env = [];
+    if (!file_exists($filePath)) {
+        return $env;
+    }
+    
+    $lines = file($filePath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        $line = trim($line);
+        
+        // Skip comments and empty lines
+        if (empty($line) || $line[0] === '#') {
+            continue;
+        }
+        
+        // Parse key=value pairs
+        $parts = explode('=', $line, 2);
+        if (count($parts) === 2) {
+            $key = trim($parts[0]);
+            $value = trim($parts[1]);
+            
+            // Remove quotes if present
+            if (($value[0] ?? '') === '"' && ($value[strlen($value)-1] ?? '') === '"') {
+                $value = substr($value, 1, -1);
+            }
+            
+            $env[$key] = $value;
+        }
+    }
+    
+    return $env;
+}
+
+/**
+ * Extract domain from email address
+ */
+function extractDomain(string $email): string
+{
+    $parts = explode('@', $email);
+    return $parts[1] ?? '';
+}
+
+/**
+ * Extract real hostname from SSL certificate
+ * Used when hostname doesn't match certificate (e.g., imap.domain.com → mx.provider.com)
+ */
+function extractRealHostFromCertError(string $host, int $port = 993): ?string
+{
+    $context = stream_context_create([
+        'ssl' => [
+            'verify_peer' => false,
+            'verify_peer_name' => false,
+            'capture_peer_cert' => true
+        ]
+    ]);
+
+    $errno = 0;
+    $errstr = '';
+    $socket = @stream_socket_client(
+        "ssl://{$host}:{$port}",
+        $errno,
+        $errstr,
+        3,
+        STREAM_CLIENT_CONNECT,
+        $context
+    );
+
+    if ($socket) {
+        $params = stream_context_get_params($socket);
+        fclose($socket);
+
+        if (isset($params['options']['ssl']['peer_certificate'])) {
+            $cert = openssl_x509_parse($params['options']['ssl']['peer_certificate']);
+
+            // Extract CN (Common Name) from certificate subject
+            if (isset($cert['subject']['CN'])) {
+                return $cert['subject']['CN'];
+            }
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Auto-detect IMAP/SMTP hosts from email domain
+ */
+function autoDetectHosts(string $email): array
+{
+    $domain = extractDomain($email);
+
+    return [
+        'imap_candidates' => [
+            "imap.{$domain}",
+            "mail.{$domain}",
+            $domain,
+        ],
+        'smtp_candidates' => [
+            "smtp.{$domain}",
+            "mail.{$domain}",
+            $domain,
+        ]
+    ];
+}
+
+/**
+ * Test IMAP connection with automatic SSL certificate hostname detection
+ */
+function testImapConnection(string $host, int $port, bool $ssl, string $username, string $password): array
+{
+    try {
+        // If SSL, check certificate first to get real hostname
+        if ($ssl) {
+            $realHost = extractRealHostFromCertError($host, $port);
+            if ($realHost && $realHost !== $host) {
+                // Certificate says different hostname - use that one
+                $host = $realHost;
+                $certificateFix = true;
+            }
+        }
+
+        $connectionString = $ssl
+            ? "{{$host}:{$port}/imap/ssl/novalidate-cert}INBOX"
+            : "{{$host}:{$port}/imap/notls}INBOX";
+
+        $imap = @imap_open($connectionString, $username, $password);
+
+        if (!$imap) {
+            $error = imap_last_error() ?: 'Connection failed';
+            return ['success' => false, 'error' => $error];
+        }
+
+        imap_close($imap);
+
+        $result = [
+            'success' => true,
+            'connection_string' => $connectionString,
+            'host' => $host,
+            'port' => $port,
+            'ssl' => $ssl,
+            'username' => $username
+        ];
+
+        if (isset($certificateFix)) {
+            $result['certificate_fix'] = true;
+            $result['original_host'] = func_get_arg(0); // Original host from parameters
+        }
+
+        return $result;
+
+    } catch (Exception $e) {
+        return ['success' => false, 'error' => $e->getMessage()];
+    }
+}
+
+/**
+ * Test SMTP connection with port-specific handling
+ */
+function testSmtpConnection(string $host, int $port, bool $ssl): array
+{
+    try {
+        $errno = 0;
+        $errstr = '';
+        
+        // Port 465: Direct SSL connection
+        if ($port == 465) {
+            $socket = @stream_socket_client(
+                "ssl://{$host}:{$port}",
+                $errno,
+                $errstr,
+                10
+            );
+        }
+        // Port 587/25: Plain connection (STARTTLS would be negotiated later)
+        else {
+            $socket = @stream_socket_client(
+                "tcp://{$host}:{$port}",
+                $errno,
+                $errstr,
+                10
+            );
+        }
+
+        if (!$socket) {
+            return ['success' => false, 'error' => "Connection failed: ({$errno}) {$errstr}"];
+        }
+
+        // Read server greeting
+        $response = fgets($socket);
+        fclose($socket);
+
+        if (strpos($response, '220') === 0) {
+            return ['success' => true, 'message' => 'SMTP connection successful'];
+        }
+
+        return ['success' => false, 'error' => 'Invalid SMTP response: ' . $response];
+
+    } catch (Exception $e) {
+        return ['success' => false, 'error' => $e->getMessage()];
+    }
+}
+
+// ============================================================================
+// AJAX HANDLERS for Autodiscover
+// ============================================================================
+if (isset($_GET['ajax'])) {
+    header('Content-Type: application/json');
+
+    switch ($_GET['ajax']) {
+        case 'test_imap':
+            $email = $_POST['email'] ?? '';
+            $password = $_POST['password'] ?? '';
+
+            if (empty($email) || empty($password)) {
+                echo json_encode(['success' => false, 'error' => 'Email and password required']);
+                exit;
+            }
+
+            // Get autodiscover candidates
+            $hosts = autoDetectHosts($email);
+            
+            // Test IMAP candidates
+            foreach ($hosts['imap_candidates'] as $host) {
+                // Try SSL first (port 993)
+                $result = testImapConnection($host, 993, true, $email, $password);
+                if ($result['success']) {
+                    echo json_encode($result);
+                    exit;
+                }
+                
+                // Try non-SSL (port 143)
+                $result = testImapConnection($host, 143, false, $email, $password);
+                if ($result['success']) {
+                    echo json_encode($result);
+                    exit;
+                }
+            }
+
+            echo json_encode(['success' => false, 'error' => 'Could not connect to any IMAP server']);
+            exit;
+
+        case 'test_smtp':
+            $host = $_POST['host'] ?? '';
+            $port = (int)($_POST['port'] ?? 587);
+            $ssl = ($_POST['ssl'] ?? 'false') === 'true';
+
+            if (empty($host)) {
+                echo json_encode(['success' => false, 'error' => 'SMTP host required']);
+                exit;
+            }
+
+            $result = testSmtpConnection($host, $port, $ssl);
+            echo json_encode($result);
+            exit;
+
+        default:
+            echo json_encode(['success' => false, 'error' => 'Unknown AJAX action']);
+            exit;
+    }
+}
+
+// Check if user clicked "Erneut prüfen"
+if (isset($_GET['action']) && $_GET['action'] === 'check_vendor') {
+    header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?'));
+    exit;
+}
+
+// K4: Handle setup reset
+if (isset($_GET['action']) && $_GET['action'] === 'reset') {
+    resetSetup();
+    session_destroy();
+    $basePath = getBasePath();
+    header("Location: {$basePath}/setup/?step=1");
+    exit;
+}
+
+// Check if already configured
+if (file_exists(__DIR__ . '/../../../.env') && !isset($_GET['force'])) {
+    // Check if setup is complete by trying DB connection
+    try {
+        $env = parseEnvFile(__DIR__ . '/../../../.env');
+        if (!empty($env['DB_HOST']) && !empty($env['DB_DATABASE'])) {
+            $pdo = new PDO(
+                "mysql:host={$env['DB_HOST']};dbname={$env['DB_DATABASE']};charset=utf8mb4",
+                $env['DB_USERNAME'] ?? 'root',
+                $env['DB_PASSWORD'] ?? ''
+            );
+            // Check if admin user exists
+            $stmt = $pdo->query("SELECT COUNT(*) FROM users WHERE role = 'admin'");
+            if ($stmt && $stmt->fetchColumn() > 0) {
+                $basePath = getBasePath();
+                header("Location: {$basePath}/login.php");
+                exit;
+            }
+        }
+    } catch (Exception $e) {
+        // Continue with setup
+    }
+}
+
+session_start();
+
+// Initialize setup state
+if (!isset($_SESSION['setup'])) {
+    $_SESSION['setup'] = [
+        'step' => 1,
+        'data' => []
+    ];
+}
+
+$currentStep = $_GET['step'] ?? $_SESSION['setup']['step'];
+$error = null;
+$success = null;
+
+// Handle auto-fix actions (via GET)
+if (isset($_GET['action'])) {
+    try {
+        switch ($_GET['action']) {
+            case 'install_composer_dependencies':
+                $result = installComposerDependencies();
+                if ($result['success']) {
+                    $success = $result['message'];
+                    // Refresh page to recheck
+                    $basePath = getBasePath();
+                    header("Location: {$basePath}/setup/?step=1&installed=1");
+                    exit;
+                } else {
+                    $error = $result['message'];
+                }
+                break;
+        }
+    } catch (Exception $e) {
+        $error = 'Auto-Fix fehlgeschlagen: ' . $e->getMessage();
+    }
+}
+
+// Handle form submissions
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    try {
+        switch ($currentStep) {
+            case 1:
+                // Hosting environment check - just proceed
+                $_SESSION['setup']['step'] = 2;
+                $basePath = getBasePath();
+                header("Location: {$basePath}/setup/?step=2");
+                exit;
+                
+            case 2:
+                // Requirements check - just proceed
+                $_SESSION['setup']['step'] = 3;
+                $basePath = getBasePath();
+                header("Location: {$basePath}/setup/?step=3");
+                exit;
+                
+            case 3:
+                // Database configuration
+                $dbHost = $_POST['db_host'] ?? 'localhost';
+                $dbName = $_POST['db_name'] ?? 'ci_inbox';
+                $dbUser = $_POST['db_user'] ?? 'root';
+                $dbPass = $_POST['db_pass'] ?? '';
+                $dbExists = isset($_POST['db_exists']);  // K2: Checkbox
+                
+                // Validate database name (only allow safe characters)
+                if (!preg_match('/^[a-zA-Z0-9_]+$/', $dbName)) {
+                    throw new Exception('Ungültiger Datenbankname. Nur Buchstaben, Zahlen und Unterstriche erlaubt.');
+                }
+                
+                // Validate host (basic sanitization)
+                $dbHost = preg_replace('/[^a-zA-Z0-9\.\-:]/', '', $dbHost);
+                
+                // K1: Try-Catch um DB Connection
+                try {
+                    // Test connection
+                    $pdo = new PDO(
+                        "mysql:host={$dbHost};charset=utf8mb4",
+                        $dbUser,
+                        $dbPass,
+                        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+                    );
+                    
+                    // K2: Create database only if checkbox NOT set (Shared Hosting Support)
+                    if (!$dbExists) {
+                        $pdo->exec("CREATE DATABASE IF NOT EXISTS `{$dbName}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+                    }
+                    
+                    // Store configuration
+                    $_SESSION['setup']['data']['db'] = [
+                        'host' => $dbHost,
+                        'name' => $dbName,
+                        'user' => $dbUser,
+                        'pass' => $dbPass
+                    ];
+                    
+                    $_SESSION['setup']['step'] = 4;
+                    $basePath = getBasePath();
+                    header("Location: {$basePath}/setup/?step=4");
+                    exit;
+                    
+                } catch (PDOException $e) {
+                    throw new Exception('Datenbankverbindung fehlgeschlagen: ' . $e->getMessage());
+                }
+                
+            case 4:
+                // Admin account
+                $email = filter_var($_POST['admin_email'] ?? '', FILTER_VALIDATE_EMAIL);
+                $name = trim($_POST['admin_name'] ?? '');
+                $password = $_POST['admin_password'] ?? '';
+                $passwordConfirm = $_POST['admin_password_confirm'] ?? '';
+                
+                if (!$email) {
+                    throw new Exception('Bitte geben Sie eine gültige E-Mail-Adresse ein.');
+                }
+                if (empty($name)) {
+                    throw new Exception('Bitte geben Sie einen Namen ein.');
+                }
+                if (strlen($password) < 8) {
+                    throw new Exception('Das Passwort muss mindestens 8 Zeichen lang sein.');
+                }
+                if ($password !== $passwordConfirm) {
+                    throw new Exception('Die Passwörter stimmen nicht überein.');
+                }
+                
+                $_SESSION['setup']['data']['admin'] = [
+                    'email' => $email,
+                    'name' => $name,
+                    'password' => $password
+                ];
+                
+                // Check if user wants to create personal IMAP account for admin
+                if (isset($_POST['create_admin_personal_imap'])) {
+                    $imapPassword = $_POST['admin_imap_password'] ?? '';
+                    // If no separate IMAP password given, use login password
+                    $imapPassword = !empty($imapPassword) ? $imapPassword : $password;
+                    
+                    $_SESSION['setup']['data']['admin']['create_personal_imap'] = true;
+                    $_SESSION['setup']['data']['admin']['imap_password'] = $imapPassword;
+                    
+                    // Store discovered IMAP config (from test button)
+                    if (!empty($_POST['admin_imap_host'])) {
+                        $_SESSION['setup']['data']['admin']['imap_host'] = $_POST['admin_imap_host'];
+                        $_SESSION['setup']['data']['admin']['imap_port'] = $_POST['admin_imap_port'] ?? '993';
+                        $_SESSION['setup']['data']['admin']['imap_ssl'] = isset($_POST['admin_imap_ssl']) && $_POST['admin_imap_ssl'] === '1';
+                    }
+                }
+                
+                $_SESSION['setup']['step'] = 5;
+                $basePath = getBasePath();
+                header("Location: {$basePath}/setup/?step=5");
+                exit;
+                
+            case 5:
+                // IMAP/SMTP configuration (optional)
+                $_SESSION['setup']['data']['imap'] = [
+                    'host' => $_POST['imap_host'] ?? '',
+                    'port' => $_POST['imap_port'] ?? '993',
+                    'user' => $_POST['imap_user'] ?? '',
+                    'pass' => $_POST['imap_pass'] ?? '',
+                    'ssl' => isset($_POST['imap_ssl']),
+                    'user_id' => null,  // K5: NULL = Shared Inbox (kein User zugeordnet)
+                ];
+                
+                $_SESSION['setup']['data']['smtp'] = [
+                    'host' => $_POST['smtp_host'] ?? '',
+                    'port' => $_POST['smtp_port'] ?? '587',
+                    'user' => $_POST['smtp_user'] ?? '',
+                    'pass' => $_POST['smtp_pass'] ?? '',
+                    'ssl' => isset($_POST['smtp_ssl']),
+                    // Fallback: Use IMAP user email if SMTP from_email not provided
+                    'from_email' => $_POST['smtp_from_email'] ?? $_SESSION['setup']['data']['imap']['user'] ?? '',
+                    'from_name' => $_POST['smtp_from_name'] ?? 'CI-Inbox',
+                ];
+                
+                $_SESSION['setup']['step'] = 6;
+                $basePath = getBasePath();
+                header("Location: {$basePath}/setup/?step=6");
+                exit;
+                
+            case 6:
+                // Complete setup
+                completeSetup($_SESSION['setup']['data']);
+                $_SESSION['setup']['step'] = 7;
+                $basePath = getBasePath();
+                header("Location: {$basePath}/setup/?step=7");
+                exit;
+        }
+    } catch (Exception $e) {
+        $error = $e->getMessage();
+    }
+}
+
+/**
+ * Complete the setup process
+ */
+function completeSetup(array $data): void
+{
+    // K3: Generate encryption key FIRST (before everything)
+    $encryptionKey = bin2hex(random_bytes(32));
+    
+    // K3: Run database migrations BEFORE writing .env
+    require_once __DIR__ . '/../../../vendor/autoload.php';
+    
+    // Initialize database with new config
+    $capsule = new \Illuminate\Database\Capsule\Manager;
+    $capsule->addConnection([
+        'driver' => 'mysql',
+        'host' => $data['db']['host'],
+        'database' => $data['db']['name'],
+        'username' => $data['db']['user'],
+        'password' => $data['db']['pass'],
+        'charset' => 'utf8mb4',
+        'collation' => 'utf8mb4_unicode_ci',
+        'prefix' => '',
+    ]);
+    $capsule->setAsGlobal();
+    $capsule->bootEloquent();
+    
+    // Run migrations - buffer output to prevent it from breaking page layout
+    ob_start();
+    
+    // Disable foreign key checks to allow clean table operations
+    $capsule->getConnection()->statement('SET FOREIGN_KEY_CHECKS=0');
+    
+    $migrationsPath = __DIR__ . '/../../../database/migrations';
+    $migrations = glob($migrationsPath . '/*.php');
+    sort($migrations);
+    
+    $migrationLog = [];
+    foreach ($migrations as $migration) {
+        $migrationName = basename($migration);
+        try {
+            require_once $migration;
+            $migrationLog[] = "✅ {$migrationName}";
+        } catch (Exception $e) {
+            $migrationLog[] = "❌ {$migrationName}: " . $e->getMessage();
+            // Continue with other migrations even if one fails
+        }
+    }
+    
+    // Re-enable foreign key checks
+    $capsule->getConnection()->statement('SET FOREIGN_KEY_CHECKS=1');
+    
+    $migrationOutput = ob_get_clean();
+    
+    // Store migration log in session for display on success page
+    $_SESSION['setup']['migration_log'] = $migrationLog;
+    
+    // K3: Write .env AFTER successful migrations (not before)
+    $envContent = generateEnvFile($data);
+    $envContent = str_replace('ENCRYPTION_KEY=', "ENCRYPTION_KEY={$encryptionKey}", $envContent);
+    file_put_contents(__DIR__ . '/../../../.env', $envContent);
+    
+    // 4. Create admin user
+    $adminUser = \CiInbox\App\Models\User::create([
+        'email' => $data['admin']['email'],
+        'password_hash' => password_hash($data['admin']['password'], PASSWORD_BCRYPT),
+        'name' => $data['admin']['name'],
+        'role' => 'admin',
+    ]);
+    
+    // 5. Create Personal IMAP Account for Admin (if requested)
+    if (!empty($data['admin']['create_personal_imap'])) {
+        // Simple encryption helper for setup (avoids ConfigInterface dependency)
+        $encryptionService = new class($encryptionKey) {
+            private string $key;
+            public function __construct(string $key) { $this->key = $key; }
+            public function encrypt(string $data): string {
+                $iv = random_bytes(16);
+                $encrypted = openssl_encrypt($data, 'AES-256-CBC', $this->key, 0, $iv);
+                return base64_encode($iv . $encrypted);
+            }
+        };
+        
+        \CiInbox\App\Models\ImapAccount::create([
+            'user_id' => $adminUser->id,
+            'email' => $data['admin']['email'],
+            'server' => $data['admin']['imap_host'] ?? 'imap.' . explode('@', $data['admin']['email'])[1],
+            'port' => (int)($data['admin']['imap_port'] ?? 993),
+            'username' => $data['admin']['email'],
+            'password' => $encryptionService->encrypt($data['admin']['imap_password']),
+            'ssl' => $data['admin']['imap_ssl'] ?? true,
+            'is_active' => true,
+        ]);
+    }
+    
+    // 6. Create IMAP account if configured
+    if (!empty($data['imap']['host'])) {
+        \CiInbox\App\Models\ImapAccount::create([
+            'user_id' => $data['imap']['user_id'] ?? null,  // K5: NULL = Shared Inbox (by design)
+            'email' => $data['imap']['user'],
+            'server' => $data['imap']['host'],
+            'port' => (int)$data['imap']['port'],
+            'username' => $data['imap']['user'],
+            'password' => $data['imap']['pass'], // Will be encrypted by model
+            'ssl' => $data['imap']['ssl'],
+            'is_active' => true,
+        ]);
+    }
+    
+    // 7. Write production .htaccess in root
+    writeProductionHtaccess();
+}
+
+/**
+ * Reset setup - Delete .env and drop all database tables
+ * K4: Allows user to restart setup after errors
+ */
+function resetSetup(): void
+{
+    try {
+        // 1. Delete .env if exists
+        $envPath = __DIR__ . '/../../../.env';
+        if (file_exists($envPath)) {
+            @unlink($envPath);
+        }
+        
+        // 2. Drop all tables (if DB connection possible)
+        if (!empty($_SESSION['setup']['data']['db'])) {
+            $db = $_SESSION['setup']['data']['db'];
+            
+            try {
+                $pdo = new PDO(
+                    "mysql:host={$db['host']};dbname={$db['name']};charset=utf8mb4",
+                    $db['user'],
+                    $db['pass'],
+                    [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+                );
+                
+                // Get all tables
+                $tables = $pdo->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
+                
+                // Drop all (with FK checks disabled)
+                $pdo->exec("SET FOREIGN_KEY_CHECKS=0");
+                foreach ($tables as $table) {
+                    $pdo->exec("DROP TABLE IF EXISTS `{$table}`");
+                }
+                $pdo->exec("SET FOREIGN_KEY_CHECKS=1");
+            } catch (PDOException $e) {
+                // Silent fail - DB might not exist yet
+                error_log('Reset DB cleanup failed: ' . $e->getMessage());
+            }
+        }
+        
+        // 3. Clear session (will be destroyed by caller)
+        $_SESSION['setup'] = ['step' => 1, 'data' => []];
+        
+    } catch (Exception $e) {
+        // Silent fail - user can manually cleanup
+        error_log('Setup reset failed: ' . $e->getMessage());
+    }
+}
+
+/**
+ * Attempt to install Composer dependencies
+ */
+function installComposerDependencies(): array
+{
+    $rootDir = __DIR__ . '/../../../';
+    $logFile = $rootDir . 'logs/composer-install.log';
+    
+    // Check if exec functions are available
+    $disabledFunctions = explode(',', ini_get('disable_functions'));
+    $disabledFunctions = array_map('trim', $disabledFunctions);
+    
+    if (in_array('exec', $disabledFunctions) || in_array('shell_exec', $disabledFunctions)) {
+        return [
+            'success' => false,
+            'message' => 'PHP-Funktionen exec() und shell_exec() sind auf diesem Server deaktiviert. ' .
+                        'Bitte laden Sie vendor.zip manuell herunter und entpacken Sie es per FTP.'
+        ];
+    }
+    
+    // Ensure logs directory exists
+    if (!is_dir($rootDir . 'logs')) {
+        @mkdir($rootDir . 'logs', 0755, true);
+    }
+    
+    // Check if composer is available
+    $composerCommand = null;
+    
+    // Try composer.phar in project root first
+    if (file_exists($rootDir . 'composer.phar')) {
+        $composerCommand = 'composer.phar';
+    } else {
+        // Try global composer
+        $whichComposer = @shell_exec('which composer 2>/dev/null');
+        if (!empty($whichComposer)) {
+            $composerCommand = 'composer';
+        } else {
+            $whereComposer = @shell_exec('where composer 2>nul');
+            if (!empty($whereComposer)) {
+                $composerCommand = 'composer';
+            } else {
+                // Try to download composer.phar
+                try {
+                    $composerInstaller = @file_get_contents('https://getcomposer.org/installer');
+                    if ($composerInstaller) {
+                        file_put_contents($rootDir . 'composer-setup.php', $composerInstaller);
+                        $escapedRootDir = escapeshellarg($rootDir);
+                        @exec('php ' . escapeshellarg($rootDir . 'composer-setup.php') . ' --install-dir=' . $escapedRootDir . ' --filename=composer.phar 2>&1', $output, $returnVar);
+                        @unlink($rootDir . 'composer-setup.php');
+                        
+                        if ($returnVar === 0 && file_exists($rootDir . 'composer.phar')) {
+                            $composerCommand = 'composer.phar';
+                        }
+                    }
+                } catch (Exception $e) {
+                    return [
+                        'success' => false,
+                        'message' => 'Composer konnte nicht heruntergeladen werden: ' . $e->getMessage() . 
+                                   ' Bitte vendor.zip manuell installieren.'
+                    ];
+                }
+            }
+        }
+    }
+    
+    if (!$composerCommand) {
+        return [
+            'success' => false,
+            'message' => 'Composer ist auf diesem Server nicht verfügbar. ' .
+                        'Bitte laden Sie vendor.zip herunter und entpacken Sie es im Projekt-Root.'
+        ];
+    }
+    
+    // Run composer install with timeout handling (with proper escaping)
+    $escapedRootDir = escapeshellarg($rootDir);
+    $command = "cd {$escapedRootDir} && timeout 300 ";
+    
+    if ($composerCommand === 'composer.phar') {
+        $command .= "php " . escapeshellarg($rootDir . 'composer.phar');
+    } else {
+        $command .= "composer";
+    }
+    
+    $command .= " install --no-dev --optimize-autoloader --no-interaction 2>&1";
+    
+    // Try with timeout, fallback without
+    $output = [];
+    $returnVar = 0;
+    @exec($command, $output, $returnVar);
+    
+    // If timeout command doesn't exist, try without
+    if ($returnVar === 127 || empty($output)) {
+        $command = "cd {$escapedRootDir} && ";
+        
+        if ($composerCommand === 'composer.phar') {
+            $command .= "php " . escapeshellarg($rootDir . 'composer.phar');
+        } else {
+            $command .= "composer";
+        }
+        
+        $command .= " install --no-dev --optimize-autoloader --no-interaction 2>&1";
+        @exec($command, $output, $returnVar);
+    }
+    
+    // Log output
+    $logContent = "=== Composer Install Log ===\n";
+    $logContent .= "Date: " . date('Y-m-d H:i:s') . "\n";
+    $logContent .= "Command: {$command}\n";
+    $logContent .= "Return Code: {$returnVar}\n";
+    $logContent .= "Output:\n" . implode("\n", $output);
+    file_put_contents($logFile, $logContent);
+    
+    if ($returnVar === 0 && is_dir($rootDir . 'vendor') && file_exists($rootDir . 'vendor/autoload.php')) {
+        $packageCount = count(glob($rootDir . 'vendor/*', GLOB_ONLYDIR));
+        return [
+            'success' => true,
+            'message' => "✅ Composer Dependencies erfolgreich installiert! ({$packageCount} Pakete)"
+        ];
+    } else {
+        return [
+            'success' => false,
+            'message' => 'Composer Installation fehlgeschlagen (Exit-Code: ' . $returnVar . '). ' .
+                        'Details siehe logs/composer-install.log. Bitte vendor.zip manuell installieren.'
+        ];
+    }
+}
+
+/**
+ * Write production .htaccess that redirects to src/public/
+ */
+function writeProductionHtaccess(): void
+{
+    $htaccessContent = <<<'HTACCESS'
+# CI-Inbox Production Configuration
+# Generated by Setup Wizard
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # Redirect all requests to src/public/
+    RewriteCond %{REQUEST_URI} !^/src/public/
+    RewriteRule ^(.*)$ src/public/$1 [L]
+</IfModule>
+
+# Security: Protect sensitive directories
+<FilesMatch "^\.">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Prevent access to sensitive files
+RedirectMatch 403 /\.env
+RedirectMatch 403 /composer\.json
+RedirectMatch 403 /composer\.lock
+RedirectMatch 403 /vendor/
+RedirectMatch 403 /database/
+RedirectMatch 403 /logs/
+RedirectMatch 403 /tests/
+RedirectMatch 403 /src/(?!public/)
+
+# Disable directory listing
+Options -Indexes
+
+# Security Headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+HTACCESS;
+
+    file_put_contents(__DIR__ . '/../../../.htaccess', $htaccessContent);
+}
+
+/**
+ * Generate .env file content
+ */
+function generateEnvFile(array $data): string
+{
+    // Define variables BEFORE Heredoc (avoids concatenation errors and undefined key warnings)
+    $smtpEncryption = !empty($data['smtp']['ssl']) ? 'tls' : 'none';
+    $smtpFromEmail = $data['smtp']['from_email'] ?? $data['imap']['user'] ?? '';
+    $smtpFromName = $data['smtp']['from_name'] ?? 'CI-Inbox';
+    
+    return <<<ENV
+# CI-Inbox Environment Configuration
+# Generated by Setup Wizard
+
+# Application
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=http://localhost
+
+# Database
+DB_HOST={$data['db']['host']}
+DB_DATABASE={$data['db']['name']}
+DB_USERNAME={$data['db']['user']}
+DB_PASSWORD={$data['db']['pass']}
+
+# Security
+ENCRYPTION_KEY=
+
+# Logging
+LOG_LEVEL=info
+LOG_PATH=logs
+
+# Session
+SESSION_LIFETIME=120
+
+# SMTP (if configured)
+SMTP_HOST={$data['smtp']['host']}
+SMTP_PORT={$data['smtp']['port']}
+SMTP_USERNAME={$data['smtp']['user']}
+SMTP_PASSWORD={$data['smtp']['pass']}
+SMTP_ENCRYPTION={$smtpEncryption}
+SMTP_FROM_EMAIL={$smtpFromEmail}
+SMTP_FROM_NAME={$smtpFromName}
+ENV;
+}
+
+/**
+ * Check system requirements
+ */
+function checkRequirements(): array
+{
+    $requirements = [
+        'php_version' => [
+            'name' => 'PHP Version',
+            'required' => '8.1.0',
+            'current' => PHP_VERSION,
+            'met' => version_compare(PHP_VERSION, '8.1.0', '>='),
+        ],
+        'pdo_mysql' => [
+            'name' => 'PDO MySQL Extension',
+            'required' => 'Enabled',
+            'current' => extension_loaded('pdo_mysql') ? 'Enabled' : 'Disabled',
+            'met' => extension_loaded('pdo_mysql'),
+        ],
+        'imap' => [
+            'name' => 'IMAP Extension',
+            'required' => 'Enabled',
+            'current' => extension_loaded('imap') ? 'Enabled' : 'Disabled',
+            'met' => extension_loaded('imap'),
+        ],
+        'openssl' => [
+            'name' => 'OpenSSL Extension',
+            'required' => 'Enabled',
+            'current' => extension_loaded('openssl') ? 'Enabled' : 'Disabled',
+            'met' => extension_loaded('openssl'),
+        ],
+        'mbstring' => [
+            'name' => 'Mbstring Extension',
+            'required' => 'Enabled',
+            'current' => extension_loaded('mbstring') ? 'Enabled' : 'Disabled',
+            'met' => extension_loaded('mbstring'),
+        ],
+        'json' => [
+            'name' => 'JSON Extension',
+            'required' => 'Enabled',
+            'current' => extension_loaded('json') ? 'Enabled' : 'Disabled',
+            'met' => extension_loaded('json'),
+        ],
+        'curl' => [
+            'name' => 'cURL Extension',
+            'required' => 'Enabled',
+            'current' => extension_loaded('curl') ? 'Enabled' : 'Disabled',
+            'met' => extension_loaded('curl'),
+        ],
+        'writable_env' => [
+            'name' => '.env Schreibbar',
+            'required' => 'Ja',
+            'current' => is_writable(__DIR__ . '/../../../') ? 'Ja' : 'Nein',
+            'met' => is_writable(__DIR__ . '/../../../'),
+        ],
+        'writable_logs' => [
+            'name' => 'logs/ Schreibbar',
+            'required' => 'Ja',
+            'current' => is_dir(__DIR__ . '/../../../logs') && is_writable(__DIR__ . '/../../../logs') ? 'Ja' : 'Nein',
+            'met' => !is_dir(__DIR__ . '/../../../logs') || is_writable(__DIR__ . '/../../../logs'),
+        ],
+    ];
+    
+    return $requirements;
+}
+
+/**
+ * Check hosting environment suitability
+ * Returns comprehensive analysis with recommendations
+ */
+function checkHostingEnvironment(): array
+{
+    $checks = [];
+    
+    // 1. PHP Version (Critical)
+    $phpVersion = PHP_VERSION;
+    $checks['php_version'] = [
+        'name' => 'PHP Version',
+        'status' => version_compare($phpVersion, '8.1.0', '>=') ? 'ok' : 'error',
+        'value' => $phpVersion,
+        'required' => '8.1.0 oder höher',
+        'recommendation' => version_compare($phpVersion, '8.1.0', '<') 
+            ? 'Bitte aktivieren Sie PHP 8.1+ in Ihrem Hosting-Panel (z.B. cPanel → PHP-Version auswählen)'
+            : null,
+        'critical' => true
+    ];
+    
+    // 2. Memory Limit
+    $memoryLimit = ini_get('memory_limit');
+    $memoryBytes = return_bytes($memoryLimit);
+    $checks['memory_limit'] = [
+        'name' => 'PHP Memory Limit',
+        'status' => $memoryBytes >= 128 * 1024 * 1024 ? 'ok' : ($memoryBytes >= 64 * 1024 * 1024 ? 'warning' : 'error'),
+        'value' => $memoryLimit,
+        'required' => '128M empfohlen (64M minimal)',
+        'recommendation' => $memoryBytes < 128 * 1024 * 1024
+            ? 'Erhöhen Sie memory_limit in php.ini oder .htaccess: php_value memory_limit 128M'
+            : null,
+        'critical' => false
+    ];
+    
+    // 3. Max Execution Time
+    $maxExecTime = ini_get('max_execution_time');
+    $checks['max_execution_time'] = [
+        'name' => 'Max Execution Time',
+        'status' => $maxExecTime >= 60 || $maxExecTime == 0 ? 'ok' : 'warning',
+        'value' => $maxExecTime == 0 ? 'Unbegrenzt' : $maxExecTime . 's',
+        'required' => '60s empfohlen',
+        'recommendation' => $maxExecTime < 60 && $maxExecTime != 0
+            ? 'Für E-Mail-Verarbeitung empfohlen: php_value max_execution_time 60 in .htaccess'
+            : null,
+        'critical' => false
+    ];
+    
+    // 4. Upload Max Filesize (for attachments)
+    $uploadMax = ini_get('upload_max_filesize');
+    $uploadBytes = return_bytes($uploadMax);
+    $checks['upload_max_filesize'] = [
+        'name' => 'Upload Max Filesize',
+        'status' => $uploadBytes >= 10 * 1024 * 1024 ? 'ok' : 'warning',
+        'value' => $uploadMax,
+        'required' => '10M empfohlen',
+        'recommendation' => $uploadBytes < 10 * 1024 * 1024
+            ? 'Für größere E-Mail-Anhänge: php_value upload_max_filesize 10M'
+            : null,
+        'critical' => false
+    ];
+    
+    // 5. Composer/Vendor Directory
+    $vendorExists = is_dir(__DIR__ . '/../../../vendor');
+    
+    // Check if exec functions are disabled
+    $disabledFunctions = explode(',', ini_get('disable_functions'));
+    $disabledFunctions = array_map('trim', $disabledFunctions);
+    $execDisabled = in_array('exec', $disabledFunctions) || in_array('shell_exec', $disabledFunctions);
+    
+    $composerExists = false;
+    if (!$execDisabled) {
+        $composerExists = file_exists(__DIR__ . '/../../../composer.phar') || 
+                          @shell_exec('which composer 2>/dev/null') || 
+                          @shell_exec('where composer 2>nul');
+    }
+    
+    $checks['vendor_dir'] = [
+        'name' => 'Composer Dependencies',
+        'status' => $vendorExists ? 'ok' : 'error',
+        'value' => $vendorExists ? 'Installiert' : 'Fehlend',
+        'required' => 'vendor/ Verzeichnis vorhanden',
+        'recommendation' => !$vendorExists
+            ? ($execDisabled
+                ? 'PHP exec() Funktionen sind deaktiviert. Laden Sie vendor.zip herunter und entpacken Sie es manuell per FTP.'
+                : ($composerExists 
+                    ? 'Klicken Sie unten auf "Dependencies automatisch installieren" oder laden Sie vendor/ manuell hoch' 
+                    : 'Composer nicht verfügbar. Laden Sie vendor.zip herunter und entpacken Sie es im Projekt-Root'))
+            : null,
+        'critical' => true,
+        'can_autofix' => !$vendorExists && $composerExists && !$execDisabled,
+        'autofix_action' => 'install_composer_dependencies'
+    ];
+    
+    // 6. Writable Directories
+    $logsWritable = is_dir(__DIR__ . '/../../../logs') && is_writable(__DIR__ . '/../../../logs');
+    $checks['writable_logs'] = [
+        'name' => 'Logs Verzeichnis beschreibbar',
+        'status' => $logsWritable ? 'ok' : 'warning',
+        'value' => $logsWritable ? 'Ja' : 'Nein',
+        'required' => 'Schreibrechte erforderlich',
+        'recommendation' => !$logsWritable
+            ? 'Setzen Sie Schreibrechte: chmod 755 logs/ oder über FTP/cPanel'
+            : null,
+        'critical' => false
+    ];
+    
+    // 7. Database Support
+    $mysqlAvailable = extension_loaded('pdo_mysql') || extension_loaded('mysqli');
+    $checks['database'] = [
+        'name' => 'MySQL/MariaDB Support',
+        'status' => $mysqlAvailable ? 'ok' : 'error',
+        'value' => $mysqlAvailable ? 'Verfügbar' : 'Nicht verfügbar',
+        'required' => 'PDO MySQL Extension',
+        'recommendation' => !$mysqlAvailable
+            ? 'Aktivieren Sie die MySQL-Extension in Ihrem Hosting-Panel'
+            : null,
+        'critical' => true
+    ];
+    
+    // 8. IMAP Extension
+    $imapAvailable = extension_loaded('imap');
+    $checks['imap'] = [
+        'name' => 'IMAP Extension',
+        'status' => $imapAvailable ? 'ok' : 'error',
+        'value' => $imapAvailable ? 'Aktiviert' : 'Deaktiviert',
+        'required' => 'Für E-Mail-Empfang erforderlich',
+        'recommendation' => !$imapAvailable
+            ? 'KRITISCH: IMAP-Extension muss aktiviert werden (oft in Hosting-Panel verfügbar)'
+            : null,
+        'critical' => true
+    ];
+    
+    // 9. Safe Mode (legacy, should be off)
+    $safeMode = ini_get('safe_mode');
+    $checks['safe_mode'] = [
+        'name' => 'PHP Safe Mode',
+        'status' => !$safeMode ? 'ok' : 'error',
+        'value' => $safeMode ? 'Aktiviert' : 'Deaktiviert',
+        'required' => 'Deaktiviert',
+        'recommendation' => $safeMode
+            ? 'Safe Mode ist veraltet und blockiert wichtige Funktionen. Kontaktieren Sie Ihren Hoster.'
+            : null,
+        'critical' => true
+    ];
+    
+    // 10. Disk Space (estimate)
+    $diskFree = @disk_free_space(__DIR__ . '/../../../');
+    $checks['disk_space'] = [
+        'name' => 'Verfügbarer Speicherplatz',
+        'status' => $diskFree === false || $diskFree > 100 * 1024 * 1024 ? 'ok' : 'warning',
+        'value' => $diskFree !== false ? format_bytes($diskFree) : 'Unbekannt',
+        'required' => '100 MB empfohlen',
+        'recommendation' => $diskFree !== false && $diskFree < 100 * 1024 * 1024
+            ? 'Wenig Speicherplatz verfügbar. CI-Inbox benötigt ca. 100-150 MB (inkl. vendor/)'
+            : null,
+        'critical' => false
+    ];
+    
+    // 11. Disabled Functions (Security Check)
+    $disabledFuncs = ini_get('disable_functions');
+    $disabledArray = $disabledFuncs ? array_map('trim', explode(',', $disabledFuncs)) : [];
+    $criticalDisabled = array_intersect($disabledArray, ['exec', 'shell_exec', 'proc_open', 'popen']);
+    
+    $checks['disabled_functions'] = [
+        'name' => 'PHP Disabled Functions',
+        'status' => empty($criticalDisabled) ? 'ok' : 'warning',
+        'value' => empty($criticalDisabled) ? 'Keine kritischen' : implode(', ', $criticalDisabled) . ' deaktiviert',
+        'required' => 'exec, shell_exec für Auto-Installation',
+        'recommendation' => !empty($criticalDisabled)
+            ? 'Automatische Composer-Installation nicht möglich. Bitte verwenden Sie vendor.zip für manuelle Installation.'
+            : null,
+        'critical' => false
+    ];
+    
+    return $checks;
+}
+
+/**
+ * Convert PHP ini size notation to bytes
+ */
+function return_bytes(string $val): int
+{
+    $val = trim($val);
+    $last = strtolower($val[strlen($val)-1]);
+    $val = (int)$val;
+    
+    switch($last) {
+        case 'g': $val *= 1024;
+        case 'm': $val *= 1024;
+        case 'k': $val *= 1024;
+    }
+    
+    return $val;
+}
+
+/**
+ * Format bytes to human-readable
+ */
+function format_bytes(int $bytes, int $precision = 2): string
+{
+    $units = ['B', 'KB', 'MB', 'GB'];
+    $bytes = max($bytes, 0);
+    $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
+    $pow = min($pow, count($units) - 1);
+    $bytes /= pow(1024, $pow);
+    
+    return round($bytes, $precision) . ' ' . $units[$pow];
+}
+
+$requirements = checkRequirements();
+$allRequirementsMet = !in_array(false, array_column($requirements, 'met'));
+
+$hostingChecks = checkHostingEnvironment();
+$criticalIssues = array_filter($hostingChecks, fn($check) => $check['status'] === 'error' && $check['critical']);
+$hostingReady = empty($criticalIssues);
+
+// Setup steps
+$steps = [
+    1 => 'Hosting-Check',
+    2 => 'Anforderungen',
+    3 => 'Datenbank',
+    4 => 'Admin-Account',
+    5 => 'E-Mail (IMAP/SMTP)',
+    6 => 'Abschluss',
+    7 => 'Fertig'
+];
+?>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CI-Inbox Setup</title>
+    <link rel="stylesheet" href="setup.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 CI-Inbox Setup</h1>
+            <p>Willkommen! Lassen Sie uns Ihre Installation einrichten.</p>
+        </div>
+        
+        <div class="steps">
+            <?php foreach ($steps as $num => $name): ?>
+                <div class="step <?= $num == $currentStep ? 'active' : ($num < $currentStep ? 'completed' : '') ?>">
+                    <div class="step-number"><?= $num < $currentStep ? '✓' : $num ?></div>
+                    <div><?= htmlspecialchars($name) ?></div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+        
+        <div class="content">
+            <?php if ($error): ?>
+                <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
+            <?php endif; ?>
+            
+            <?php if ($success): ?>
+                <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>
+            <?php endif; ?>
+            
+            <?php if (isset($_GET['installed'])): ?>
+                <div class="alert alert-success">✅ Dependencies erfolgreich installiert! Bitte prüfen Sie die Ergebnisse unten.</div>
+            <?php endif; ?>
+            
+            <?php if ($currentStep == 1): ?>
+                <!-- Step 1: Hosting Environment Check -->
+                <h2 class="section-title">🌐 Hosting-Umgebung prüfen</h2>
+                <p class="section-desc">
+                    Wir überprüfen, ob Ihre Hosting-Umgebung für CI-Inbox geeignet ist.
+                    <?php if (!$hostingReady): ?>
+                        <strong style="color: #ef4444;">⚠️ Kritische Probleme gefunden - Installation kann fehlschlagen!</strong>
+                    <?php elseif (count(array_filter($hostingChecks, fn($c) => $c['status'] === 'warning')) > 0): ?>
+                        <strong style="color: #f59e0b;">⚠️ Einige Warnungen - Installation möglich, aber Performance könnte eingeschränkt sein.</strong>
+                    <?php else: ?>
+                        <strong style="color: #10b981;">✓ Ihre Umgebung ist für CI-Inbox geeignet!</strong>
+                    <?php endif; ?>
+                </p>
+                
+                <table class="requirements-table">
+                    <thead>
+                        <tr>
+                            <th>Prüfpunkt</th>
+                            <th>Aktuell</th>
+                            <th>Empfohlen</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($hostingChecks as $check): ?>
+                        <tr>
+                            <td><strong><?= htmlspecialchars($check['name']) ?></strong></td>
+                            <td><?= htmlspecialchars($check['value']) ?></td>
+                            <td><?= htmlspecialchars($check['required']) ?></td>
+                            <td class="<?= $check['status'] === 'ok' ? 'status-ok' : ($check['status'] === 'warning' ? 'status-warning' : 'status-error') ?>">
+                                <?= $check['status'] === 'ok' ? '✓ OK' : ($check['status'] === 'warning' ? '⚠ Warnung' : '✗ Fehler') ?>
+                            </td>
+                        </tr>
+                        <?php if ($check['recommendation']): ?>
+                        <tr style="background: #fef3c7; border-left: 4px solid #f59e0b;">
+                            <td colspan="4" style="padding: 12px; font-size: 13px;">
+                                <strong>💡 Empfehlung:</strong> <?= htmlspecialchars($check['recommendation']) ?>
+                            </td>
+                        </tr>
+                        <?php endif; ?>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+                
+                <?php if (!$hostingReady): ?>
+                <div class="alert alert-error" style="margin-top: 20px;">
+                    <strong>⛔ Installation blockiert</strong><br>
+                    Bitte beheben Sie die kritischen Fehler oben, bevor Sie fortfahren. 
+                    Kontaktieren Sie ggf. Ihren Hosting-Anbieter für Hilfe bei der PHP-Konfiguration.
+                </div>
+                <?php endif; ?>
+                
+                <form method="POST">
+                    <div class="actions">
+                        <div></div>
+                        <button type="submit" class="btn btn-primary" <?= !$hostingReady ? 'disabled' : '' ?>>
+                            Weiter zu System-Anforderungen →
+                        </button>
+                    </div>
+                </form>
+                
+            <?php elseif ($currentStep == 2): ?>
+                <!-- Step 2: Requirements -->
+                <h2 class="section-title">Systemanforderungen</h2>
+                <p class="section-desc">Überprüfung der erforderlichen PHP-Erweiterungen und Berechtigungen.</p>
+                
+                <table class="requirements-table">
+                    <thead>
+                        <tr>
+                            <th>Anforderung</th>
+                            <th>Benötigt</th>
+                            <th>Aktuell</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($requirements as $req): ?>
+                        <tr>
+                            <td><?= htmlspecialchars($req['name']) ?></td>
+                            <td><?= htmlspecialchars($req['required']) ?></td>
+                            <td><?= htmlspecialchars($req['current']) ?></td>
+                            <td class="<?= $req['met'] ? 'status-ok' : 'status-error' ?>">
+                                <?= $req['met'] ? '✓ OK' : '✗ Fehlt' ?>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+                
+                <form method="POST">
+                    <div class="actions">
+                        <a href="?step=1" class="btn btn-secondary">← Zurück</a>
+                        <button type="submit" class="btn btn-primary" <?= !$allRequirementsMet ? 'disabled' : '' ?>>
+                            Weiter →
+                        </button>
+                    </div>
+                </form>
+                
+            <?php elseif ($currentStep == 3): ?>
+                <!-- Step 2: Database -->
+                <h2 class="section-title">Datenbank-Konfiguration</h2>
+                <p class="section-desc">Geben Sie Ihre MySQL-Datenbankdaten ein.</p>
+                
+                <form method="POST">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Datenbank-Host</label>
+                            <input type="text" name="db_host" value="localhost" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Datenbank-Name</label>
+                            <input type="text" name="db_name" value="ci_inbox" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Benutzername</label>
+                            <input type="text" name="db_user" value="root" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Passwort</label>
+                            <input type="password" name="db_pass">
+                        </div>
+                    </div>
+                    
+                    <!-- K2: Checkbox für Shared Hosting -->
+                    <div class="form-group" style="margin: 20px 0;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" name="db_exists" id="db_exists" style="width: auto; margin: 0;">
+                            <span>Datenbank existiert bereits (Skip CREATE DATABASE)</span>
+                        </label>
+                        <small style="color: #6b7280; margin-left: 28px; display: block; margin-top: 4px;">
+                            💡 Für Shared Hosting ohne CREATE DATABASE Rechte
+                        </small>
+                    </div>
+                    
+                    <div class="actions">
+                        <a href="?step=1" class="btn btn-secondary">← Zurück</a>
+                        <button type="submit" class="btn btn-primary">Weiter →</button>
+                    </div>
+                </form>
+                
+            <?php elseif ($currentStep == 4): ?>
+                <!-- Step 4: Admin Account -->
+                <h2 class="section-title">Administrator-Account</h2>
+                <p class="section-desc">Erstellen Sie den ersten Administrator-Account.</p>
+                
+                <form method="POST" id="adminAccountForm">
+                    <div class="form-group">
+                        <label>Name</label>
+                        <input type="text" name="admin_name" id="admin_name" placeholder="Max Mustermann" required>
+                    </div>
+                    <div class="form-group">
+                        <label>E-Mail-Adresse</label>
+                        <input type="email" name="admin_email" id="admin_email" placeholder="admin@example.com" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Passwort (Login)</label>
+                            <input type="password" name="admin_password" id="admin_password" minlength="8" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Passwort bestätigen</label>
+                            <input type="password" name="admin_password_confirm" minlength="8" required>
+                        </div>
+                    </div>
+                    
+                    <!-- Optional: Personal IMAP Account für Admin anlegen -->
+                    <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 16px; margin: 20px 0;" id="personal-imap-section">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                            <input type="checkbox" id="create_admin_personal_imap" name="create_admin_personal_imap" style="width: auto; margin: 0;">
+                            <label for="create_admin_personal_imap" style="margin: 0; cursor: pointer; font-weight: 500;">
+                                📬 Persönlichen IMAP-Account für diese E-Mail anlegen
+                            </label>
+                        </div>
+                        <p style="margin: 0 0 10px 0; font-size: 13px; color: #475569; padding-left: 30px;">
+                            Server-Konfiguration wird automatisch erkannt und im nächsten Schritt für die Shared Inbox vorausgefüllt.
+                        </p>
+                        
+                        <!-- IMAP Password field (only shown when checkbox active) -->
+                        <div id="admin-imap-password-field" style="display: none; padding-left: 30px; margin-top: 10px;">
+                            <label style="display: block; margin-bottom: 5px; font-size: 14px; font-weight: 500;">IMAP-Passwort (für E-Mail-Server)</label>
+                            <input type="password" name="admin_imap_password" id="admin_imap_password" placeholder="Falls abweichend vom Login-Passwort" style="max-width: 400px;">
+                            <small style="display: block; margin-top: 4px; color: #6b7280;">
+                                💡 Leer lassen, wenn IMAP-Passwort = Login-Passwort
+                            </small>
+                            
+                            <!-- Test Connection Button -->
+                            <div style="margin-top: 15px;">
+                                <button type="button" class="btn btn-primary" id="test-admin-imap-btn" style="font-size: 13px; padding: 8px 16px;">
+                                    <span id="admin-btn-text">🔍 IMAP-Verbindung testen</span>
+                                    <span id="admin-btn-spinner" style="display: none;">⏳ Teste...</span>
+                                </button>
+                            </div>
+                            
+                            <!-- Test Status Message -->
+                            <div id="admin-test-status" style="display: none; margin-top: 10px; padding: 10px; border-radius: 6px; font-size: 13px;"></div>
+                            
+                            <!-- Hidden fields to store discovered config -->
+                            <input type="hidden" name="admin_imap_host" id="admin_imap_host">
+                            <input type="hidden" name="admin_imap_port" id="admin_imap_port">
+                            <input type="hidden" name="admin_imap_ssl" id="admin_imap_ssl">
+                        </div>
+                    </div>
+                    
+                    <!-- JavaScript moved to setup.js -->
+                    
+                    <div class="actions">
+                        <a href="?step=3" class="btn btn-secondary">← Zurück</a>
+                        <button type="submit" class="btn btn-primary">Weiter →</button>
+                    </div>
+                </form>
+                
+            <?php elseif ($currentStep == 5): ?>
+                <!-- Step 5: IMAP/SMTP -->
+                <h2 class="section-title">E-Mail-Konfiguration</h2>
+                <p class="section-desc">Konfigurieren Sie IMAP für den E-Mail-Empfang und SMTP für den Versand. Sie können diesen Schritt überspringen und später konfigurieren.</p>
+                
+                <form method="POST">
+                    <h3 style="font-size: 16px; margin-bottom: 15px; color: #374151;">IMAP (Empfang)</h3>
+                    
+                    <div id="imap-test-result" style="display: none; padding: 15px; border-radius: 8px; margin-bottom: 20px;"></div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>E-Mail für Test</label>
+                            <input type="email" id="imap_email" name="imap_email" placeholder="user@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Passwort für Test</label>
+                            <input type="password" id="imap_pass_test" placeholder="Password">
+                        </div>
+                    </div>
+                    <button type="button" id="test-imap-btn" class="btn btn-secondary" style="margin-bottom: 20px;">
+                        <span class="btn-text">📡 IMAP-Verbindung testen</span>
+                        <span class="btn-spinner" style="display: none;">⏳</span>
+                    </button>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>IMAP-Server</label>
+                            <input type="text" id="imap_host" name="imap_host" placeholder="imap.example.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Port</label>
+                            <input type="number" id="imap_port" name="imap_port" value="993">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Benutzername/E-Mail</label>
+                            <input type="text" id="imap_user" name="imap_user" placeholder="user@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Passwort</label>
+                            <input type="password" name="imap_pass">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-group">
+                            <input type="checkbox" id="imap_ssl" name="imap_ssl" checked> SSL/TLS verwenden
+                        </label>
+                    </div>
+                    
+                    <h3 style="font-size: 16px; margin: 25px 0 15px; color: #374151;">SMTP (Versand)</h3>
+                    
+                    <div id="smtp-test-result" style="display: none; padding: 15px; border-radius: 8px; margin-bottom: 20px;"></div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>SMTP-Server</label>
+                            <input type="text" id="smtp_host" name="smtp_host" placeholder="smtp.example.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Port</label>
+                            <input type="number" id="smtp_port" name="smtp_port" value="587">
+                        </div>
+                    </div>
+                    <button type="button" id="test-smtp-btn" class="btn btn-secondary" style="margin-bottom: 20px;">
+                        <span class="btn-text">📧 SMTP-Verbindung testen</span>
+                        <span class="btn-spinner" style="display: none;">⏳</span>
+                    </button>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Benutzername</label>
+                            <input type="text" name="smtp_user" placeholder="user@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Passwort</label>
+                            <input type="password" name="smtp_pass">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Absender-E-Mail</label>
+                            <input type="email" name="smtp_from_email" placeholder="noreply@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Absender-Name</label>
+                            <input type="text" name="smtp_from_name" value="CI-Inbox">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-group">
+                            <input type="checkbox" id="smtp_ssl" name="smtp_ssl" checked> SSL/TLS verwenden
+                        </label>
+                    </div>
+                    
+                    <div class="actions">
+                        <a href="?step=4" class="btn btn-secondary">← Zurück</a>
+                        <div>
+                            <button type="submit" class="btn btn-primary">Weiter →</button>
+                        </div>
+                    </div>
+                </form>
+                
+            <?php elseif ($currentStep == 6): ?>
+                <!-- Step 6: Confirm -->
+                <h2 class="section-title">Installation abschließen</h2>
+                <p class="section-desc">Überprüfen Sie Ihre Einstellungen und klicken Sie auf "Installation starten".</p>
+                
+                <div style="background: #f9fafb; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                    <h4 style="margin-bottom: 10px;">Zusammenfassung:</h4>
+                    <p><strong>Datenbank:</strong> <?= htmlspecialchars($_SESSION['setup']['data']['db']['name'] ?? '-') ?> @ <?= htmlspecialchars($_SESSION['setup']['data']['db']['host'] ?? '-') ?></p>
+                    <p><strong>Admin:</strong> <?= htmlspecialchars($_SESSION['setup']['data']['admin']['email'] ?? '-') ?></p>
+                    <p><strong>IMAP:</strong> <?= !empty($_SESSION['setup']['data']['imap']['host']) ? htmlspecialchars($_SESSION['setup']['data']['imap']['host']) : 'Nicht konfiguriert' ?></p>
+                    <p><strong>SMTP:</strong> <?= !empty($_SESSION['setup']['data']['smtp']['host']) ? htmlspecialchars($_SESSION['setup']['data']['smtp']['host']) : 'Nicht konfiguriert' ?></p>
+                </div>
+                
+                <form method="POST">
+                    <div class="actions">
+                        <a href="?step=5" class="btn btn-secondary">← Zurück</a>
+                        <button type="submit" class="btn btn-success">🚀 Installation starten</button>
+                    </div>
+                </form>
+                
+            <?php elseif ($currentStep == 7): ?>
+                <!-- Step 7: Complete -->
+                
+                <?php if (!empty($error)): ?>
+                    <!-- K4: Error State mit Reset-Button -->
+                    <div style="text-align: center; padding: 40px 0;">
+                        <div class="error-icon" style="width: 80px; height: 80px; margin: 0 auto 20px; color: #dc2626;">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </div>
+                        <h2 class="section-title" style="text-align: center; color: #dc2626;">⚠️ Setup fehlgeschlagen</h2>
+                        <div class="error-box" style="text-align: left; margin: 20px auto; max-width: 600px;">
+                            <p><strong>Fehler:</strong> <?= htmlspecialchars($error) ?></p>
+                        </div>
+                        
+                        <div style="margin-top: 30px;">
+                            <a href="<?= getBasePath() ?>/setup/?action=reset" 
+                               class="btn btn-danger"
+                               onclick="return confirm('⚠️ Setup zurücksetzen? Alle bisherigen Daten (.env + DB-Tabellen) werden gelöscht.')">
+                                🔄 Setup zurücksetzen
+                            </a>
+                            <p style="margin-top: 10px; font-size: 13px; color: #6b7280;">
+                                Nach dem Reset können Sie das Setup neu starten.
+                            </p>
+                        </div>
+                        
+                        <?php if (!empty($_SESSION['setup']['migration_log'])): ?>
+                        <div style="margin: 30px auto; text-align: left; max-width: 800px;">
+                            <h3 style="font-size: 14px; color: #6b7280; margin-bottom: 10px;">Migration Log (Debug):</h3>
+                            <div style="background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 12px; max-height: 300px; overflow-y: auto; text-align: left;">
+                                <?php foreach ($_SESSION['setup']['migration_log'] as $logEntry): ?>
+                                    <div style="margin: 3px 0;"><?= htmlspecialchars($logEntry) ?></div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                <?php else: ?>
+                    <!-- Success State -->
+                    <div style="text-align: center; padding: 40px 0;">
+                        <div class="success-icon">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                        </div>
+                        <h2 class="section-title" style="text-align: center;">Installation abgeschlossen!</h2>
+                        <p class="section-desc" style="text-align: center;">
+                            CI-Inbox wurde erfolgreich installiert. Sie können sich jetzt mit Ihrem Administrator-Account anmelden.
+                        </p>
+                        
+                        <?php if (!empty($_SESSION['setup']['migration_log'])): ?>
+                        <div style="margin: 30px 0; text-align: left;">
+                            <h3 style="font-size: 14px; color: #6b7280; margin-bottom: 10px;">Datenbank-Migrationen:</h3>
+                            <div style="background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 12px; max-height: 300px; overflow-y: auto; text-align: left;">
+                                <?php foreach ($_SESSION['setup']['migration_log'] as $logEntry): ?>
+                                    <div style="margin: 3px 0;"><?= htmlspecialchars($logEntry) ?></div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <a href="/login.php" class="btn btn-success" style="margin-top: 20px;">
+                            Zur Anmeldung →
+                        </a>
+                    </div>
+                <?php endif; ?>
+                
+                <?php 
+                // Clear setup session only on success
+                if (empty($error)) {
+                    unset($_SESSION['setup']);
+                }
+                ?>
+            <?php endif; ?>
+        </div>
+    </div>
+    
+    <script>
+    // IMAP Test Button Handler
+    document.getElementById('test-imap-btn')?.addEventListener('click', async function(e) {
+        e.preventDefault();
+        
+        const btn = this;
+        const btnText = btn.querySelector('.btn-text');
+        const btnSpinner = btn.querySelector('.btn-spinner');
+        const resultDiv = document.getElementById('imap-test-result');
+        
+        const email = document.getElementById('imap_email').value;
+        const password = document.getElementById('imap_pass_test').value;
+        
+        if (!email || !password) {
+            resultDiv.style.display = 'block';
+            resultDiv.style.background = '#fef2f2';
+            resultDiv.style.border = '1px solid #fca5a5';
+            resultDiv.style.color = '#991b1b';
+            resultDiv.innerHTML = '❌ Bitte E-Mail und Passwort eingeben';
+            return;
+        }
+        
+        // Show loading state
+        btnText.style.display = 'none';
+        btnSpinner.style.display = 'inline';
+        btn.disabled = true;
+        resultDiv.style.display = 'none';
+        
+        try {
+            const formData = new FormData();
+            formData.append('email', email);
+            formData.append('password', password);
+            
+            const response = await fetch('/setup/?ajax=test_imap', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                // Update form with discovered values
+                if (result.host) document.getElementById('imap_host').value = result.host;
+                if (result.port) document.getElementById('imap_port').value = result.port;
+                if (result.ssl !== undefined) document.getElementById('imap_ssl').checked = result.ssl;
+                if (result.username) document.getElementById('imap_user').value = result.username;
+                
+                // Also prefill SMTP host
+                if (result.host) {
+                    const smtpHost = result.host.replace(/^imap\./, 'smtp.');
+                    document.getElementById('smtp_host').value = smtpHost;
+                }
+                
+                // Show success message
+                resultDiv.style.display = 'block';
+                resultDiv.style.background = '#d1fae5';
+                resultDiv.style.border = '1px solid #86efac';
+                resultDiv.style.color = '#065f46';
+                
+                let message = '✅ IMAP-Verbindung erfolgreich!<br>';
+                message += `<strong>Server:</strong> ${result.host}:${result.port} ${result.ssl ? '(SSL)' : ''}`;
+                
+                if (result.certificate_fix) {
+                    message += `<br><em style="color: #1e40af;">ℹ️ Hostname korrigiert: ${result.original_host} → ${result.host}</em>`;
+                }
+                
+                resultDiv.innerHTML = message;
+            } else {
+                // Show error message
+                resultDiv.style.display = 'block';
+                resultDiv.style.background = '#fee2e2';
+                resultDiv.style.border = '1px solid #fca5a5';
+                resultDiv.style.color = '#991b1b';
+                resultDiv.innerHTML = '❌ ' + (result.error || 'Verbindung fehlgeschlagen');
+            }
+        } catch (error) {
+            resultDiv.style.display = 'block';
+            resultDiv.style.background = '#fee2e2';
+            resultDiv.style.border = '1px solid #fca5a5';
+            resultDiv.style.color = '#991b1b';
+            resultDiv.innerHTML = '❌ Fehler beim Testen: ' + error.message;
+        } finally {
+            // Reset button state
+            btnText.style.display = 'inline';
+            btnSpinner.style.display = 'none';
+            btn.disabled = false;
+        }
+    });
+    </script>
+    
+    <!-- JavaScript moved to setup.js -->
+    <script src="setup.js"></script>
+</body>
+</html>
