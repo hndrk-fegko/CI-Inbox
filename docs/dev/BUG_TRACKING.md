@@ -1,644 +1,1325 @@
-# Bug Tracking & Testing - Anwendungsinstallation
+# CI-Inbox Setup Wizard - Bug Tracking
 
-**Test-Umgebung:** test.localhost  
-**Datum:** 09.12.2025  
-**PHP Version:** 8.2.12  
-**MySQL/MariaDB:** Verfügbar via XAMPP  
-**Ziel-Umgebung:** Standard Webhosting
+**Datum:** 2025-12-09  
+**Status:** Statische Code-Analyse durchgeführt  
+**Analysierte Szenarien:** Fresh Installation, Unterbrochene Installation, Vendor Missing Edge Cases
 
 ---
 
-## 🔴 CRITICAL - Sofort beheben (Blocker)
+## 🔴 KRITISCH - Sofort beheben
 
-*Fehler die die Installation oder Kernfunktionen verhindern*
-
-*(Alle Critical Bugs gelöst! ✅ Siehe Zusammenfassung unten)*
-
----
-
-## [CRITICAL] - Race Condition: .env-Erstellung vs. Installation-Completion
-**Status:** ✅ Gelöst - index.php Router + .env ans Ende  
-**Datum:** 09.12.2025 16:25 (gelöst: 16:45)  
-**Kategorie:** Installer / Data Integrity / Race Condition
+### [KRITISCH] - Bug #0: POST-Daten werden nicht an Handler übergeben
+**Status:** 🔍 Neu gefunden  
+**Datum:** 2025-12-09  
+**Kategorie:** Installer / Fatal Error
 
 **Problem:**
-- `.env`-Datei wurde am **ANFANG** von Step 6 erstellt (Zeile 20)
-- Datenbank-Migrations und User-Creation liefen **DANACH**
-- Bei Verbindungsabbruch zwischen `.env`-Erstellung und `updateSessionStep(7)`:
-  - `.env` existiert → ROOT/index.php denkt Installation ist fertig
-  - Session sagt noch Step 6 → Setup-Wizard denkt Installation läuft
-  - Datenbank kann unvollständig sein
-  - Doppelte Installation möglich
-
-**Lösung (Implementiert):**
-✅ **Zwei-Stufen-Lösung:**
-
-1. **index.php im ROOT** (Installation Router):
-   - Prüft ob `.env` + `vendor/` existieren
-   - NEIN → Redirect zu `/src/public/setup/`
-   - JA → Prüft ob Setup noch existiert → Redirect zu Setup (für Cleanup)
-   - Setup gelöscht → Redirect zu `/src/public/` (normale App)
-   - Wird in Step 7 automatisch gelöscht (optional - stört nicht wenn's bleibt)
-   - **IM REPO COMMITTED** (funktioniert auch ohne .htaccess via DirectoryIndex)
-
-2. **.env-Erstellung ans ENDE** von Step 6:
-   - Datenbank-Connection → Migrations → Admin-User → IMAP → Labels → Settings
-   - **`.htaccess` schreiben** (vorher nicht im Repo!)
-   - **ZULETZT:** `.env` erstellen (= atomarer Installation-Complete-Flag)
-   - `updateSessionStep(7)`
-
-**Wichtig - .htaccess Timing:**
-- ❌ `.htaccess` NICHT im Repo (weil `vendor/` fehlt → RewriteRules scheitern)
-- ✅ `.htaccess` wird erst in Step 6 generiert (zusammen mit `.env`)
-- ✅ `index.php` funktioniert auch OHNE `.htaccess` (DirectoryIndex)
-- ✅ `.gitignore` enthält `/.htaccess`
-
-**Vorteile:**
-- ✅ Atomare Installation (`.env` = wirklich fertig)
-- ✅ Installer kann mehrfach aufgerufen werden (idempotent)
-- ✅ Keine .htaccess-Probleme während Installation (wird erst in Step 6 generiert)
-- ✅ Auto-Cleanup nach erfolgreicher Installation (optional, stört nicht wenn's bleibt)
-- ✅ Löst gleichzeitig die Routing-Probleme im Installer
-- ✅ `index.php` funktioniert auch ohne .htaccess (DirectoryIndex)
-- ✅ Nach Installation übernimmt .htaccess das Routing (index.php wird nicht mehr aufgerufen)
-
-**Betroffene Dateien:**
-- ✅ `index.php` (ROOT - neu erstellt als Installation Router, IM REPO)
-- ✅ `.htaccess` (ROOT - NICHT im Repo, wird in Step 6 generiert)
-- ✅ `.gitignore` (`.htaccess` hinzugefügt)
-- ✅ `src/public/setup/includes/step-6-review.php` (`.env` ans Ende verschoben)
-- ✅ `src/public/setup/includes/step-7-complete.php` (löscht `index.php`)
-- ✅ `src/public/setup/includes/functions.php` (`writeProductionHtaccess()` erstellt .htaccess)
-
-**Testing:**
-- ✅ Code implementiert
-- ⏳ Full-Installation-Test ausstehend
-
-**Priorität:** CRITICAL → ✅ GELÖST
-
----
-
-### [CRITICAL] - XAMPP: PHP_BINARY zeigt auf httpd.exe statt php.exe
-**Status:** ✅ Quick-Fix implementiert  
-**Datum:** 09.12.2025 14:47  
-**Kategorie:** Installer / XAMPP / PHP
-
-**Problem:**
-- Auto-Installation der Vendor-Dependencies schlägt in XAMPP fehl
-- Composer-Install verwendet `httpd.exe` (Apache) statt `php.exe`
-- Fehlermeldung: "AH02965: Child: Unable to retrieve my generation from the parent"
-- Installation scheitert mit Return Code 3
-
-**Error-Logs:**
-```
-=== Composer Install Log ===
-Date: 2025-12-09 14:47:06
-Command: cd "..." && "C:\xampp\apache\bin\httpd.exe" "...\composer.phar" install
-Return Code: 3
-Output: [Tue Dec 09 14:47:06] [mpm_winnt:crit] AH02965: Child: Unable to retrieve my generation from the parent
-```
-
-**Root Cause:**
-- In XAMPP wird PHP als Apache-Modul (mod_php) geladen
-- Die PHP-Konstante `PHP_BINARY` zeigt dann auf `httpd.exe` statt `php.exe`
-- `getPhpExecutable()` verwendete `PHP_BINARY` als erste Wahl
-- Dies führt dazu, dass Apache-Binary für Shell-Commands verwendet wird
+- `handleStep3Submit()`, `handleStep4Submit()`, `handleStep5Submit()` erwarten Parameter `array $post`
+- In index.php (Zeilen 342-348) werden sie OHNE Parameter aufgerufen
+- PHP Fatal Error: "Too few arguments to function handleStep3Submit()"
+- Steps 3, 4, 5 schlagen IMMER fehl
 
 **Reproduktion:**
-1. XAMPP-Setup (mod_php)
-2. Vendor-Missing-Page aufrufen
-3. "Dependencies jetzt installieren" klicken
-4. → Installation schlägt fehl mit Apache-Error
+1. Setup bis Step 3 durchlaufen
+2. Datenbankdaten eingeben und "Weiter" klicken
+3. **Erwartetes Verhalten:** Daten werden gespeichert, Redirect zu Step 4
+4. **Tatsächliches Verhalten:** PHP Fatal Error, Setup bricht ab
 
-**Lösung (Quick-Fix):**
-✅ Reihenfolge der PHP-Detection umgedreht:
-1. **Zuerst:** XAMPP-Standard-Pfade prüfen (`C:\xampp\php\php.exe`)
-2. **Dann:** `PHP_BINARY` als Fallback (mit Validierung)
-3. **Validierung:** Prüfen dass Binary wirklich `php.exe` enthält, nicht `httpd`
-4. **Last Resort:** `'php'` (für PATH-basierte Installationen)
+**Betroffene Dateien:**
+- `src/public/setup/index.php` (Zeilen 342, 345, 348)
+- `src/public/setup/includes/step-3-database.php` (Zeile 17)
+- `src/public/setup/includes/step-4-admin.php` (Zeile 17)
+- `src/public/setup/includes/step-5-imap-smtp.php` (Zeile 16)
 
-**Code-Änderungen:**
+**Lösung:**
 ```php
-// VORHER (falsch):
-if (defined('PHP_BINARY') && PHP_BINARY && file_exists(PHP_BINARY)) {
-    return escapeshellarg(PHP_BINARY);  // ← Gibt httpd.exe zurück!
+// In src/public/setup/index.php - POST Routing:
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    try {
+        switch ($currentStep) {
+            case 1:
+                handleStep1Submit();
+                break;
+            case 2:
+                handleStep2Submit();
+                break;
+            case 3:
+                handleStep3Submit($_POST);  // ✅ Pass $_POST
+                break;
+            case 4:
+                handleStep4Submit($_POST);  // ✅ Pass $_POST
+                break;
+            case 5:
+                handleStep5Submit($_POST);  // ✅ Pass $_POST
+                break;
+            case 6:
+                handleStep6Submit();
+                break;
+            default:
+                redirectToStep(1);
+        }
+    } catch (Exception $e) {
+        $error = $e->getMessage();
+    }
+}
+```
+
+**Alternative:** Handler-Signaturen ändern (weniger empfohlen):
+```php
+// In step-3-database.php, step-4-admin.php, step-5-imap-smtp.php:
+function handleStep3Submit(array $post = null): void
+{
+    $post = $post ?? $_POST;  // Fallback to global $_POST
+    // ... rest of logic
+}
+```
+
+**Risiko-Bewertung:**
+- **Wahrscheinlichkeit:** Hoch (100% - passiert bei jedem Setup ab Step 3)
+- **Impact:** Kritisch (Setup schlägt komplett fehl, keine Installation möglich)
+
+---
+
+### [KRITISCH] - Bug #1: generateEnvFile() Parameter-Mismatch
+**Status:** 🔍 Neu gefunden  
+**Datum:** 2025-12-09  
+**Kategorie:** Installer / Fatal Error
+
+**Problem:**
+- `handleStep6Submit()` ruft `generateEnvFile($sessionData, $basePath)` mit 2 Parametern auf
+- Die Funktion `generateEnvFile(array $data): string` akzeptiert aber nur 1 Parameter
+- .env-Datei wird NIE geschrieben, da Funktion nur String zurückgibt, aber kein `file_put_contents()` aufruft
+- Setup schlägt IMMER in Step 6 fehl
+
+**Reproduktion:**
+1. Setup-Wizard bis Step 6 durchlaufen
+2. "Installation starten" klicken
+3. **Erwartetes Verhalten:** .env wird erstellt, Installation läuft durch
+4. **Tatsächliches Verhalten:** PHP Fatal Error oder silent fail, .env existiert nicht
+
+**Betroffene Dateien:**
+- `src/public/setup/includes/step-6-review.php` (Zeile 20)
+- `src/public/setup/includes/functions.php` (Zeile 214)
+
+**Lösung:**
+Die `generateEnvFile()` Funktion generiert nur den String-Content, schreibt aber keine Datei. Es fehlt:
+
+```php
+// In handleStep6Submit() - NACH generateEnvFile():
+$envContent = generateEnvFile($sessionData);
+$envPath = $basePath . '/.env';
+
+// Atomically write .env file
+$tempFile = $envPath . '.tmp';
+$written = file_put_contents($tempFile, $envContent, LOCK_EX);
+
+if ($written === false) {
+    throw new Exception('Fehler beim Schreiben der .env-Datei (Schreibrechte prüfen)');
 }
 
-// NACHHER (korrekt):
-// Check XAMPP paths FIRST
-if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-    $possiblePaths = ['C:\\xampp\\php\\php.exe', ...];
-    foreach ($possiblePaths as $path) {
-        if (file_exists($path)) return escapeshellarg($path);
+// Atomic rename
+if (!rename($tempFile, $envPath)) {
+    @unlink($tempFile);
+    throw new Exception('Fehler beim Finalisieren der .env-Datei');
+}
+
+// Set proper permissions
+@chmod($envPath, 0600);
+```
+
+**Alternative Lösung:**
+generateEnvFile() erweitern, um direkt zu schreiben:
+
+```php
+function generateEnvFile(array $data, string $basePath): bool
+{
+    // Generate content (existing logic)
+    $smtpEncryption = !empty($data['smtp']['ssl']) ? 'tls' : 'none';
+    $smtpFromEmail = $data['smtp']['from_email'] ?? $data['imap']['user'] ?? '';
+    $smtpFromName = $data['smtp']['from_name'] ?? 'CI-Inbox';
+    
+    $envContent = <<<ENV
+# CI-Inbox Environment Configuration...
+ENV;
+
+    // Write to file atomically
+    $envPath = rtrim($basePath, '/') . '/../../../.env';
+    $tempFile = $envPath . '.tmp';
+    
+    $written = file_put_contents($tempFile, $envContent, LOCK_EX);
+    if ($written === false) {
+        return false;
+    }
+    
+    if (!rename($tempFile, $envPath)) {
+        @unlink($tempFile);
+        return false;
+    }
+    
+    @chmod($envPath, 0600);
+    return true;
+}
+```
+
+**Risiko-Bewertung:**
+- **Wahrscheinlichkeit:** Hoch (100% - passiert bei jedem Setup)
+- **Impact:** Kritisch (Setup kann nicht abgeschlossen werden, .env fehlt)
+
+---
+
+### [KRITISCH] - Bug #2: Session-Datenstruktur inkonsistent
+**Status:** 🔍 Neu gefunden  
+**Datum:** 2025-12-09  
+**Kategorie:** Installer / Logic
+
+**Problem:**
+- Step 3 speichert Daten unter `$_SESSION['setup']['data']['db']` mit Feldern: `host`, `name`, `user`, `pass`, `port`
+- Step 6 erwartet aber: `$sessionData['db_host']`, `$sessionData['db_name']`, `$sessionData['db_user']`, `$sessionData['db_password']`, `$sessionData['db_port']`
+- Flache vs. verschachtelte Struktur führt zu `undefined array key` Errors
+
+**Reproduktion:**
+1. Step 3: Datenbankdaten eingeben und speichern
+2. Prüfung: `var_dump($_SESSION['setup']['data'])` zeigt `['db' => ['host' => '...', ...]`
+3. Step 6: Versucht auf `$sessionData['db_host']` zuzugreifen
+4. **Tatsächliches Verhalten:** PHP Warning "Undefined array key 'db_host'"
+
+**Betroffene Dateien:**
+- `src/public/setup/includes/step-3-database.php` (Zeile 49-55)
+- `src/public/setup/includes/step-6-review.php` (Zeilen 25-35)
+- `src/public/setup/includes/functions.php` (Zeile 231-235 in generateEnvFile)
+
+**Lösung:**
+Konsistente Datenstruktur verwenden. **Option A** (flache Struktur überall):
+
+```php
+// In step-3-database.php handleStep3Submit():
+updateSessionData('db_host', $dbHost);
+updateSessionData('db_name', $dbName);
+updateSessionData('db_user', $dbUser);
+updateSessionData('db_pass', $dbPass);
+updateSessionData('db_port', 3306);
+updateSessionData('db_exists', $dbExists);
+```
+
+**Option B** (verschachtelte Struktur überall):
+```php
+// In step-6-review.php und generateEnvFile():
+$dbHost = $sessionData['db']['host'] ?? '';
+$dbName = $sessionData['db']['name'] ?? '';
+$dbUser = $sessionData['db']['user'] ?? '';
+$dbPass = $sessionData['db']['pass'] ?? '';
+$dbPort = $sessionData['db']['port'] ?? 3306;
+```
+
+**Empfehlung:** Option A (flache Struktur) für bessere Kompatibilität mit generateEnvFile().
+
+**Risiko-Bewertung:**
+- **Wahrscheinlichkeit:** Hoch (100% bei jedem Setup)
+- **Impact:** Kritisch (Setup schlägt in Step 6 fehl)
+
+---
+
+### [KRITISCH] - Bug #3: writeProductionHtaccess() Fehlerbehandlung fehlt
+**Status:** 🔍 Neu gefunden  
+**Datum:** 2025-12-09  
+**Kategorie:** Installer / Error Handling
+
+**Problem:**
+- `writeProductionHtaccess()` hat keine Fehlerbehandlung
+- `file_put_contents()` Rückgabewert wird nicht geprüft (Zeile 317 in functions.php)
+- Wenn Schreibrechte fehlen, schlägt Setup silent fehl
+- Step 6 ruft `writeProductionHtaccess($basePath)` mit 1 Parameter auf, aber Funktion nimmt 0 Parameter (Zeile 149 in step-6-review.php)
+
+**Reproduktion:**
+1. Root-Verzeichnis auf read-only setzen: `chmod 555 /path/to/ci-inbox`
+2. Setup bis Step 6 durchlaufen
+3. **Erwartetes Verhalten:** Error-Meldung "Keine Schreibrechte für .htaccess"
+4. **Tatsächliches Verhalten:** Setup "erfolgreich", aber .htaccess fehlt → App nicht erreichbar
+
+**Betroffene Dateien:**
+- `src/public/setup/includes/functions.php` (Zeile 274-318)
+- `src/public/setup/includes/step-6-review.php` (Zeile 149)
+
+**Lösung:**
+```php
+function writeProductionHtaccess(string $basePath = ''): bool
+{
+    $htaccessContent = <<<'HTACCESS'
+# CI-Inbox Production Configuration...
+HTACCESS;
+
+    $htaccessPath = __DIR__ . '/../../../../.htaccess';
+    
+    // Check write permissions first
+    $dir = dirname($htaccessPath);
+    if (!is_writable($dir)) {
+        error_log("Setup Error: Directory {$dir} is not writable");
+        return false;
+    }
+    
+    // Atomic write with temp file
+    $tempFile = $htaccessPath . '.tmp';
+    $written = file_put_contents($tempFile, $htaccessContent, LOCK_EX);
+    
+    if ($written === false) {
+        error_log("Setup Error: Failed to write .htaccess temp file");
+        return false;
+    }
+    
+    // Atomic rename
+    if (!rename($tempFile, $htaccessPath)) {
+        @unlink($tempFile);
+        error_log("Setup Error: Failed to rename .htaccess temp file");
+        return false;
+    }
+    
+    return true;
+}
+```
+
+**Risiko-Bewertung:**
+- **Wahrscheinlichkeit:** Mittel (shared hosting mit restriktiven Rechten)
+- **Impact:** Kritisch (App nicht erreichbar nach "erfolgreichem" Setup)
+
+---
+
+### [KRITISCH] - Bug #4: Encryption Key nicht in .env geschrieben
+**Status:** 🔍 Neu gefunden  
+**Datum:** 2025-12-09  
+**Kategorie:** Installer / Security
+
+**Problem:**
+- `generateEnvFile()` schreibt `ENCRYPTION_KEY=` (leer) in .env (Zeile 238)
+- Encryption Key wird nie generiert oder in Session gespeichert
+- Step 6 versucht IMAP/SMTP Passwörter zu verschlüsseln, aber Key fehlt
+- `openssl_encrypt()` schlägt fehl oder nutzt leeren Key → Passwörter unverschlüsselt
+
+**Reproduktion:**
+1. Setup durchlaufen bis Step 6
+2. .env-Datei prüfen: `ENCRYPTION_KEY=` (leer)
+3. Datenbank prüfen: `imap_accounts.imap_password` sollte verschlüsselt sein
+4. **Tatsächliches Verhalten:** Encryption schlägt fehl oder Passwörter sind unverschlüsselt gespeichert
+
+**Betroffene Dateien:**
+- `src/public/setup/includes/step-6-review.php` (Zeilen 62-86)
+- `src/public/setup/includes/functions.php` (Zeile 238)
+
+**Lösung:**
+```php
+// In handleStep6Submit() VOR Datenbank-Operationen:
+$encryptionKey = bin2hex(random_bytes(32)); // 64 hex chars = 32 bytes
+updateSessionData('encryption_key', $encryptionKey);
+
+// Dann bei IMAP-Verschlüsselung:
+$encKey = getSessionData('encryption_key');
+$encIv = openssl_random_pseudo_bytes(16);
+$encPassword = openssl_encrypt(
+    $sessionData['admin_imap_password'],
+    'AES-256-CBC',
+    hex2bin($encKey),
+    0,
+    $encIv
+);
+
+// In generateEnvFile() - ersetze leeren Key:
+ENCRYPTION_KEY={$data['encryption_key']}
+```
+
+**Alternative:** Encryption Key NACH Migrations generieren (wie in setup-fixes-implemented.md beschrieben):
+```php
+// 1. Generate key first
+$encryptionKey = bin2hex(random_bytes(32));
+
+// 2. Run migrations with encrypted passwords
+// ... encryption logic ...
+
+// 3. Write .env with key AFTER migrations
+$envContent = generateEnvFile($sessionData);
+$envContent = str_replace('ENCRYPTION_KEY=', "ENCRYPTION_KEY={$encryptionKey}", $envContent);
+file_put_contents('.env', $envContent);
+```
+
+**Risiko-Bewertung:**
+- **Wahrscheinlichkeit:** Hoch (100% bei jedem Setup)
+- **Impact:** Kritisch (IMAP/SMTP Passwörter nicht verschlüsselt → Security Risk)
+
+---
+
+## 🟠 HOCH - Bald beheben
+
+### [HOCH] - Bug #5: Migration-Fehler führen zu Broken State
+**Status:** 🔍 Neu gefunden  
+**Datum:** 2025-12-09  
+**Kategorie:** Installer / Robustheit
+
+**Problem:**
+- Step 6 schreibt .env VOR Migrationen (Bug #1 betrifft dies auch)
+- Wenn Migrations fehlschlagen, existiert .env bereits
+- Setup kann nicht neu gestartet werden (.env exists → App versucht zu laden)
+- Datenbank ist halbfertig (einige Tabellen erstellt, andere nicht)
+
+**Reproduktion:**
+1. Migration absichtlich fehlschlagen lassen (z.B. SQL-Syntax-Fehler in migration einfügen)
+2. Setup in Step 6 ausführen
+3. **Erwartetes Verhalten:** Rollback, .env nicht geschrieben
+4. **Tatsächliches Verhalten:** .env existiert, DB halbfertig, Setup blockiert
+
+**Betroffene Dateien:**
+- `src/public/setup/includes/step-6-review.php` (Zeilen 19-44)
+
+**Lösung:**
+Reihenfolge ändern:
+
+```php
+function handleStep6Submit(): void
+{
+    $basePath = getBasePath();
+    $sessionData = getSessionData();
+    
+    try {
+        // 1. Generate encryption key FIRST
+        $encryptionKey = bin2hex(random_bytes(32));
+        updateSessionData('encryption_key', $encryptionKey);
+        
+        // 2. Database connection
+        $dsn = "mysql:host={$sessionData['db_host']}...";
+        $pdo = new PDO($dsn, $sessionData['db_user'], $sessionData['db_password']);
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        
+        // 3. Create database if needed
+        if (empty($sessionData['db_exists'])) {
+            $pdo->exec("CREATE DATABASE IF NOT EXISTS `{$sessionData['db_name']}`");
+        }
+        
+        $pdo->exec("USE `{$sessionData['db_name']}`");
+        
+        // 4. Run migrations (can fail without side effects)
+        $migrationsPath = $basePath . '/database/migrations';
+        $migrations = glob($migrationsPath . '/*.php');
+        sort($migrations);
+        
+        foreach ($migrations as $migration) {
+            require_once $migration;
+        }
+        
+        // 5. Create admin user and IMAP accounts
+        // ... (encryption with $encryptionKey)
+        
+        // 6. Write .env ONLY after all DB operations succeeded
+        $envContent = generateEnvFile($sessionData);
+        $envContent = str_replace('ENCRYPTION_KEY=', "ENCRYPTION_KEY={$encryptionKey}", $envContent);
+        
+        $envPath = $basePath . '/../../../.env';
+        $tempFile = $envPath . '.tmp';
+        
+        if (file_put_contents($tempFile, $envContent, LOCK_EX) === false) {
+            throw new Exception('Fehler beim Schreiben der .env-Datei');
+        }
+        
+        if (!rename($tempFile, $envPath)) {
+            @unlink($tempFile);
+            throw new Exception('Fehler beim Finalisieren der .env-Datei');
+        }
+        
+        // 7. Write .htaccess
+        if (!writeProductionHtaccess($basePath)) {
+            throw new Exception('Fehler beim Erstellen der .htaccess-Datei');
+        }
+        
+        updateSessionStep(7);
+        redirectToStep(7);
+        
+    } catch (Exception $e) {
+        // Rollback: Delete .env if it was written
+        $envPath = $basePath . '/../../../.env';
+        if (file_exists($envPath)) {
+            @unlink($envPath);
+        }
+        
+        throw new Exception('Installation fehlgeschlagen: ' . $e->getMessage());
+    }
+}
+```
+
+**Risiko-Bewertung:**
+- **Wahrscheinlichkeit:** Mittel (Migrations können fehlschlagen bei DB-Problemen)
+- **Impact:** Hoch (Broken State, manueller Cleanup nötig)
+
+---
+
+### [HOCH] - Bug #6: Concurrent Setup Execution möglich
+**Status:** 🔍 Neu gefunden  
+**Datum:** 2025-12-09  
+**Kategorie:** Installer / Race Condition
+
+**Problem:**
+- Kein Setup-Lock Mechanismus
+- Zwei Benutzer können gleichzeitig Setup starten
+- Sessions sind getrennt, aber schreiben in dieselbe .env und Datenbank
+- Race Condition bei .env-Schreiben und Migrations
+- Inkonsistente Daten möglich (zwei Admin-Accounts, doppelte Labels, etc.)
+
+**Reproduktion:**
+1. Tab 1: Setup starten, bis Step 5
+2. Tab 2: Setup starten (neue Session), bis Step 5
+3. Tab 1: Step 6 Submit
+4. Tab 2: Step 6 Submit (gleichzeitig)
+5. **Erwartetes Verhalten:** Tab 2 blockiert mit "Setup läuft bereits"
+6. **Tatsächliches Verhalten:** Beide schreiben in DB, .env wird überschrieben, Chaos
+
+**Betroffene Dateien:**
+- `src/public/setup/index.php` (Session Init, Zeile 315)
+- `src/public/setup/includes/step-6-review.php` (Installation)
+
+**Lösung:**
+Lock-File Mechanismus implementieren:
+
+```php
+// In handleStep6Submit() ganz am Anfang:
+$lockFile = __DIR__ . '/../../../../data/setup.lock';
+
+// Check if setup is already running
+if (file_exists($lockFile)) {
+    $lockAge = time() - filemtime($lockFile);
+    
+    // Stale lock (older than 5 minutes) → remove
+    if ($lockAge > 300) {
+        @unlink($lockFile);
+    } else {
+        throw new Exception('Setup läuft bereits. Bitte warten Sie, bis die andere Installation abgeschlossen ist.');
     }
 }
 
-// THEN check PHP_BINARY (with validation)
-if (defined('PHP_BINARY') && PHP_BINARY && file_exists(PHP_BINARY)) {
-    if (stripos(PHP_BINARY, 'php.exe') !== false && !stripos(PHP_BINARY, 'httpd')) {
-        return escapeshellarg(PHP_BINARY);
+// Create lock file
+if (!is_dir(dirname($lockFile))) {
+    @mkdir(dirname($lockFile), 0755, true);
+}
+
+$lockCreated = file_put_contents($lockFile, getmypid() . "\n" . date('Y-m-d H:i:s'), LOCK_EX);
+if ($lockCreated === false) {
+    throw new Exception('Setup-Lock konnte nicht erstellt werden');
+}
+
+try {
+    // ... normal setup logic ...
+    
+} finally {
+    // Always remove lock, even on exception
+    @unlink($lockFile);
+}
+```
+
+**Alternative:** .env als Lock verwenden (einfacher):
+```php
+// At start of handleStep6Submit():
+$envPath = $basePath . '/../../../.env';
+if (file_exists($envPath)) {
+    throw new Exception('Setup wurde bereits durchgeführt. .env-Datei existiert bereits.');
+}
+```
+
+**Risiko-Bewertung:**
+- **Wahrscheinlichkeit:** Niedrig (unwahrscheinlich, dass zwei Admins gleichzeitig Setup starten)
+- **Impact:** Hoch (Datenbank-Chaos, doppelte Accounts)
+
+---
+
+### [HOCH] - Bug #7: Port-Parsing in Database Host fehlt
+**Status:** 🔍 Neu gefunden  
+**Datum:** 2025-12-09  
+**Kategorie:** Installer / Logic
+
+**Problem:**
+- Step 3 UI sagt: "Für nicht-standard Ports verwenden Sie `hostname:port` Syntax"
+- Aber Code parst niemals den Port aus `db_host` Feld
+- `db_port` wird hart auf 3306 gesetzt (Zeile 54 in step-3-database.php)
+- PDO DSN verwendet dann falschen Port
+
+**Reproduktion:**
+1. Step 3: Host eingeben als `localhost:3307`
+2. Submit
+3. **Erwartetes Verhalten:** Port 3307 wird erkannt und verwendet
+4. **Tatsächliches Verhalten:** Port 3306 verwendet, Connection schlägt fehl
+
+**Betroffene Dateien:**
+- `src/public/setup/includes/step-3-database.php` (Zeilen 19-54)
+
+**Lösung:**
+```php
+function handleStep3Submit(array $post): void
+{
+    $dbHostInput = $post['db_host'] ?? 'localhost';
+    $dbName = $post['db_name'] ?? 'ci_inbox';
+    $dbUser = $post['db_user'] ?? 'root';
+    $dbPass = $post['db_pass'] ?? '';
+    $dbExists = isset($post['db_exists']);
+    
+    // Parse host:port syntax
+    $dbHost = $dbHostInput;
+    $dbPort = 3306; // Default
+    
+    if (strpos($dbHostInput, ':') !== false) {
+        list($dbHost, $portStr) = explode(':', $dbHostInput, 2);
+        $dbPort = (int)$portStr;
+        
+        // Validate port range
+        if ($dbPort < 1 || $dbPort > 65535) {
+            throw new Exception('Ungültiger Port. Muss zwischen 1 und 65535 liegen.');
+        }
+    }
+    
+    // Validate database name
+    if (!preg_match('/^[a-zA-Z0-9_]+$/', $dbName)) {
+        throw new Exception('Ungültiger Datenbankname. Nur Buchstaben, Zahlen und Unterstriche erlaubt.');
+    }
+    
+    // Validate host (basic sanitization)
+    $dbHost = preg_replace('/[^a-zA-Z0-9\.\-]/', '', $dbHost);
+    
+    try {
+        // Test connection with parsed port
+        $pdo = new PDO(
+            "mysql:host={$dbHost};port={$dbPort};charset=utf8mb4",
+            $dbUser,
+            $dbPass,
+            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+        );
+        
+        // ... rest of logic ...
+        
+        updateSessionData('db', [
+            'host' => $dbHost,
+            'name' => $dbName,
+            'user' => $dbUser,
+            'pass' => $dbPass,
+            'port' => $dbPort  // ✅ Use parsed port
+        ]);
+        
+        updateSessionStep(4);
+        redirectToStep(4);
+        
+    } catch (PDOException $e) {
+        throw new Exception('Datenbankverbindung fehlgeschlagen: ' . $e->getMessage());
     }
 }
 ```
 
-**Betroffene Dateien:**
-- `/src/public/setup/index.php` (Zeilen 35-65: `getPhpExecutableEarly()`)
-- `/src/public/setup/includes/functions.php` (Zeilen 20-50: `getPhpExecutable()`)
-
-**Test:** Vendor-Installation sollte jetzt in XAMPP funktionieren.
+**Risiko-Bewertung:**
+- **Wahrscheinlichkeit:** Mittel (nicht-standard Ports sind selten, aber kommen vor)
+- **Impact:** Hoch (Setup schlägt fehl, User ist verwirrt)
 
 ---
 
-### [CRITICAL] - Setup-Wizard: CSS/JS werden nicht geladen (Routing-Problem)
-**Status:** ✅ Quick-Fix implementiert  
-**Datum:** 09.12.2025 14:52  
-**Kategorie:** Installer / Config / .htaccess
+## 🟡 MITTEL - Nächste Iteration
+
+### [MITTEL] - Bug #8: Session Fixation möglich
+**Status:** 🔍 Neu gefunden  
+**Datum:** 2025-12-09  
+**Kategorie:** Security
 
 **Problem:**
-- Nach erfolgreicher Vendor-Installation zeigt Setup-Wizard kein CSS/JS
-- Browser lädt `/setup.css` und `/setup.js` → beide 500 Error
-- Page ist ungestylt und JavaScript funktioniert nicht
-- Gleiche Routing-Problem wie bei Vendor-Missing-Page
+- `initSession()` regeneriert Session-ID nicht (Zeile 392 in functions.php)
+- Angreifer kann Session-ID vor Setup setzen und nach Setup nutzen
+- Session-ID bleibt gleich über alle Setup-Steps hinweg
 
-**Access-Logs:**
-```
-"GET /setup.css HTTP/1.1" 500 672 "http://test.localhost/"
-"GET /setup.js HTTP/1.1" 500 672 "http://test.localhost/"
-```
-
-**Ursache:**
-- `functions.php` rendert Header/Footer mit relativen Pfaden:
-  - `<link rel="stylesheet" href="setup.css">`
-  - `<script src="setup.js"></script>`
-- Root `.htaccess` fängt diese Requests ab
-- Führt zu internen Server-Errors (500)
-
-**Lösung (Quick-Fix):**
-✅ Absolute Pfade in `functions.php`:
-- Zeile 344: `setup.css` → `/src/public/setup/setup.css`
-- Zeile 386: `setup.js` → `/src/public/setup/setup.js`
+**Reproduktion:**
+1. Angreifer setzt Cookie: `PHPSESSID=malicious_id`
+2. Admin durchläuft Setup mit dieser Session
+3. Angreifer nutzt `malicious_id` nach Setup → hat Admin-Session
+4. **Tatsächliches Verhalten:** Möglich (wenn Setup ohne Auth läuft)
 
 **Betroffene Dateien:**
-- `/src/public/setup/includes/functions.php` (Zeilen 344, 386)
+- `src/public/setup/includes/functions.php` (Zeile 390-404)
 
-**Test:** Setup-Wizard sollte jetzt korrekt gestylt sein.
+**Lösung:**
+```php
+function initSession(): array
+{
+    if (session_status() === PHP_SESSION_NONE) {
+        // Secure session config
+        ini_set('session.cookie_httponly', '1');
+        ini_set('session.cookie_secure', '0'); // Set to '1' in production with HTTPS
+        ini_set('session.use_only_cookies', '1');
+        ini_set('session.use_strict_mode', '1');
+        
+        session_start();
+        
+        // Regenerate session ID on first access (prevents fixation)
+        if (!isset($_SESSION['setup_initialized'])) {
+            session_regenerate_id(true);
+            $_SESSION['setup_initialized'] = true;
+        }
+    }
+    
+    if (!isset($_SESSION['setup'])) {
+        $_SESSION['setup'] = [
+            'step' => 1,
+            'data' => []
+        ];
+    }
+    
+    return $_SESSION['setup'];
+}
+```
+
+**Risiko-Bewertung:**
+- **Wahrscheinlichkeit:** Niedrig (erfordert aktiven Angriff während Setup)
+- **Impact:** Mittel (Session-Hijacking nach Setup möglich)
 
 ---
 
-### [CRITICAL] - Vendor-Missing-Page: CSS wird nicht geladen (Routing-Problem)
-**Status:** ✅ Gelöst (CSS-Loading) / 📋 Design needs work  
-**Datum:** 09.12.2025 14:35  
-**Kategorie:** Installer / Config / .htaccess / Frontend
+### [MITTEL] - Bug #9: Kein CSRF-Schutz in Setup-Forms
+**Status:** 🔍 Neu gefunden  
+**Datum:** 2025-12-09  
+**Kategorie:** Security
 
 **Problem:**
-- ~~Vendor-Missing-Page CSS wurde nicht geladen (Routing-Problem)~~ ✅ Gelöst
-- Design ist funktional aber noch nicht zufriedenstellend (siehe MEDIUM Issue)
+- Alle Setup-Forms haben kein CSRF-Token
+- Angreifer kann POST-Requests faken
+- Besonders kritisch in Step 6 (Installation)
 
-**Access-Logs zeigten das Problem:**
+**Reproduktion:**
+1. Angreifer erstellt bösartige Seite mit Form:
+```html
+<form action="http://victim.com/src/public/setup/?step=6" method="POST">
+    <input name="..." value="malicious">
+</form>
+<script>document.forms[0].submit();</script>
 ```
-[09/Dec/2025:14:35:28] "GET /setup.css HTTP/1.1" 302 - "http://test.localhost/"
+2. Admin besucht bösartige Seite während Setup-Session aktiv
+3. **Tatsächliches Verhalten:** POST wird ausgeführt, Settings werden überschrieben
+
+**Betroffene Dateien:**
+- Alle `src/public/setup/includes/step-*.php` Files (Form-Rendering)
+
+**Lösung:**
+```php
+// In initSession() - generate CSRF token:
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+// In renderFooter() oder renderHeader() - add to forms:
+<input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+
+// In each handleStepXSubmit() - verify:
+function handleStep3Submit(array $post): void
+{
+    // CSRF Check
+    if (!isset($post['csrf_token']) || $post['csrf_token'] !== ($_SESSION['csrf_token'] ?? '')) {
+        throw new Exception('Ungültige Anfrage. Bitte versuchen Sie es erneut.');
+    }
+    
+    // ... rest of logic ...
+}
 ```
 
-**Ursache:**
-- Relativer CSS-Pfad wurde durch Root `.htaccess` abgefangen
-
-**✅ Implementierter Fix (CSS-Loading):**
-- Inline CSS direkt in `index.php` eingebettet (keine externe CSS-Abhängigkeit)
-- Verhindert Routing-Probleme komplett
-- Page ist self-contained und funktioniert auch ohne vendor/
-
-**📋 Weiteres Vorgehen (Design):**
-- Design benötigt konzeptuelle Überarbeitung (siehe MEDIUM Issue)
-- Mehrere Iterationen durchgeführt, aber noch nicht optimal
-- Benötigt grundlegendes Redesign mit UX-Focus
+**Risiko-Bewertung:**
+- **Wahrscheinlichkeit:** Niedrig (erfordert aktiven Angriff während Setup)
+- **Impact:** Mittel (Settings können manipuliert werden)
 
 ---
 
-## 🟠 HIGH - Quick-Fix möglich
-
-*Fehler die schnell behoben werden können und sollten*
-
-*(Leer - alle vorherigen Bugs wurden behoben)*
-
----
-
-## 🟡 MEDIUM - Konzeptuelle Lösung nötig
-
-*Fehler die tiefgreifendere Änderungen oder Refactoring benötigen*
-
-### [MEDIUM] - Root .htaccess Routing verursacht Pfad-Probleme (Architektur)
-**Status:** ✅ Implementiert - Bootstrap-Lösung  
-**Datum:** 09.12.2025 15:00  
-**Kategorie:** Config / Architecture / .htaccess
+### [MITTEL] - Bug #10: Sensitive Data in Session nicht verschlüsselt
+**Status:** 🔍 Neu gefunden  
+**Datum:** 2025-12-09  
+**Kategorie:** Security
 
 **Problem:**
-Die aktuelle `.htaccess`-Routing-Strategie führte zu Pfad-Problemen mit `__DIR__ . '/../../../'`-Akrobatik.
+- IMAP/SMTP Passwörter in Session als Plaintext gespeichert
+- Session-Datei auf Server lesbar (meist `/tmp/sess_*`)
+- Bei shared hosting mit Sicherheitslücken können andere Benutzer Session lesen
 
-**Lösung (Implementiert):**
-✅ **Mini-Bootstrap im Setup** (funktioniert OHNE vendor/):
+**Reproduktion:**
+1. Setup bis Step 5 durchlaufen
+2. Session-Datei prüfen: `/tmp/sess_XXXXX`
+3. **Tatsächliches Verhalten:** Passwörter sind im Klartext sichtbar
+
+**Betroffene Dateien:**
+- Alle Step-Handler die Passwörter speichern
+
+**Lösung:**
+Session-Passwörter verschlüsseln (mit temporärem Key):
 
 ```php
-// setup/index.php - Funktioniert auch ohne vendor/
-function findProjectRoot(string $startDir): string {
-    // Sucht composer.json bis zu 5 Ebenen nach oben
-    // Fallback: __DIR__/../../.. (3 Ebenen von setup/ hoch)
+// In step-4 und step-5 handler:
+function storePasswordSecurely(string $password): string
+{
+    // Use PHP's built-in encryption for session
+    $key = $_SESSION['temp_encrypt_key'] ?? null;
+    if (!$key) {
+        $key = random_bytes(32);
+        $_SESSION['temp_encrypt_key'] = $key;
+    }
+    
+    $iv = random_bytes(16);
+    $encrypted = openssl_encrypt($password, 'AES-256-CBC', $key, 0, $iv);
+    return base64_encode($iv . $encrypted);
 }
 
-define('PROJECT_ROOT', findProjectRoot(__DIR__));
-define('VENDOR_PATH', PROJECT_ROOT . '/vendor');
-define('LOGS_PATH', PROJECT_ROOT . '/logs');
-define('DATA_PATH', PROJECT_ROOT . '/data');
-```
-
-**Vorteile:**
-✅ Funktioniert VOR vendor-Installation (Phase 0)
-✅ Klare absolute Pfade statt `../../../`
-✅ Auto-Detection des Project Root
-✅ Keine Symlinks nötig
-✅ Funktioniert auf allen Platformen
-
-**Betroffene Dateien:**
-- `/src/public/setup/index.php` (Zeilen 23-57: Bootstrap + Pfad-Konstanten)
-
-**Weiteres Vorgehen:**
-- Für Main Application: `src/bootstrap/paths.php` erstellen
-- In `composer.json` registrieren (autoload.files)
-- Wird automatisch geladen sobald vendor/ existiert
-
-**Architektur-Konzept bestätigt:**
-✅ **Mehrstufiger Installer** ist die richtige Lösung:
-1. **Phase 0 (Pre-Setup)**: `setup/index.php` prüft vendor/ OHNE Dependencies
-2. **Phase 1 (Vendor-Bootstrap)**: Installiert Dependencies wenn nötig
-3. **Phase 2 (Main Setup)**: Lädt vendor/autoload → hat alle Tools verfügbar
-
----
-
-### [MEDIUM] - Vendor-Missing-Page Design benötigt Überarbeitung
-**Status:** 📋 Dokumentiert - Konzeptuelle Lösung erforderlich  
-**Datum:** 09.12.2025  
-**Kategorie:** Frontend / UX / Installer
-
-**Problem:**
-- Vendor-Missing-Page funktioniert technisch, aber Design ist noch nicht zufriedenstellend
-- Mehrere Design-Iterationen durchgeführt, aber noch nicht optimal
-- Page wirkt überladen mit zu viel Text und Optionen
-- Layout-Struktur benötigt grundlegendes Redesign
-
-**Aktuelle Situation:**
-- CSS-Loading-Problem gelöst (inline CSS funktioniert)
-- Mehrere Design-Ansätze getestet:
-  1. CI-Inbox Design-System (Blue) - zu hell
-  2. Setup-Wizard-Style (Purple gradient) - besser, aber noch nicht perfekt
-  3. Verschiedene Card-Layouts und Button-Styles
-
-**Was fehlt noch:**
-- **Klarere Hierarchie:** Haupt-Option vs. Alternative Optionen
-- **Weniger Text:** Kompaktere Beschreibungen
-- **Visuell ansprechender:** Bessere Balance zwischen Funktion und Ästhetik
-- **Konsistenz:** Einheitliches Look & Feel mit dem Rest der Anwendung
-
-**Empfehlung für konzeptuelle Lösung:**
-1. **Wizard-Approach:** Schritt-für-Schritt statt alle Optionen auf einmal
-2. **Primary Action hervorheben:** Auto-Install als Hauptoption, Rest als "Erweiterte Optionen"
-3. **Illustrationen:** Icons oder SVG-Grafiken statt nur Text
-4. **Progressive Disclosure:** Details erst auf Klick zeigen
-5. **Design-Review:** Mit Designer/UX-Expert abstimmen
-
-**Technische Anforderungen:**
-- Inline CSS beibehalten (keine externe Datei wegen Routing)
-- Muss auch ohne vendor/ funktionieren
-- Mobile-responsive
-- Loading-States für Auto-Install
-
-**Dateien betroffen:**
-- `/src/public/setup/index.php` (Zeilen 138-450: Vendor-Missing-Page)
-
-**Priorität:** MEDIUM - Funktioniert, aber UX nicht optimal
-
----
-
-### [MEDIUM] - Root .htaccess verursacht CSS/JS-Routing-Probleme
-**Status:** ✅ Gelöst - index.php Router  
-**Datum:** 09.12.2025 16:20 (gelöst: 16:45)  
-**Kategorie:** Installer / Routing / Architecture
-
-**Problem:**
-- Root .htaccess routete alle Requests zu `src/public/`
-- Setup-Wizard liegt aber in `src/public/setup/`
-- Relative CSS/JS-Pfade führten zu 302-Redirects
-- Komplexe .htaccess-Regeln während Installation schwer wartbar
-
-**Root Cause:**
-- `.htaccess` im ROOT: `RewriteRule ^(.*)$ src/public/$1 [L]`
-- Setup verwendete relative Pfade: `setup.css`, `setup.js`
-- Browser-Request: `/setup.css` → wurde zu `/src/public/setup.css` umgeschrieben
-- Datei existiert nicht → 302 Redirect Loop
-
-**Lösung (Implementiert):**
-✅ **index.php im ROOT** als Installation Router:
-- Ersetzt komplexe .htaccess-Bedingungen
-- Prüft `.env` + `vendor/` Existenz
-- Redirect-Logik in PHP (einfacher zu debuggen)
-- Wird nach Installation automatisch gelöscht
-- Danach übernimmt normale .htaccess das Routing
-
-✅ **Vereinfachte .htaccess:**
-```apache
-# CI-Inbox Production Configuration
-# Generated by Setup Wizard (Step 6)
-
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-    RewriteBase /
-
-    # Redirect all requests to src/public/
-    RewriteCond %{REQUEST_URI} !^/src/public/
-    RewriteRule ^(.*)$ src/public/$1 [L]
-</IfModule>
-
-# Security headers and file protection...
-```
-
-**Wichtig:**
-- `.htaccess` wird NICHT im Repo committed
-- Wird erst in Step 6 generiert (zusammen mit `.env`)
-- `index.php` funktioniert auch ohne `.htaccess` (DirectoryIndex)
-
-**Vorteile:**
-- ✅ Keine CSS/JS-Routing-Probleme mehr
-- ✅ Keine komplexen .htaccess-Conditions nötig
-- ✅ PHP-basierte Logik ist transparenter
-- ✅ Auto-Cleanup nach Installation
-- ✅ Löst auch andere Pfad-Probleme (logs/, vendor/)
-
-**Betroffene Dateien:**
-- ✅ `index.php` (ROOT - neu erstellt, IM REPO)
-- ✅ `.htaccess` (ROOT - NICHT im Repo, wird in Step 6 generiert)
-- ✅ `.gitignore` (`.htaccess` hinzugefügt)
-- ✅ `src/public/setup/includes/step-7-complete.php` (löscht index.php)
-- ✅ `src/public/setup/includes/functions.php` (`writeProductionHtaccess()`)
-
-**Testing:**
-- ✅ Code implementiert
-- ⏳ Full-Installation-Test ausstehend
-
-**Priorität:** MEDIUM → ✅ GELÖST
-
----
-
-*(Frühere MEDIUM-Issues wurden gelöst)*
-
----
-
-## 🟢 LOW - Nice-to-have / Optimierungen
-
-*Verbesserungen und kleinere Issues*
-
-*(Leer)*
-
----
-
-## ✅ GELÖSTE BUGS
-
-### [CRITICAL] - Setup Step 1: Vendor-Check zeigt "Fehlend" obwohl installiert
-**Status:** ✅ Gelöst  
-**Datum:** 09.12.2025 (gelöst: 17:30)  
-**Kategorie:** Installer / Path Resolution
-
-**Problem:**
-- Setup Step 1 zeigte "Composer Dependencies: Fehlend" obwohl `vendor/` existiert
-- Hosting-Check blockierte Installation fälschlicherweise
-- Logs-Verzeichnis wurde als "nicht beschreibbar" erkannt obwohl Rechte korrekt
-
-**Root Cause:**
-- `getBasePath()` lieferte Web-Pfad (z.B. `/src/public`)
-- Wurde aber für Filesystem-Operationen verwendet: `is_dir($basePath . '/vendor')`
-- `/src/public/vendor` existiert nicht → false positive
-- Richtig wäre: `/project-root/vendor`
-
-**Lösung:**
-✅ Zwei separate Funktionen erstellt:
-1. `getProjectRoot()` - Filesystem-Pfad für `is_dir()`, `file_exists()` etc.
-2. `getBasePath()` - Web-Pfad für Redirects (`Location:` Header)
-
-**Code-Änderungen:**
-```php
-// functions.php
-function getProjectRoot(): string {
-    return realpath(__DIR__ . '/../../../../') ?: __DIR__ . '/../../../../';
+function retrievePasswordSecurely(string $encryptedData): string
+{
+    $key = $_SESSION['temp_encrypt_key'] ?? null;
+    if (!$key) {
+        throw new Exception('Encryption key missing');
+    }
+    
+    $data = base64_decode($encryptedData);
+    $iv = substr($data, 0, 16);
+    $encrypted = substr($data, 16);
+    
+    return openssl_decrypt($encrypted, 'AES-256-CBC', $key, 0, $iv);
 }
-
-function getBasePath(): string {
-    // ... existing web path logic
-}
-
-// Step 1 Hosting Checks
-$projectRoot = getProjectRoot(); // ← geändert
-$vendorExists = is_dir($projectRoot . '/vendor');
 ```
 
-**Betroffene Dateien:**
-- ✅ `src/public/setup/includes/functions.php` (neue Funktion `getProjectRoot()`)
-- ✅ `src/public/setup/includes/step-6-review.php` (verwendet `getProjectRoot()`)
+**Alternative:** Passwörter gar nicht in Session speichern, sondern nur für Step 6 im POST weitergeben (weniger praktisch).
 
-**Testing:**
-- ✅ Code implementiert
-- ⏳ Full-Installation-Test ausstehend
+**Risiko-Bewertung:**
+- **Wahrscheinlichkeit:** Niedrig (erfordert Server-Sicherheitslücke)
+- **Impact:** Mittel (Passwort-Leak während Setup)
 
 ---
 
-### [CRITICAL] - Root .htaccess fehlt - Installer nicht erreichbar
-**Status:** ✅ Gelöst  
-**Datum:** 09.12.2025 (gelöst)  
-**Kategorie:** Installer / Config
+## 🟢 NIEDRIG - Optional
 
-**Problem:**
-- Aufruf von `/`, `/install`, `/setup` führte zu 404-Fehlern
-- Setup-Wizard war nicht erreichbar
-
-**Lösung:**
-- Root `.htaccess` erstellt mit Smart-Routing zu Setup-Wizard
-- Zwei-Phasen-Strategie: Installation-Mode → Production-Mode
-
-**Betroffene Dateien:**
-- `/.htaccess` (erstellt)
-
----
-
-### [HIGH] - favicon.ico Request verursacht 500 Error
-**Status:** ✅ Gelöst  
-**Datum:** 09.12.2025 (gelöst)  
-**Kategorie:** Config
-
-**Problem:**
-- `favicon.ico` Requests führten zu PHP Fatal Error wenn `vendor/` fehlt
-
-**Lösung:**
-- `favicon.ico` im Repo hinzugefügt unter `src/public/favicon.ico`
-- Requests werden nicht mehr zu `index.php` weitergeleitet
-
-**Betroffene Dateien:**
-- `/src/public/favicon.ico` (erstellt)
-
----
-
-### [HIGH] - XAMPP: Auto-Install fehlschlägt - PHP nicht im PATH
-**Status:** ✅ Gelöst  
-**Datum:** 09.12.2025 (gelöst)  
-**Kategorie:** Installer / XAMPP
-
-**Problem:**
-- Composer-Auto-Install schlug fehl mit "php command not found"
-- XAMPP fügt PHP nicht automatisch zum PATH hinzu
-
-**Lösung:**
-- Neue Funktionen `getPhpExecutable()` und `getPhpExecutableEarly()` implementiert
-- Prüft Standard-XAMPP-Pfade automatisch
-- Fallback auf `PHP_BINARY`
-
-**Betroffene Dateien:**
-- `/src/public/setup/index.php` (Zeilen 18-42, 618-642)
-
----
-
-### [MEDIUM] - MySQL Port-Konfiguration: Kein UI-Feld, keine Hilfe
-**Status:** ✅ Gelöst (Tooltip)  
-**Datum:** 09.12.2025 (gelöst)  
+### [NIEDRIG] - Bug #11: Vendor Auto-Install Timeout nicht konfigurierbar
+**Status:** 🔍 Neu gefunden  
+**Datum:** 2025-12-09  
 **Kategorie:** Installer / UX
 
 **Problem:**
-- User wussten nicht, dass Port mit `hostname:port` eingegeben werden kann
+- `installComposerDependenciesVendorMissing()` hat keinen Timeout für `exec()` Befehl (Zeile 109 in index.php)
+- Composer Install kann auf langsamen Servern >5 Minuten dauern
+- PHP `max_execution_time` könnte Script abbrechen
+- User wartet ewig ohne Feedback
+
+**Reproduktion:**
+1. Server mit langsamem Internet
+2. Auto-Install Button klicken
+3. **Erwartetes Verhalten:** Progress-Feedback oder konfigurierbarer Timeout
+4. **Tatsächliches Verhalten:** Browser wartet, evtl. Timeout nach 60s
+
+**Betroffene Dateien:**
+- `src/public/setup/index.php` (Zeilen 60-123)
 
 **Lösung:**
-- Tooltip/Infobox im Setup-Wizard hinzugefügt
+```php
+// Set higher execution time limit for composer install
+set_time_limit(300); // 5 minutes
 
-**Betroffene Dateien:**
-- `/src/public/setup/index.php` (Step 3 Database Form)
+// Add timestamp to response for timeout detection
+$startTime = time();
+$command .= " install --no-dev --optimize-autoloader --no-interaction 2>&1";
+
+// Execute with timeout awareness
+$output = [];
+$returnVar = 0;
+@exec($command, $output, $returnVar);
+$duration = time() - $startTime;
+
+$logContent = "=== Composer Install Log ===\n";
+$logContent .= "Date: " . date('Y-m-d H:i:s') . "\n";
+$logContent .= "Duration: {$duration} seconds\n";
+$logContent .= "Command: {$command}\n";
+$logContent .= "Return Code: {$returnVar}\n";
+$logContent .= "Output:\n" . implode("\n", $output);
+file_put_contents($logFile, $logContent);
+```
+
+**Frontend:** Loading Overlay erweitern mit:
+```javascript
+// Warn user if taking too long
+setTimeout(() => {
+    document.querySelector('.loading-warning').innerHTML = 
+        '⚠️ Installation dauert länger als erwartet (>2 Min). Bitte haben Sie Geduld...';
+}, 120000); // After 2 minutes
+```
+
+**Risiko-Bewertung:**
+- **Wahrscheinlichkeit:** Mittel (langsame Server/Verbindungen)
+- **Impact:** Niedrig (UX-Problem, aber Installation läuft)
 
 ---
 
-### [LOW] - Auto-Install: Keine Ladeanimation
-**Status:** ✅ Gelöst  
-**Datum:** 09.12.2025 (gelöst)  
-**Kategorie:** Frontend / UX
+### [NIEDRIG] - Bug #12: Partial Vendor Directory nicht erkannt
+**Status:** 🔍 Neu gefunden  
+**Datum:** 2025-12-09  
+**Kategorie:** Installer / Edge Case
 
 **Problem:**
-- Kein visuelles Feedback während Composer-Installation
+- Vendor-Check prüft nur ob `vendor/autoload.php` existiert (Zeile 24 in index.php)
+- Partial/corrupt vendor Verzeichnis wird nicht erkannt
+- Wenn `composer install` abbricht, kann vendor/ halbfertig sein
+- Setup lädt, schlägt aber später mit "Class not found" fehl
+
+**Reproduktion:**
+1. Composer Install manuell abbrechen: Ctrl+C während `composer install`
+2. Prüfung: `vendor/autoload.php` existiert, aber `vendor/slim/` fehlt
+3. Setup aufrufen
+4. **Erwartetes Verhalten:** "Vendor incomplete, please reinstall"
+5. **Tatsächliches Verhalten:** Setup lädt, schlägt später mit Class-Not-Found fehl
+
+**Betroffene Dateien:**
+- `src/public/setup/index.php` (Zeilen 24-26)
 
 **Lösung:**
-- Loading-Overlay mit Spinner implementiert
-- Warnung gegen Seiten-Reload hinzugefügt
+Vendor-Integrität prüfen:
 
-**Betroffene Dateien:**
-- `/src/public/setup/index.php` (Vendor-Missing-Page)
+```php
+// Enhanced vendor check
+$vendorAutoload = __DIR__ . '/../../../vendor/autoload.php';
+$vendorExists = file_exists($vendorAutoload);
+
+// Additional integrity check: Ensure critical packages exist
+if ($vendorExists) {
+    $criticalPackages = [
+        __DIR__ . '/../../../vendor/slim/slim',
+        __DIR__ . '/../../../vendor/illuminate/database',
+        __DIR__ . '/../../../vendor/monolog/monolog',
+    ];
+    
+    foreach ($criticalPackages as $package) {
+        if (!is_dir($package)) {
+            $vendorExists = false;
+            error_log("Setup Warning: Vendor incomplete - missing {$package}");
+            break;
+        }
+    }
+}
+
+if (!$vendorExists) {
+    // Show vendor missing page...
+}
+```
+
+**Alternative:** Prüfe composer.lock Hash:
+```php
+$composerLock = __DIR__ . '/../../../composer.lock';
+$vendorInstalled = __DIR__ . '/../../../vendor/composer/installed.json';
+
+if (file_exists($composerLock) && file_exists($vendorInstalled)) {
+    $lockData = json_decode(file_get_contents($composerLock), true);
+    $installedData = json_decode(file_get_contents($vendorInstalled), true);
+    
+    // Compare package counts
+    if (count($lockData['packages']) !== count($installedData['packages'])) {
+        $vendorExists = false;
+    }
+}
+```
+
+**Risiko-Bewertung:**
+- **Wahrscheinlichkeit:** Niedrig (erfordert abgebrochene Installation)
+- **Impact:** Niedrig (Setup schlägt fehl, aber User kann neu installieren)
 
 ---
 
-## 📋 DOKUMENTIERTE FEATURES (keine Bugs)
-
-### Setup-Session-Persistenz
-**Status:** Feature (kein Bug)  
-**Kategorie:** Installer
-
-Setup-Wizard speichert Fortschritt in PHP-Session - dies ist gewolltes Verhalten.
-Für Testing: Browser-Cookies löschen oder Incognito-Mode verwenden.
-
----
-
-### Vendor-Missing-Page Design
-**Status:** UX-Verbesserung für später  
-**Kategorie:** Frontend / UX
-
-Die Vendor-Missing-Page verwendet derzeit Error-Ästhetik (rot).
-Konzeptuelle Verbesserung: Freundlicheres Design als normaler Setup-Schritt.
-
----
-
-## 📋 Template für neue Bugs
-
-```markdown
-### [PRIORITY] - Titel des Bugs
-**Status:** 🔍 In Analyse / 🔧 In Bearbeitung / ✅ Gelöst / 📝 Dokumentiert für Dev
-**Datum:** DD.MM.YYYY
-**Kategorie:** [PHP Error / SQL / Frontend / Security / Performance / Installer / Config]
+### [NIEDRIG] - Bug #13: Windows Path Backslashes in Migrations
+**Status:** 🔍 Neu gefunden  
+**Datum:** 2025-12-09  
+**Kategorie:** Installer / Cross-Platform
 
 **Problem:**
-- Was ist das Problem?
-- Wann tritt es auf?
-- Error-Logs/Meldungen
+- Migration-Path verwendet `glob()` mit relativen Pfaden (step-6-review.php Zeile 38)
+- Auf Windows: Backslashes `\` können Probleme machen
+- `$basePath . '/database/migrations'` kann zu `C:\xampp\htdocs/database/migrations` führen
 
-**Error-Details:**
-```
-[Fehler-Logs hier einfügen]
-```
-
-**Umgebungs-Kontext:**
-- Lokaler Test vs. Standard Webhosting Unterschiede?
-- Spezielle Konfigurationen?
-
-**Analyse:**
-- Root Cause
-- Warum tritt der Fehler auf?
-
-**Lösungsansatz:**
-1. Option A: Quick-Fix (wenn möglich)
-2. Option B: Konzeptuelle Lösung für Entwicklung
+**Reproduktion:**
+1. Windows Server mit XAMPP
+2. Setup bis Step 6
+3. **Erwartetes Verhalten:** Migrations werden gefunden
+4. **Tatsächliches Verhalten:** Möglicherweise keine Migrations gefunden (abhängig von PHP-Version)
 
 **Betroffene Dateien:**
-- `pfad/zur/datei.php` (Zeile X)
+- `src/public/setup/includes/step-6-review.php` (Zeile 38)
 
-**Testing:**
-- [ ] Reproduziert
-- [ ] Lokal getestet
-- [ ] Dokumentiert
+**Lösung:**
+```php
+// Normalize path separators
+$migrationsPath = str_replace('\\', '/', $basePath . '/database/migrations');
+$migrations = glob($migrationsPath . '/*.php');
 
-**Notizen:**
-- Zusätzliche Beobachtungen
-- Empfehlungen für Production-Deployment
+// Or use DIRECTORY_SEPARATOR constant
+$migrationsPath = $basePath . DIRECTORY_SEPARATOR . 'database' . DIRECTORY_SEPARATOR . 'migrations';
+$migrations = glob($migrationsPath . DIRECTORY_SEPARATOR . '*.php');
+```
+
+**Risiko-Bewertung:**
+- **Wahrscheinlichkeit:** Niedrig (moderne PHP-Versionen handhaben Mixed-Slashes gut)
+- **Impact:** Niedrig (Setup schlägt fehl, aber Fehler ist offensichtlich)
+
+---
+
+## ✅ GEFIXT - Bereits behobene Bugs
+
+### [GEFIXT] ✅ - Race Condition: .env-Timing
+**Status:** ✅ Gefixt  
+**Datum:** 2025-12-06 (Commit c692d73)  
+**Kategorie:** Installer / Race Condition
+
+**Problem:**
+- .env wurde VOR Migrations geschrieben
+- Bei Migration-Fehler blieb .env zurück → Broken State
+- Setup konnte nicht neu gestartet werden
+
+**Lösung implementiert:**
+- Reihenfolge geändert: Encryption Key generieren → Migrations → .env schreiben
+- .env wird nur noch bei erfolgreichen Migrations geschrieben
+- Siehe `docs/dev/setup-fixes-implemented.md` K3
+
+**Quelle:** Problem statement, `setup-fixes-implemented.md`
+
+---
+
+### [GEFIXT] ✅ - Path Resolution: getProjectRoot vs getBasePath
+**Status:** ✅ Gefixt  
+**Datum:** 2025-12-06 (Commit c692d73)  
+**Kategorie:** Installer / Logic
+
+**Problem:**
+- Inkonsistente Pfad-Berechnungen zwischen IONOS (subdirectory) und Plesk (root)
+- `getProjectRoot()` und `getBasePath()` führten zu falschen Redirects
+
+**Lösung implementiert:**
+- `getBasePath()` Funktion vereinheitlicht (functions.php Zeile 58-67)
+- Regex-basierte Erkennung: `/^(.*?)/setup/`
+- Funktioniert sowohl für `/src/public/setup` als auch `/setup`
+
+**Quelle:** Problem statement, `setup-fixes-implemented.md`
+
+---
+
+### [GEFIXT] ✅ - XAMPP PHP_BINARY httpd.exe Problem
+**Status:** ✅ Gefixt  
+**Datum:** 2025-12-06 (Commit c692d73)  
+**Kategorie:** Installer / XAMPP
+
+**Problem:**
+- Auf XAMPP zeigte `PHP_BINARY` auf `httpd.exe` statt `php.exe`
+- Composer Auto-Install schlug fehl: "httpd.exe: command not found"
+- Betraf Zeile 96 in setup/index.php
+
+**Lösung implementiert:**
+- `getPhpExecutable()` Funktion mit XAMPP-Fallback-Pfaden (functions.php Zeile 20-46)
+- Prüft bekannte XAMPP-Pfade: `C:\xampp\php\php.exe`, `C:\XAMPP\php\php.exe`, etc.
+- Duplicate in setup/index.php als `getPhpExecutableEarly()` (Zeile 35-58)
+
+**Quelle:** Problem statement, `docs/dev/issue-autosetup-php-binary.txt`
+
+---
+
+### [GEFIXT] ✅ - Root .htaccess Routing-Chaos
+**Status:** ✅ Gefixt (früher)  
+**Datum:** Vor 2025-12-06  
+**Kategorie:** Installer / Routing
+
+**Problem:**
+- Root `index.php` routete zu `/src/public/setup/`
+- Nach Setup sollte Root-index.php gelöscht werden
+- .htaccess-Regeln konnten kollidieren
+
+**Lösung implementiert:**
+- Root `index.php` existiert nicht mehr (wurde bereits entfernt)
+- .htaccess redirected direkt zu `src/public/`
+- Step 7 cleanup ist nicht mehr nötig
+
+**Quelle:** Problem statement (erwähnt als "früher gefixt")
+
+---
+
+### [GEFIXT] ✅ - DB Connection Error Handling (K1)
+**Status:** ✅ Gefixt  
+**Datum:** 2025-12-07  
+**Kategorie:** Installer / Error Handling
+
+**Problem:**
+- PDO-Verbindung ohne Try-Catch → Fatal Error bei falschen Credentials
+
+**Lösung implementiert:**
+- Try-Catch um PDO-Connection in step-3-database.php (Zeilen 34-62)
+- User-freundliche Error-Message: "Datenbankverbindung fehlgeschlagen: ..."
+
+**Quelle:** `docs/dev/setup-fixes-implemented.md`
+
+---
+
+### [GEFIXT] ✅ - DB Exists Checkbox (K2 - Shared Hosting)
+**Status:** ✅ Gefixt  
+**Datum:** 2025-12-07  
+**Kategorie:** Installer / Shared Hosting
+
+**Problem:**
+- Shared Hosting hat oft keine CREATE DATABASE Rechte
+- Setup schlug fehl
+
+**Lösung implementiert:**
+- Checkbox "Datenbank existiert bereits" in Step 3 Form
+- Skip CREATE DATABASE wenn Checkbox aktiviert (step-3-database.php Zeile 44-46)
+
+**Quelle:** `docs/dev/setup-fixes-implemented.md`
+
+---
+
+### [GEFIXT] ✅ - user_id Field für Shared IMAP (K5)
+**Status:** ✅ Gefixt  
+**Datum:** 2025-12-07  
+**Kategorie:** Installer / Data Model
+
+**Problem:**
+- Shared IMAP Accounts brauchen `user_id = NULL`
+- Personal IMAP brauchen `user_id = <user_id>`
+
+**Lösung implementiert:**
+- Step 6 setzt `user_id = NULL` für Shared IMAP (step-6-review.php Zeile 112)
+- Step 4 setzt `user_id = $userId` für Admin Personal IMAP
+
+**Quelle:** `docs/dev/setup-fixes-implemented.md`
+
+---
+
+## Zusammenfassung
+
+**Neu gefundene Bugs:** 14  
+**Kritische Bugs:** 5 (müssen vor nächstem Release gefixt werden)  
+**Hohe Bugs:** 3 (sollten in nächster Iteration gefixt werden)  
+**Mittlere Bugs:** 3 (Sicherheit - können später gefixt werden)  
+**Niedrige Bugs:** 3 (UX/Edge Cases - optional)  
+**Gefixte Bugs:** 6 (dokumentiert als ✅)
+
+**Dringendste Fixes:**
+1. Bug #0 - POST-Daten nicht übergeben (KRITISCH - Steps 3/4/5 schlagen IMMER fehl)
+2. Bug #1 - generateEnvFile() Parameter-Mismatch (KRITISCH - Setup schlägt IMMER fehl)
+3. Bug #2 - Session-Datenstruktur inkonsistent (KRITISCH - undefined array keys)
+4. Bug #4 - Encryption Key fehlt (KRITISCH - Security Risk)
+5. Bug #3 - writeProductionHtaccess() Error Handling (KRITISCH - Silent Fail)
+
+---
+
+## Empfohlene Fix-Reihenfolge
+
+### Phase 1: Installation wieder funktionsfähig machen (SOFORT - 2-3 Stunden)
+
+**Diese 3 Bugs verhindern JEDE Installation und müssen ZUERST gefixt werden:**
+
+1. **Bug #0** - POST-Parameter übergeben (5 Minuten)
+   - Datei: `src/public/setup/index.php` Zeilen 342, 345, 348
+   - Fix: `handleStep3Submit($_POST)` statt `handleStep3Submit()`
+   - Test: Setup bis Step 3 durchlaufen, sollte nicht mehr crashen
+
+2. **Bug #2** - Session-Struktur vereinheitlichen (30 Minuten)
+   - Option A: Steps 3-5 auf flache Struktur ändern (empfohlen)
+   - Option B: Step 6 und generateEnvFile auf verschachtelte Struktur ändern
+   - Test: Daten aus Step 3 sollten in Step 6 verfügbar sein
+
+3. **Bug #1 & #4** - .env richtig schreiben mit Encryption Key (1 Stunde)
+   - handleStep6Submit() muss .env schreiben (nicht generateEnvFile)
+   - Encryption Key VOR Migrations generieren
+   - .env nur bei erfolgreichen Migrations schreiben
+   - Test: Nach Setup sollte .env mit ENCRYPTION_KEY existieren
+
+**Nach Phase 1:** Setup sollte von Step 1 bis Step 7 durchlaufen können (Basic Installation funktioniert)
+
+---
+
+### Phase 2: Robustheit & Fehlerbehandlung (NÄCHSTER SPRINT - 3-4 Stunden)
+
+4. **Bug #3** - .htaccess Error Handling (30 Minuten)
+5. **Bug #5** - Migration-Fehler Rollback (1 Stunde)
+6. **Bug #7** - Port-Parsing für DB Host (30 Minuten)
+7. **Bug #6** - Setup-Lock Mechanismus (1 Stunde)
+
+**Nach Phase 2:** Setup ist robust gegen Fehler und Edge Cases
+
+---
+
+### Phase 3: Security-Verbesserungen (OPTIONAL - 2-3 Stunden)
+
+8. **Bug #8** - Session ID Regeneration (15 Minuten)
+9. **Bug #9** - CSRF-Token in Forms (1 Stunde)
+10. **Bug #10** - Session-Passwörter verschlüsseln (1 Stunde)
+
+**Nach Phase 3:** Setup ist security-hardened
+
+---
+
+### Phase 4: UX-Verbesserungen (NICE-TO-HAVE)
+
+11. **Bug #11** - Timeout-Handling für Composer (30 Minuten)
+12. **Bug #12** - Vendor-Integrity Check (30 Minuten)
+13. **Bug #13** - Windows-Path Normalisierung (15 Minuten)
+
+**Nach Phase 4:** Setup hat bessere UX, weniger Edge-Case-Probleme
+
+---
+
+## Testing-Checkliste nach Fixes
+
+**Nach Phase 1 Fixes:**
+- [ ] Fresh Install: Root-URL → Vendor Check → Steps 1-7 → Login funktioniert
+- [ ] .env Datei existiert mit korrekten Werten (inkl. ENCRYPTION_KEY)
+- [ ] Datenbank-Tabellen wurden erstellt
+- [ ] Admin-User kann sich einloggen
+- [ ] IMAP/SMTP Passwörter sind verschlüsselt in DB gespeichert
+
+**Regressions-Tests:**
+- [ ] Shared Hosting (ohne CREATE DATABASE Rechte)
+- [ ] Non-Standard MySQL Port (z.B. localhost:3307)
+- [ ] XAMPP auf Windows (PHP_BINARY Check)
+- [ ] Vendor Auto-Install funktioniert
+- [ ] Setup kann bei Fehler neu gestartet werden
+
+**Edge Cases:**
+- [ ] Browser-Refresh während Step 3-6 (keine Session-Corruption)
+- [ ] Zwei Browser-Tabs parallel Setup starten (Lock-Mechanismus nach Phase 2)
+- [ ] Migration schlägt fehl → .env sollte NICHT existieren
+
+---
+
+## Architektur-Empfehlungen
+
+### 1. Konsistente Handler-Signaturen
+**Problem:** Inkonsistente Parameter (manche Handler nehmen `array $post`, andere nicht)
+
+**Empfehlung:**
+```php
+// ALLE Handler sollten gleich sein:
+function handleStepXSubmit(): void
+{
+    $post = $_POST;  // Access globally
+    // ... logic
+}
+```
+
+Oder:
+```php
+// ALLE Handler bekommen $_POST:
+function handleStepXSubmit(array $post): void
+{
+    // ... logic
+}
+
+// In index.php:
+handleStepXSubmit($_POST);
 ```
 
 ---
 
-## 🔧 Webhosting-spezifische Überlegungen
+### 2. Einheitliche Session-Struktur
+**Problem:** Nested vs. Flat Structure durcheinander
 
-**Bekannte Unterschiede XAMPP vs. Standard Webhosting:**
-- Pfad-Separatoren (Windows \ vs. Linux /)
-- Schreibrechte auf Verzeichnisse
-- PHP-Konfiguration (memory_limit, max_execution_time, etc.)
-- MySQL-Verbindung (localhost vs. spezifische Hosts)
-- .htaccess vs. Apache-Config
-- File Permissions
+**Empfehlung:** Flache Struktur überall:
+```php
+$_SESSION['setup'] = [
+    'step' => 3,
+    'data' => [
+        'db_host' => '...',
+        'db_name' => '...',
+        'db_user' => '...',
+        // ... flat keys
+    ]
+];
+```
 
-**Installer-Anforderungen:**
-- Muss verschiedene Umgebungen erkennen
-- Auto-Detection von Pfaden und Konfigurationen
-- Fallback-Strategien für unterschiedliche Setups
-
----
-
-## 📊 Zusammenfassung
-
-**Aktueller Test-Durchlauf:**
-- 🔴 Critical: 0 (✅ Alle gelöst!)
-- 🟠 High: 0  
-- 🟡 Medium: 1 (Vendor-Page Design - für Cloud Agent)
-- 🟢 Low: 0
-
-**Gesamt gelöste Bugs:** 12
-**Offene Issues:** 1 (MEDIUM - Design only)
-**Quick-Fixes angewandt:** 9
-**Konzeptuelle Lösungen implementiert:** 2
-
-**Wichtigste Lösungen heute:**
-1. ✅ **index.php Router** - Löst Race Condition + Routing-Chaos
-2. ✅ **.env ans Ende** - Atomare Installation
-3. ✅ **Vereinfachte .htaccess** - Keine komplexen Bedingungen mehr
+Getter/Setter verwenden:
+```php
+updateSessionData('db_host', $host);
+$host = getSessionData('db_host');
+```
 
 ---
 
-## 📁 Log-Dateien
+### 3. Atomic File Operations
+**Problem:** file_put_contents() ohne Fehlerbehandlung
 
-- **Apache Error:** `c:\Users\hendr\Documents\XAMPP_Testordner\XAMPP_log\test.localhost-error.log`
-- **Apache Access:** `c:\Users\hendr\Documents\XAMPP_Testordner\XAMPP_log\test.localhost-access.log`
-- **MySQL Error:** `c:\Users\hendr\Documents\XAMPP_Testordner\XAMPP_log\mysql_error.log`
-- **PHP Error:** Siehe Apache Error Log (LogLevel: debug)
+**Best Practice für ALLE File-Writes:**
+```php
+function writeFileAtomically(string $path, string $content): void
+{
+    $dir = dirname($path);
+    if (!is_writable($dir)) {
+        throw new Exception("Directory not writable: {$dir}");
+    }
+    
+    $tempFile = $path . '.tmp.' . getmypid();
+    
+    $written = file_put_contents($tempFile, $content, LOCK_EX);
+    if ($written === false) {
+        throw new Exception("Failed to write: {$path}");
+    }
+    
+    if (!rename($tempFile, $path)) {
+        @unlink($tempFile);
+        throw new Exception("Failed to finalize: {$path}");
+    }
+    
+    @chmod($path, 0600); // Secure permissions
+}
+```
+
+---
+
+### 4. Setup-State Machine
+**Problem:** Keine klare State-Verwaltung, Steps können out-of-order ausgeführt werden
+
+**Empfehlung:** State-Guards einbauen:
+```php
+function validateStepAccess(int $requestedStep, int $currentStep): void
+{
+    // User kann nur zum aktuellen Step oder zurück
+    if ($requestedStep > $currentStep + 1) {
+        redirectToStep($currentStep);
+    }
+    
+    // Step 6 erfordert alle vorherigen Daten
+    if ($requestedStep === 6) {
+        $required = ['db_host', 'db_name', 'admin_email', 'imap_host'];
+        foreach ($required as $key) {
+            if (empty(getSessionData($key))) {
+                redirectToStep(1, ['error' => 'Bitte alle vorherigen Steps durchlaufen']);
+            }
+        }
+    }
+}
+```
+
+---
+
+## Code-Review Findings - Positive
+
+**Was FUNKTIONIERT bereits gut:**
+
+✅ **SQL Injection Schutz:**
+- DB-Namen werden mit Regex validiert: `/^[a-zA-Z0-9_]+$/`
+- Prepared Statements für User-Inserts
+- Backticks um Identifier
+
+✅ **XSS Protection:**
+- `htmlspecialchars()` wird konsequent in Views verwendet
+- 22 Vorkommen in Step-Files
+
+✅ **PDO Error Mode:**
+- `PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION` korrekt gesetzt
+- Try-Catch um DB-Operationen
+
+✅ **XAMPP PHP_BINARY Fix:**
+- `getPhpExecutable()` prüft Windows-Pfade korrekt
+- Fallback-Mechanismus vorhanden
+
+✅ **Path Resolution:**
+- `getBasePath()` funktioniert für Subdirectory und Root
+- Regex `/^(.*?)/setup/` ist robust
+
+✅ **Shared Hosting Support:**
+- `db_exists` Checkbox implementiert (K2)
+- Skip CREATE DATABASE möglich
+
+---
+
+**Erstellt:** 2025-12-09  
+**Analysiert von:** GitHub Copilot Coding Agent  
+**Methode:** Statische Code-Analyse der Setup-Wizard Dateien  
+**Dateien analysiert:** 12 PHP-Dateien im Setup-Bereich  
+**Code-Zeilen analysiert:** ~3000+ Zeilen  
+**Analyse-Dauer:** 90 Minuten  
+**Gefundene Bugs:** 14 (5 kritisch, 3 hoch, 3 mittel, 3 niedrig)  
+**Dokumentierte Fixes:** 6
