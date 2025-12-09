@@ -533,7 +533,7 @@ code {
 }
 
 .loading-spinner {
-    border: 5px solid #f3f3f3;
+    border: 5px solid var(--color-bg-light);
     border-top: 5px solid var(--color-success);
     border-radius: 50%;
     width: 60px;
@@ -570,6 +570,28 @@ code {
     background: #eff6ff;
     color: #1e40af;
     border: 1px solid #bfdbfe;
+}
+
+/* Option Card Text Styles */
+.option-card .note {
+    font-size: 0.9em;
+    color: var(--color-text-secondary);
+    margin-top: 10px;
+}
+
+.vendor-missing-help ul {
+    margin-left: 20px;
+    text-align: left;
+    margin-top: 10px;
+}
+
+.vendor-missing-help li {
+    margin: 8px 0;
+    color: var(--color-text-primary);
+}
+
+.vendor-missing-help .doc-link {
+    margin-top: 15px;
 }
 
 /* Small devices */

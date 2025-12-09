@@ -162,7 +162,7 @@ if (!$vendorExists) {
                         <p>Wenn Composer auf Ihrem Server verfügbar ist, installieren wir die Dependencies automatisch (Linux-optimiert, ~5 Minuten).</p>
                         <button id="autoInstallBtn" class="btn btn-primary">Dependencies jetzt installieren</button>
                         <div id="installStatus" style="display: none;"></div>
-                        <p style="font-size: 0.9em; color: var(--color-text-secondary); margin-top: 10px;">
+                        <p class="note">
                             <strong>Hinweis:</strong> Dies lädt ca. 50 MB Dependencies herunter und installiert diese für Ihr System optimiert.
                         </p>
                     </div>
@@ -177,7 +177,7 @@ if (!$vendorExists) {
                             <li>Stellen Sie sicher, dass <code>vendor/autoload.php</code> existiert</li>
                             <li><button onclick="window.location.reload()" class="btn btn-secondary">Seite neu laden</button></li>
                         </ol>
-                        <p style="font-size: 0.9em; color: var(--color-text-secondary);">
+                        <p class="note">
                             <strong>Platform-Hinweis:</strong> Verwenden Sie das passende vendor.zip für Ihr System (Linux vs. Windows), 
                             da Dependencies platform-spezifische Binaries enthalten können.
                         </p>
@@ -188,7 +188,7 @@ if (!$vendorExists) {
                         <p>Falls Sie SSH-Zugriff haben, können Sie Composer manuell ausführen:</p>
                         <pre>cd /pfad/zu/ci-inbox
 composer install --no-dev --optimize-autoloader</pre>
-                        <p style="font-size: 0.9em; color: var(--color-text-secondary);">
+                        <p class="note">
                             Dies installiert die Dependencies optimiert für Ihr aktuelles System.
                         </p>
                     </div>
@@ -196,12 +196,12 @@ composer install --no-dev --optimize-autoloader</pre>
                 
                 <div class="vendor-missing-help">
                     <strong>💡 Hilfe benötigt?</strong><br>
-                    <ul style="margin-top: 10px;">
+                    <ul>
                         <li><strong>Shared Hosting:</strong> Option 2 (vendor.zip) ist meist die einfachste Lösung</li>
                         <li><strong>VPS/Dedicated:</strong> Option 1 (automatisch) oder Option 3 (SSH) empfohlen</li>
                         <li><strong>Windows-Server:</strong> Erstellen Sie vendor-windows.zip lokal mit <code>php scripts\create-vendor-zip-windows.php</code></li>
                     </ul>
-                    <p style="margin-top: 15px;">
+                    <p class="doc-link">
                         📚 <a href="https://github.com/hndrk-fegko/CI-Inbox/blob/main/DEPLOYMENT.md" target="_blank">Ausführliche Deployment-Dokumentation</a>
                     </p>
                 </div>
@@ -348,7 +348,7 @@ $steps = [
 echo renderHeader($currentStep, $steps);
 
 if (isset($error)) {
-    echo '<div class="alert alert-error" style="margin: 20px 0;">❌ ' . htmlspecialchars($error) . '</div>';
+    echo '<div class="alert alert-error">❌ ' . htmlspecialchars($error) . '</div>';
 }
 
 switch ($currentStep) {
