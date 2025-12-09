@@ -1095,8 +1095,231 @@ $migrations = glob($migrationsPath . DIRECTORY_SEPARATOR . '*.php');
 
 ---
 
+## Empfohlene Fix-Reihenfolge
+
+### Phase 1: Installation wieder funktionsfähig machen (SOFORT - 2-3 Stunden)
+
+**Diese 3 Bugs verhindern JEDE Installation und müssen ZUERST gefixt werden:**
+
+1. **Bug #0** - POST-Parameter übergeben (5 Minuten)
+   - Datei: `src/public/setup/index.php` Zeilen 342, 345, 348
+   - Fix: `handleStep3Submit($_POST)` statt `handleStep3Submit()`
+   - Test: Setup bis Step 3 durchlaufen, sollte nicht mehr crashen
+
+2. **Bug #2** - Session-Struktur vereinheitlichen (30 Minuten)
+   - Option A: Steps 3-5 auf flache Struktur ändern (empfohlen)
+   - Option B: Step 6 und generateEnvFile auf verschachtelte Struktur ändern
+   - Test: Daten aus Step 3 sollten in Step 6 verfügbar sein
+
+3. **Bug #1 & #4** - .env richtig schreiben mit Encryption Key (1 Stunde)
+   - handleStep6Submit() muss .env schreiben (nicht generateEnvFile)
+   - Encryption Key VOR Migrations generieren
+   - .env nur bei erfolgreichen Migrations schreiben
+   - Test: Nach Setup sollte .env mit ENCRYPTION_KEY existieren
+
+**Nach Phase 1:** Setup sollte von Step 1 bis Step 7 durchlaufen können (Basic Installation funktioniert)
+
+---
+
+### Phase 2: Robustheit & Fehlerbehandlung (NÄCHSTER SPRINT - 3-4 Stunden)
+
+4. **Bug #3** - .htaccess Error Handling (30 Minuten)
+5. **Bug #5** - Migration-Fehler Rollback (1 Stunde)
+6. **Bug #7** - Port-Parsing für DB Host (30 Minuten)
+7. **Bug #6** - Setup-Lock Mechanismus (1 Stunde)
+
+**Nach Phase 2:** Setup ist robust gegen Fehler und Edge Cases
+
+---
+
+### Phase 3: Security-Verbesserungen (OPTIONAL - 2-3 Stunden)
+
+8. **Bug #8** - Session ID Regeneration (15 Minuten)
+9. **Bug #9** - CSRF-Token in Forms (1 Stunde)
+10. **Bug #10** - Session-Passwörter verschlüsseln (1 Stunde)
+
+**Nach Phase 3:** Setup ist security-hardened
+
+---
+
+### Phase 4: UX-Verbesserungen (NICE-TO-HAVE)
+
+11. **Bug #11** - Timeout-Handling für Composer (30 Minuten)
+12. **Bug #12** - Vendor-Integrity Check (30 Minuten)
+13. **Bug #13** - Windows-Path Normalisierung (15 Minuten)
+
+**Nach Phase 4:** Setup hat bessere UX, weniger Edge-Case-Probleme
+
+---
+
+## Testing-Checkliste nach Fixes
+
+**Nach Phase 1 Fixes:**
+- [ ] Fresh Install: Root-URL → Vendor Check → Steps 1-7 → Login funktioniert
+- [ ] .env Datei existiert mit korrekten Werten (inkl. ENCRYPTION_KEY)
+- [ ] Datenbank-Tabellen wurden erstellt
+- [ ] Admin-User kann sich einloggen
+- [ ] IMAP/SMTP Passwörter sind verschlüsselt in DB gespeichert
+
+**Regressions-Tests:**
+- [ ] Shared Hosting (ohne CREATE DATABASE Rechte)
+- [ ] Non-Standard MySQL Port (z.B. localhost:3307)
+- [ ] XAMPP auf Windows (PHP_BINARY Check)
+- [ ] Vendor Auto-Install funktioniert
+- [ ] Setup kann bei Fehler neu gestartet werden
+
+**Edge Cases:**
+- [ ] Browser-Refresh während Step 3-6 (keine Session-Corruption)
+- [ ] Zwei Browser-Tabs parallel Setup starten (Lock-Mechanismus nach Phase 2)
+- [ ] Migration schlägt fehl → .env sollte NICHT existieren
+
+---
+
+## Architektur-Empfehlungen
+
+### 1. Konsistente Handler-Signaturen
+**Problem:** Inkonsistente Parameter (manche Handler nehmen `array $post`, andere nicht)
+
+**Empfehlung:**
+```php
+// ALLE Handler sollten gleich sein:
+function handleStepXSubmit(): void
+{
+    $post = $_POST;  // Access globally
+    // ... logic
+}
+```
+
+Oder:
+```php
+// ALLE Handler bekommen $_POST:
+function handleStepXSubmit(array $post): void
+{
+    // ... logic
+}
+
+// In index.php:
+handleStepXSubmit($_POST);
+```
+
+---
+
+### 2. Einheitliche Session-Struktur
+**Problem:** Nested vs. Flat Structure durcheinander
+
+**Empfehlung:** Flache Struktur überall:
+```php
+$_SESSION['setup'] = [
+    'step' => 3,
+    'data' => [
+        'db_host' => '...',
+        'db_name' => '...',
+        'db_user' => '...',
+        // ... flat keys
+    ]
+];
+```
+
+Getter/Setter verwenden:
+```php
+updateSessionData('db_host', $host);
+$host = getSessionData('db_host');
+```
+
+---
+
+### 3. Atomic File Operations
+**Problem:** file_put_contents() ohne Fehlerbehandlung
+
+**Best Practice für ALLE File-Writes:**
+```php
+function writeFileAtomically(string $path, string $content): void
+{
+    $dir = dirname($path);
+    if (!is_writable($dir)) {
+        throw new Exception("Directory not writable: {$dir}");
+    }
+    
+    $tempFile = $path . '.tmp.' . getmypid();
+    
+    $written = file_put_contents($tempFile, $content, LOCK_EX);
+    if ($written === false) {
+        throw new Exception("Failed to write: {$path}");
+    }
+    
+    if (!rename($tempFile, $path)) {
+        @unlink($tempFile);
+        throw new Exception("Failed to finalize: {$path}");
+    }
+    
+    @chmod($path, 0600); // Secure permissions
+}
+```
+
+---
+
+### 4. Setup-State Machine
+**Problem:** Keine klare State-Verwaltung, Steps können out-of-order ausgeführt werden
+
+**Empfehlung:** State-Guards einbauen:
+```php
+function validateStepAccess(int $requestedStep, int $currentStep): void
+{
+    // User kann nur zum aktuellen Step oder zurück
+    if ($requestedStep > $currentStep + 1) {
+        redirectToStep($currentStep);
+    }
+    
+    // Step 6 erfordert alle vorherigen Daten
+    if ($requestedStep === 6) {
+        $required = ['db_host', 'db_name', 'admin_email', 'imap_host'];
+        foreach ($required as $key) {
+            if (empty(getSessionData($key))) {
+                redirectToStep(1, ['error' => 'Bitte alle vorherigen Steps durchlaufen']);
+            }
+        }
+    }
+}
+```
+
+---
+
+## Code-Review Findings - Positive
+
+**Was FUNKTIONIERT bereits gut:**
+
+✅ **SQL Injection Schutz:**
+- DB-Namen werden mit Regex validiert: `/^[a-zA-Z0-9_]+$/`
+- Prepared Statements für User-Inserts
+- Backticks um Identifier
+
+✅ **XSS Protection:**
+- `htmlspecialchars()` wird konsequent in Views verwendet
+- 22 Vorkommen in Step-Files
+
+✅ **PDO Error Mode:**
+- `PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION` korrekt gesetzt
+- Try-Catch um DB-Operationen
+
+✅ **XAMPP PHP_BINARY Fix:**
+- `getPhpExecutable()` prüft Windows-Pfade korrekt
+- Fallback-Mechanismus vorhanden
+
+✅ **Path Resolution:**
+- `getBasePath()` funktioniert für Subdirectory und Root
+- Regex `/^(.*?)/setup/` ist robust
+
+✅ **Shared Hosting Support:**
+- `db_exists` Checkbox implementiert (K2)
+- Skip CREATE DATABASE möglich
+
+---
+
 **Erstellt:** 2025-12-09  
 **Analysiert von:** GitHub Copilot Coding Agent  
 **Methode:** Statische Code-Analyse der Setup-Wizard Dateien  
 **Dateien analysiert:** 12 PHP-Dateien im Setup-Bereich  
-**Code-Zeilen analysiert:** ~3000+ Zeilen
+**Code-Zeilen analysiert:** ~3000+ Zeilen  
+**Analyse-Dauer:** 90 Minuten  
+**Gefundene Bugs:** 14 (5 kritisch, 3 hoch, 3 mittel, 3 niedrig)  
+**Dokumentierte Fixes:** 6
