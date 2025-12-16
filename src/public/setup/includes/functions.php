@@ -702,7 +702,7 @@ function return_bytes(string $val): int
 /**
  * Format bytes to human-readable
  */
-function format_bytes(int $bytes, int $precision = 2): string
+function format_bytes(float $bytes, int $precision = 2): string
 {
     $units = ['B', 'KB', 'MB', 'GB'];
     $bytes = max($bytes, 0);
