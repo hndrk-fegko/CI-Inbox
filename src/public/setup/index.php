@@ -271,12 +271,77 @@ require_once __DIR__ . '/includes/step-6-review.php';
 require_once __DIR__ . '/includes/step-7-complete.php';
 
 // ============================================================================
+// SESSION NORMALIZATION
+// ============================================================================
+
+/**
+ * Normalize nested session structure to flat structure
+ * Converts: ['db' => ['host' => 'x']] to ['db_host' => 'x']
+ * 
+ * @param array $sessionData Raw session data
+ * @return array Normalized flat structure
+ */
+function normalizeSessionData(array $sessionData): array
+{
+    $normalized = $sessionData;
+    
+    // Database fields (from step 3)
+    if (isset($sessionData['db']) && is_array($sessionData['db'])) {
+        $normalized['db_host'] = $sessionData['db']['host'] ?? '';
+        $normalized['db_name'] = $sessionData['db']['name'] ?? '';
+        $normalized['db_user'] = $sessionData['db']['user'] ?? '';
+        $normalized['db_password'] = $sessionData['db']['pass'] ?? '';
+        $normalized['db_port'] = $sessionData['db']['port'] ?? 3306;
+        $normalized['db_exists'] = $sessionData['db']['exists'] ?? false;
+    }
+    
+    // Admin fields (from step 4)
+    if (isset($sessionData['admin']) && is_array($sessionData['admin'])) {
+        $normalized['admin_email'] = $sessionData['admin']['email'] ?? '';
+        $normalized['admin_name'] = $sessionData['admin']['name'] ?? '';
+        $normalized['admin_password'] = $sessionData['admin']['password'] ?? '';
+        $normalized['enable_admin_imap'] = $sessionData['admin']['create_personal_imap'] ?? false;
+        $normalized['admin_imap_password'] = $sessionData['admin']['imap_password'] ?? '';
+        $normalized['admin_imap_host'] = $sessionData['admin']['imap_host'] ?? '';
+        $normalized['admin_imap_port'] = $sessionData['admin']['imap_port'] ?? '993';
+        $normalized['admin_imap_username'] = $sessionData['admin']['email'] ?? '';
+        $normalized['admin_imap_encryption'] = ($sessionData['admin']['imap_ssl'] ?? true) ? 'ssl' : 'tls';
+    }
+    
+    // IMAP fields (from step 5)
+    if (isset($sessionData['imap']) && is_array($sessionData['imap'])) {
+        $normalized['imap_host'] = $sessionData['imap']['host'] ?? '';
+        $normalized['imap_port'] = $sessionData['imap']['port'] ?? '993';
+        $normalized['imap_username'] = $sessionData['imap']['user'] ?? '';
+        $normalized['imap_password'] = $sessionData['imap']['pass'] ?? '';
+        $normalized['imap_email'] = $sessionData['imap']['user'] ?? '';
+        $normalized['imap_encryption'] = ($sessionData['imap']['ssl'] ?? true) ? 'ssl' : 'tls';
+    }
+    
+    // SMTP fields (from step 5)
+    if (isset($sessionData['smtp']) && is_array($sessionData['smtp'])) {
+        $normalized['smtp_host'] = $sessionData['smtp']['host'] ?? '';
+        $normalized['smtp_port'] = $sessionData['smtp']['port'] ?? '587';
+        $normalized['smtp_username'] = $sessionData['smtp']['user'] ?? '';
+        $normalized['smtp_password'] = $sessionData['smtp']['pass'] ?? '';
+        $normalized['smtp_encryption'] = ($sessionData['smtp']['ssl'] ?? true) ? 'tls' : 'none';
+        $normalized['smtp_from_email'] = $sessionData['smtp']['from_email'] ?? '';
+        $normalized['smtp_from_name'] = $sessionData['smtp']['from_name'] ?? 'CI-Inbox';
+    }
+    
+    return $normalized;
+}
+
+// ============================================================================
 // SESSION & ROUTING
 // ============================================================================
 
 $sessionData = initSession();
 $currentStep = isset($_GET['step']) ? (int)$_GET['step'] : $sessionData['step'];
 $currentStep = max(1, min(7, $currentStep));
+
+// Normalize session data for steps that need flat structure (step 6)
+$normalizedSessionData = normalizeSessionData($sessionData);
 
 // ============================================================================
 // AJAX HANDLER
@@ -301,16 +366,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 handleStep2Submit();
                 break;
             case 3:
-                handleStep3Submit();
+                handleStep3Submit($_POST);
                 break;
             case 4:
-                handleStep4Submit();
+                handleStep4Submit($_POST);
                 break;
             case 5:
-                handleStep5Submit();
+                handleStep5Submit($_POST);
                 break;
             case 6:
-                handleStep6Submit();
+                handleStep6Submit($normalizedSessionData);
                 break;
             default:
                 redirectToStep(1);
@@ -368,7 +433,7 @@ switch ($currentStep) {
         renderStep5Form($sessionData);
         break;
     case 6:
-        renderStep6Form($sessionData);
+        renderStep6Form($normalizedSessionData);
         break;
     case 7:
         renderStep7($sessionData);

@@ -9,14 +9,19 @@ declare(strict_types=1);
 
 /**
  * Handle Step 6 form submission (starts installation)
+ * 
+ * @param array $sessionData Normalized session data from index.php
  */
-function handleStep6Submit(): void
+function handleStep6Submit(array $sessionData): void
 {
     $projectRoot = getProjectRoot();
-    $sessionData = getSessionData();
     
     try {
-        // Database connection (BEFORE .env creation to prevent race condition)
+        // STEP 1: Generate encryption key FIRST (before any DB operations)
+        $encryptionKey = bin2hex(random_bytes(32)); // 64 hex chars = 32 bytes
+        $sessionData['encryption_key'] = $encryptionKey;
+        
+        // STEP 2: Database connection
         $dsn = "mysql:host={$sessionData['db_host']};port={$sessionData['db_port']};charset=utf8mb4";
         $pdo = new PDO($dsn, $sessionData['db_user'], $sessionData['db_password']);
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -140,21 +145,46 @@ function handleStep6Submit(): void
         $stmt->execute(['threads_per_page', '25']);
         $stmt->execute(['email_retention_days', '0']);
         
-        // Write .htaccess for production
+        // Write production .htaccess
         if (!writeProductionHtaccess($projectRoot)) {
             throw new Exception('Fehler beim Erstellen der .htaccess-Datei');
         }
         
-        // IMPORTANT: Generate .env file as LAST step (atomic installation marker)
+        // STEP 5: Generate and write .env file as LAST step (atomic installation marker)
         // This prevents race conditions where .env exists but DB is incomplete
-        if (!generateEnvFile($sessionData, $projectRoot)) {
-            throw new Exception('Fehler beim Erstellen der .env-Datei');
+        $envContent = generateEnvFile($sessionData);
+        
+        // Replace empty ENCRYPTION_KEY with generated key
+        $envContent = str_replace('ENCRYPTION_KEY=', "ENCRYPTION_KEY={$encryptionKey}", $envContent);
+        
+        // Write .env atomically
+        $envPath = $projectRoot . '/.env';
+        $tempFile = $envPath . '.tmp';
+        
+        $written = file_put_contents($tempFile, $envContent, LOCK_EX);
+        if ($written === false) {
+            throw new Exception('Fehler beim Schreiben der .env-Datei (Schreibrechte prüfen)');
         }
+        
+        // Atomic rename
+        if (!rename($tempFile, $envPath)) {
+            @unlink($tempFile);
+            throw new Exception('Fehler beim Finalisieren der .env-Datei');
+        }
+        
+        // Set secure permissions
+        @chmod($envPath, 0600);
         
         updateSessionStep(7);
         redirectToStep(7);
         
     } catch (Exception $e) {
+        // Rollback: Delete .env if it was written (allows setup restart)
+        $envPath = $projectRoot . '/.env';
+        if (file_exists($envPath)) {
+            @unlink($envPath);
+        }
+        
         throw new Exception('Installation fehlgeschlagen: ' . $e->getMessage());
     }
 }

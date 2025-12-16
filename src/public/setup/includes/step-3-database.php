@@ -45,13 +45,14 @@ function handleStep3Submit(array $post): void
             $pdo->exec("CREATE DATABASE IF NOT EXISTS `{$dbName}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
         }
         
-        // Store configuration in session
+        // Store configuration in session (nested structure)
         updateSessionData('db', [
             'host' => $dbHost,
             'name' => $dbName,
             'user' => $dbUser,
             'pass' => $dbPass,
-            'port' => 3306
+            'port' => 3306,
+            'exists' => $dbExists
         ]);
         
         updateSessionStep(4);

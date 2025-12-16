@@ -231,9 +231,9 @@ function autoDetectHosts(string $email): array
 function generateEnvFile(array $data): string
 {
     // Define variables BEFORE Heredoc (avoids concatenation errors)
-    $smtpEncryption = !empty($data['smtp']['ssl']) ? 'tls' : 'none';
-    $smtpFromEmail = $data['smtp']['from_email'] ?? $data['imap']['user'] ?? '';
-    $smtpFromName = $data['smtp']['from_name'] ?? 'CI-Inbox';
+    $smtpEncryption = !empty($data['smtp_encryption']) ? $data['smtp_encryption'] : 'none';
+    $smtpFromEmail = $data['smtp_from_email'] ?? $data['imap_email'] ?? '';
+    $smtpFromName = $data['smtp_from_name'] ?? 'CI-Inbox';
     
     return <<<ENV
 # CI-Inbox Environment Configuration
@@ -245,27 +245,27 @@ APP_DEBUG=false
 APP_URL=http://localhost
 
 # Database
-DB_HOST={$data['db']['host']}
-DB_PORT={$data['db']['port']}
-DB_NAME={$data['db']['name']}
-DB_USER={$data['db']['user']}
-DB_PASS={$data['db']['pass']}
+DB_HOST={$data['db_host']}
+DB_PORT={$data['db_port']}
+DB_NAME={$data['db_name']}
+DB_USER={$data['db_user']}
+DB_PASS={$data['db_password']}
 
 # Encryption
 ENCRYPTION_KEY=
 
 # IMAP (Shared Inbox)
-IMAP_HOST={$data['imap']['host']}
-IMAP_PORT={$data['imap']['port']}
-IMAP_USER={$data['imap']['user']}
-IMAP_PASS={$data['imap']['pass']}
-IMAP_SSL={$data['imap']['ssl']}
+IMAP_HOST={$data['imap_host']}
+IMAP_PORT={$data['imap_port']}
+IMAP_USER={$data['imap_username']}
+IMAP_PASS={$data['imap_password']}
+IMAP_SSL={$data['imap_encryption']}
 
 # SMTP
-SMTP_HOST={$data['smtp']['host']}
-SMTP_PORT={$data['smtp']['port']}
-SMTP_USER={$data['smtp']['user']}
-SMTP_PASS={$data['smtp']['pass']}
+SMTP_HOST={$data['smtp_host']}
+SMTP_PORT={$data['smtp_port']}
+SMTP_USER={$data['smtp_username']}
+SMTP_PASS={$data['smtp_password']}
 SMTP_ENCRYPTION={$smtpEncryption}
 SMTP_FROM_EMAIL={$smtpFromEmail}
 SMTP_FROM_NAME={$smtpFromName}
@@ -286,9 +286,10 @@ ENV;
 /**
  * Write production .htaccess that redirects to src/public/
  * 
- * @return void
+ * @param string $basePath Base path (optional, for compatibility)
+ * @return bool True on success, false on failure
  */
-function writeProductionHtaccess(): void
+function writeProductionHtaccess(string $basePath = ''): bool
 {
     $htaccessContent = <<<'HTACCESS'
 # CI-Inbox Production Configuration
@@ -331,7 +332,32 @@ Options -Indexes
 </IfModule>
 HTACCESS;
 
-    file_put_contents(__DIR__ . '/../../../../.htaccess', $htaccessContent);
+    $htaccessPath = __DIR__ . '/../../../../.htaccess';
+    
+    // Check write permissions first
+    $dir = dirname($htaccessPath);
+    if (!is_writable($dir)) {
+        error_log("Setup Error: Directory {$dir} is not writable for .htaccess");
+        return false;
+    }
+    
+    // Atomic write with temp file
+    $tempFile = $htaccessPath . '.tmp';
+    $written = file_put_contents($tempFile, $htaccessContent, LOCK_EX);
+    
+    if ($written === false) {
+        error_log("Setup Error: Failed to write .htaccess temp file");
+        return false;
+    }
+    
+    // Atomic rename
+    if (!rename($tempFile, $htaccessPath)) {
+        @unlink($tempFile);
+        error_log("Setup Error: Failed to rename .htaccess temp file");
+        return false;
+    }
+    
+    return true;
 }
 
 /**

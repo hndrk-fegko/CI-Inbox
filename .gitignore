@@ -30,6 +30,7 @@ node_modules/
 # Composer
 composer.lock
 vendor.zip
+vendor-windows.zip
 
 # IDE
 .vscode/
