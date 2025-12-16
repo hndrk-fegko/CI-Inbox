@@ -7,6 +7,8 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\Capsule\Manager as Capsule;
+
 /**
  * Handle Step 6 form submission (starts installation)
  * 
@@ -33,6 +35,22 @@ function handleStep6Submit(array $sessionData): void
         
         // Use database
         $pdo->exec("USE `{$sessionData['db_name']}`");
+
+        // Initialize Capsule
+        $capsule = new Capsule;
+        $capsule->addConnection([
+            'driver'    => 'mysql',
+            'host'      => $sessionData['db_host'],
+            'database'  => $sessionData['db_name'],
+            'username'  => $sessionData['db_user'],
+            'password'  => $sessionData['db_password'],
+            'port'      => $sessionData['db_port'],
+            'charset'   => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix'    => '',
+        ]);
+        $capsule->setAsGlobal();
+        $capsule->bootEloquent();
         
         // Run migrations
         $migrationsPath = $projectRoot . '/database/migrations';
