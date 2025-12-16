@@ -23,6 +23,24 @@ function getPhpExecutable(): string
     if (defined('PHP_BINARY') && PHP_BINARY && file_exists(PHP_BINARY)) {
         return escapeshellarg(PHP_BINARY);
     }
+
+    // Linux/Unix: Check common paths, especially for Plesk
+    if (strtoupper(substr(PHP_OS, 0, 3)) !== 'WIN') {
+        $possiblePaths = [
+            '/usr/bin/php',
+            '/usr/local/bin/php',
+            // Common Plesk PHP paths
+            '/opt/plesk/php/8.2/bin/php',
+            '/opt/plesk/php/8.1/bin/php',
+            '/opt/plesk/php/8.0/bin/php',
+        ];
+
+        foreach ($possiblePaths as $path) {
+            if (file_exists($path)) {
+                return escapeshellarg($path);
+            }
+        }
+    }
     
     // Windows: Check common XAMPP paths
     if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
