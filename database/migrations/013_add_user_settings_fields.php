@@ -9,11 +9,6 @@
 require_once __DIR__ . '/../../vendor/autoload.php';
 
 use Illuminate\Database\Capsule\Manager as Capsule;
-use CiInbox\Core\Container;
-
-// Initialize database connection
-$container = Container::getInstance();
-$container->get('database');
 
 echo "Running migration: 013_add_user_settings_fields.php\n";
 

@@ -10,11 +10,6 @@
 require_once __DIR__ . '/../../vendor/autoload.php';
 
 use Illuminate\Database\Capsule\Manager as Capsule;
-use CiInbox\Core\Container;
-
-// Initialize database connection
-$container = Container::getInstance();
-$container->get('database');
 
 echo "Running migration: 016_add_theme_mode_to_users.php\n";
 

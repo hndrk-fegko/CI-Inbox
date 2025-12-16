@@ -58,7 +58,10 @@ function handleStep6Submit(array $sessionData): void
         sort($migrations);
         
         foreach ($migrations as $migration) {
-            require_once $migration;
+            $migrationInstance = require $migration;
+            if (is_object($migrationInstance) && method_exists($migrationInstance, 'up')) {
+                $migrationInstance->up();
+            }
         }
         
         // Create admin user

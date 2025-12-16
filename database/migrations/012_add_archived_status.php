@@ -11,10 +11,6 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 use Illuminate\Database\Capsule\Manager as Capsule;
 use CiInbox\Core\Container;
 
-// Initialize database connection
-$container = Container::getInstance();
-$container->get('database');
-
 // Raw SQL to modify enum
 $pdo = Capsule::connection()->getPdo();
 $pdo->exec("ALTER TABLE threads MODIFY COLUMN status ENUM('open', 'pending', 'closed', 'archived') DEFAULT 'open'");
