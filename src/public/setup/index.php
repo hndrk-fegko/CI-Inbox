@@ -80,52 +80,54 @@ if (!$vendorExists && isset($_GET['action']) && $_GET['action'] === 'auto_instal
         $rootDir = __DIR__ . '/../../../';
         $logFile = $rootDir . 'logs/composer-install.log';
         
+        // Check if shell execution is disabled
         $disabledFunctions = explode(',', ini_get('disable_functions'));
         $disabledFunctions = array_map('trim', $disabledFunctions);
-        
         if (in_array('exec', $disabledFunctions) || in_array('shell_exec', $disabledFunctions)) {
             return ['success' => false, 'message' => 'PHP exec() und shell_exec() sind deaktiviert.'];
         }
         
+        // Ensure logs directory exists
         if (!is_dir($rootDir . 'logs')) {
             @mkdir($rootDir . 'logs', 0755, true);
         }
         
-        $composerCommand = null;
+        // Find a path to a composer executable (local .phar or global command)
+        $composerPath = null;
         if (file_exists($rootDir . 'composer.phar')) {
-            $composerCommand = 'composer.phar';
+            $composerPath = $rootDir . 'composer.phar';
         } else {
+            // Use shell_exec to find composer in the system's PATH
             $whichComposer = @shell_exec('which composer 2>/dev/null');
             if (!empty($whichComposer)) {
-                $composerCommand = 'composer';
+                $composerPath = trim($whichComposer);
             } else {
+                // Fallback for Windows
                 $whereComposer = @shell_exec('where composer 2>nul');
                 if (!empty($whereComposer)) {
-                    $composerCommand = 'composer';
+                    $composerPath = trim($whereComposer);
                 }
             }
         }
         
-        if (!$composerCommand) {
-            return ['success' => false, 'message' => 'Composer nicht verfügbar.'];
+        if (!$composerPath) {
+            return ['success' => false, 'message' => 'Composer konnte nicht gefunden werden (weder composer.phar noch ein globaler Composer).'];
         }
         
+        // Get the reliable PHP executable path
+        $phpExec = getPhpExecutableEarly();
         $escapedRootDir = escapeshellarg($rootDir);
-        $phpExec = getPhpExecutableEarly(); // BUG FIX: Use XAMPP-aware PHP path
-        $command = "cd {$escapedRootDir} && ";
         
-        if ($composerCommand === 'composer.phar') {
-            $command .= "{$phpExec} " . escapeshellarg($rootDir . 'composer.phar');
-        } else {
-            $command .= "composer";
-        }
-        
-        $command .= " install --no-dev --optimize-autoloader --no-interaction 2>&1";
-        
+        // Always execute composer with our detected PHP binary for reliability
+        $command = "cd {$escapedRootDir} && " .
+                   "{$phpExec} " . escapeshellarg($composerPath) .
+                   " install --no-dev --optimize-autoloader --no-interaction 2>&1";
+
         $output = [];
         $returnVar = 0;
         @exec($command, $output, $returnVar);
         
+        // Log the execution details
         $logContent = "=== Composer Install Log ===\n";
         $logContent .= "Date: " . date('Y-m-d H:i:s') . "\n";
         $logContent .= "Command: {$command}\n";
@@ -133,10 +135,11 @@ if (!$vendorExists && isset($_GET['action']) && $_GET['action'] === 'auto_instal
         $logContent .= "Output:\n" . implode("\n", $output);
         file_put_contents($logFile, $logContent);
         
+        // Check if installation was successful
         if ($returnVar === 0 && is_dir($rootDir . 'vendor') && file_exists($rootDir . 'vendor/autoload.php')) {
             return ['success' => true, 'message' => 'Dependencies erfolgreich installiert!'];
         } else {
-            return ['success' => false, 'message' => 'Installation fehlgeschlagen. Siehe logs/composer-install.log'];
+            return ['success' => false, 'message' => 'Installation fehlgeschlagen. Siehe logs/composer-install.log für Details.'];
         }
     }
     
