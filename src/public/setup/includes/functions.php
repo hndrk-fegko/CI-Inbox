@@ -507,6 +507,7 @@ function checkRequirements(): array
  */
 function checkHostingEnvironment(): array
 {
+    $basePath = getProjectRoot();
     $checks = [];
     
     // 1. PHP Version (Critical)
