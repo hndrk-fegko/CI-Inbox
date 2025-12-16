@@ -239,7 +239,11 @@ composer install --no-dev --optimize-autoloader</pre>
             
             try {
                 const response = await fetch('?action=auto_install_vendor');
-                const result = await response.json();
+                const responseText = await response.text();
+                console.log("--- Raw Server Response ---");
+                console.log(responseText);
+                console.log("---------------------------");
+                const result = JSON.parse(responseText);
                 
                 overlay.classList.remove('active'); // Hide loading overlay
                 
