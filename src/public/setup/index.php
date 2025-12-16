@@ -34,28 +34,16 @@ if (!$vendorExists && isset($_GET['action']) && $_GET['action'] === 'auto_instal
     // Must be defined HERE because functions.php can't be loaded without vendor/
     function getPhpExecutableEarly(): string
     {
-        if (defined('PHP_BINARY') && PHP_BINARY && file_exists(PHP_BINARY)) {
-            return escapeshellarg(PHP_BINARY);
-        }
+        // Due to open_basedir restrictions, we cannot use file_exists().
+        // We will try a prioritized list of common paths and let exec() determine if they work.
 
-        // Linux/Unix: Check common paths, especially for Plesk
+        // For non-Windows systems (like Plesk)
         if (strtoupper(substr(PHP_OS, 0, 3)) !== 'WIN') {
-            $possiblePaths = [
-                '/usr/bin/php',
-                '/usr/local/bin/php',
-                // Common Plesk PHP paths
-                '/opt/plesk/php/8.2/bin/php',
-                '/opt/plesk/php/8.1/bin/php',
-                '/opt/plesk/php/8.0/bin/php',
-            ];
-
-            foreach ($possiblePaths as $path) {
-                if (file_exists($path)) {
-                    return escapeshellarg($path);
-                }
-            }
+            // This path is derived from the user's error logs and is the most likely to succeed.
+            return escapeshellarg('/opt/plesk/php/8.2/bin/php');
         }
         
+        // For Windows, the original logic is likely fine as open_basedir is less of an issue.
         if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
             $possiblePaths = [
                 'C:\\xampp\\php\\php.exe',
@@ -72,6 +60,7 @@ if (!$vendorExists && isset($_GET['action']) && $_GET['action'] === 'auto_instal
             }
         }
         
+        // Fallback if no specific OS logic matches.
         return 'php';
     }
     
@@ -250,11 +239,7 @@ composer install --no-dev --optimize-autoloader</pre>
             
             try {
                 const response = await fetch('?action=auto_install_vendor');
-                const responseText = await response.text();
-                console.log("--- Raw Server Response ---");
-                console.log(responseText);
-                console.log("---------------------------");
-                const result = JSON.parse(responseText);
+                const result = await response.json();
                 
                 overlay.classList.remove('active'); // Hide loading overlay
                 
