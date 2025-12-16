@@ -56,6 +56,9 @@ function handleStep6Submit(array $sessionData): void
         $migrationsPath = $projectRoot . '/database/migrations';
         $migrations = glob($migrationsPath . '/*.php');
         sort($migrations);
+
+        // Disable foreign key checks for the duration of migrations
+        $pdo->exec("SET FOREIGN_KEY_CHECKS=0;");
         
         foreach ($migrations as $migration) {
             $migrationInstance = require $migration;
@@ -63,6 +66,9 @@ function handleStep6Submit(array $sessionData): void
                 $migrationInstance->up();
             }
         }
+
+        // Re-enable foreign key checks
+        $pdo->exec("SET FOREIGN_KEY_CHECKS=1;");
         
         // Create admin user
         $passwordHash = password_hash($sessionData['admin_password'], PASSWORD_BCRYPT);
