@@ -341,7 +341,7 @@ $currentStep = isset($_GET['step']) ? (int)$_GET['step'] : $sessionData['step'];
 $currentStep = max(1, min(7, $currentStep));
 
 // Normalize session data for steps that need flat structure (step 6)
-$normalizedSessionData = normalizeSessionData($sessionData);
+$normalizedSessionData = normalizeSessionData($sessionData['data']);
 
 // ============================================================================
 // AJAX HANDLER

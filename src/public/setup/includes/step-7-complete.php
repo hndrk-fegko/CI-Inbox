@@ -23,9 +23,9 @@ function renderStep7(array $sessionData): void
         // Silently ignore if deletion fails (file permissions, etc.)
     }
     
-    // Clear session after successful installation
-    session_destroy();
-    
+    $adminEmail = !empty($sessionData['data']['admin']['email']) ? $sessionData['data']['admin']['email'] : 'admin@example.com';
+    $enableAdminImap = !empty($sessionData['data']['admin']['create_personal_imap']);
+
     ?>
     <div style="text-align: center; padding: 40px 20px;">
         <div style="font-size: 72px; margin-bottom: 20px;">🎉</div>
@@ -40,7 +40,7 @@ function renderStep7(array $sessionData): void
             <table class="review-table">
                 <tr>
                     <th style="text-align: right;">E-Mail:</th>
-                    <td style="text-align: left;"><strong><?= htmlspecialchars($sessionData['admin_email'] ?? 'admin@example.com') ?></strong></td>
+                    <td style="text-align: left;"><strong><?= htmlspecialchars($adminEmail) ?></strong></td>
                 </tr>
                 <tr>
                     <th style="text-align: right;">Passwort:</th>
@@ -55,7 +55,7 @@ function renderStep7(array $sessionData): void
                 <li>Datenbank-Tabellen erstellt</li>
                 <li>Administrator-Account angelegt</li>
                 <li>Gemeinsame IMAP/SMTP-Inbox konfiguriert</li>
-                <?php if (!empty($sessionData['enable_admin_imap'])): ?>
+                <?php if ($enableAdminImap): ?>
                 <li>Persönlicher IMAP-Account für Admin eingerichtet</li>
                 <?php endif; ?>
                 <li>System-Labels erstellt (Important, Follow-up, In Progress, Done)</li>
@@ -81,4 +81,7 @@ function renderStep7(array $sessionData): void
         </p>
     </div>
     <?php
+    
+    // Clear session after successful installation
+    session_destroy();
 }

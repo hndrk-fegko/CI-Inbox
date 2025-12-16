@@ -46,16 +46,6 @@ function getPhpExecutable(): string
 }
 
 /**
- * Get base path for redirects
- * Detects if app is running in subdirectory (IONOS) or root (Plesk)
- * 
- * Examples:
- * - Plesk: /src/public/setup/index.php → returns ""
- * - IONOS: /src/public/setup/index.php → returns "/src/public"
- * 
- * @return string Base path without trailing slash
- */
-/**
  * Get project root filesystem path
  * 
  * @return string Absolute filesystem path to project root
