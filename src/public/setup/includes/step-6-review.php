@@ -204,7 +204,7 @@ function renderStep6Form(array $sessionData): void
         <h3>🗄️ Datenbank</h3>
         <table class="review-table">
             <tr><th>Host:</th><td><?= htmlspecialchars($sessionData['db_host'] ?? '') ?></td></tr>
-            <tr><th>Port:</th><td><?= htmlspecialchars($sessionData['db_port'] ?? '') ?></td></tr>
+            <tr><th>Port:</th><td><?= htmlspecialchars((string)($sessionData['db_port'] ?? '')) ?></td></tr>
             <tr><th>Datenbankname:</th><td><?= htmlspecialchars($sessionData['db_name'] ?? '') ?></td></tr>
             <tr><th>Benutzer:</th><td><?= htmlspecialchars($sessionData['db_user'] ?? '') ?></td></tr>
         </table>
@@ -216,7 +216,7 @@ function renderStep6Form(array $sessionData): void
             <tr><th>Name:</th><td><?= htmlspecialchars($sessionData['admin_name'] ?? '') ?></td></tr>
             <tr><th>E-Mail:</th><td><?= htmlspecialchars($sessionData['admin_email'] ?? '') ?></td></tr>
             <?php if (!empty($sessionData['enable_admin_imap'])): ?>
-            <tr><th>Persönlicher IMAP:</th><td><?= htmlspecialchars($sessionData['admin_imap_host'] ?? '') ?>:<?= htmlspecialchars($sessionData['admin_imap_port'] ?? '') ?></td></tr>
+            <tr><th>Persönlicher IMAP:</th><td><?= htmlspecialchars($sessionData['admin_imap_host'] ?? '') ?>:<?= htmlspecialchars((string)($sessionData['admin_imap_port'] ?? '')) ?></td></tr>
             <?php endif; ?>
         </table>
     </div>
@@ -225,10 +225,10 @@ function renderStep6Form(array $sessionData): void
         <h3>📧 Gemeinsame Inbox</h3>
         <table class="review-table">
             <tr><th>IMAP Host:</th><td><?= htmlspecialchars($sessionData['imap_host'] ?? '') ?></td></tr>
-            <tr><th>IMAP Port:</th><td><?= htmlspecialchars($sessionData['imap_port'] ?? '') ?></td></tr>
+            <tr><th>IMAP Port:</th><td><?= htmlspecialchars((string)($sessionData['imap_port'] ?? '')) ?></td></tr>
             <tr><th>IMAP Verschlüsselung:</th><td><?= strtoupper(htmlspecialchars($sessionData['imap_encryption'] ?? '')) ?></td></tr>
             <tr><th>SMTP Host:</th><td><?= htmlspecialchars($sessionData['smtp_host'] ?? '') ?></td></tr>
-            <tr><th>SMTP Port:</th><td><?= htmlspecialchars($sessionData['smtp_port'] ?? '') ?></td></tr>
+            <tr><th>SMTP Port:</th><td><?= htmlspecialchars((string)($sessionData['smtp_port'] ?? '')) ?></td></tr>
             <tr><th>SMTP Verschlüsselung:</th><td><?= strtoupper(htmlspecialchars($sessionData['smtp_encryption'] ?? '')) ?></td></tr>
         </table>
     </div>
