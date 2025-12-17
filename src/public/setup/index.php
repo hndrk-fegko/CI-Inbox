@@ -34,22 +34,22 @@ if (!$vendorExists && isset($_GET['action']) && $_GET['action'] === 'auto_instal
     // Must be defined HERE because functions.php can't be loaded without vendor/
     function getPhpExecutableEarly(): string
     {
-        // Due to open_basedir restrictions, we cannot use file_exists().
-        // We will try a prioritized list of common paths and let exec() determine if they work.
-
-        // For non-Windows systems (like Plesk)
+        // Vermeide file_exists() wegen open_basedir Restriktionen
+        // Nutze stattdessen 'which' bzw. 'where' (Shell-Tools)
+        
         if (strtoupper(substr(PHP_OS, 0, 3)) !== 'WIN') {
-            // This path is derived from the user's error logs and is the most likely to succeed.
+            // Linux/Unix: Nutze 'which' statt file_exists()
+            $whichPhp = @shell_exec('which php 2>/dev/null');
+            if (!empty(trim($whichPhp))) {
+                return escapeshellarg(trim($whichPhp));
+            }
+            
+            // Fallback auf vollständigen Pfad (Plesk-Standard)
             return escapeshellarg('/opt/plesk/php/8.2/bin/php');
-            //debug log to console
-            echo "--- Detected PHP Executable Path ---\n";
-            echo escapeshellarg('/opt/plesk/php/8.2/bin/php') . "\n";
         }
         
-        // For Windows, the original logic is likely fine as open_basedir is less of an issue.
+        // Windows: Originaler Code bleibt erhalten
         if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-            // debug log to console
-            echo "--- Detected PHP Executable Path (Windows) ---\n";
             $possiblePaths = [
                 'C:\\xampp\\php\\php.exe',
                 'C:\\XAMPP\\php\\php.exe',
@@ -61,9 +61,6 @@ if (!$vendorExists && isset($_GET['action']) && $_GET['action'] === 'auto_instal
             foreach ($possiblePaths as $path) {
                 if (file_exists($path)) {
                     return escapeshellarg($path);
-                    //debug log to console
-                    echo "--- path ". $possiblePaths ." returnes ---\n";
-                    echo escapeshellarg($path) . "\n";
                 }
             }
         }
