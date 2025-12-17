@@ -7,16 +7,15 @@ use Illuminate\Database\Capsule\Manager as Capsule;
 return new class {
     public function up(): void
     {
+        if (!Capsule::schema()->hasTable('internal_notes')) {
+            return;
+        }
+        if (Capsule::schema()->hasColumn('internal_notes', 'position')) {
+            return; // column already exists, skip
+        }
+
         Capsule::schema()->table('internal_notes', function ($table) {
             $table->integer('position')->nullable()->after('type');
-            $table->index('position');
-        });
-    }
-
-    public function down(): void
-    {
-        Capsule::schema()->table('internal_notes', function ($table) {
-            $table->dropColumn('position');
         });
     }
 };
