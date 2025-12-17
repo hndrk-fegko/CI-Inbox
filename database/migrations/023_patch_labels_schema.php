@@ -12,25 +12,33 @@ return new class {
             return;
         }
 
-        $needIsSystem  = !$schema->hasColumn('labels', 'is_system');
-        $needCreatedAt = !$schema->hasColumn('labels', 'created_at');
-        $needUpdatedAt = !$schema->hasColumn('labels', 'updated_at');
+        $hasIsSystem   = $schema->hasColumn('labels', 'is_system');
+        $hasCreatedAt  = $schema->hasColumn('labels', 'created_at');
+        $hasUpdatedAt  = $schema->hasColumn('labels', 'updated_at');
+        $hasDescription= $schema->hasColumn('labels', 'description');
+        $hasColor      = $schema->hasColumn('labels', 'color');
 
-        if ($needIsSystem || $needCreatedAt || $needUpdatedAt) {
-            $schema->table('labels', function ($table) use ($needIsSystem, $needCreatedAt, $needUpdatedAt) {
-                if ($needIsSystem) {
-                    $table->boolean('is_system')->default(false)->after('description');
+        if (!$hasIsSystem || !$hasCreatedAt || !$hasUpdatedAt) {
+            $schema->table('labels', function ($table) use ($hasIsSystem, $hasCreatedAt, $hasUpdatedAt, $hasDescription, $hasColor) {
+                if (!$hasIsSystem) {
+                    // Add without AFTER; set position only if a safe reference exists
+                    $col = $table->boolean('is_system')->default(false);
+                    if ($hasDescription) {
+                        $col->after('description');
+                    } elseif ($hasColor) {
+                        $col->after('color');
+                    }
                 }
-                if ($needCreatedAt) {
+                if (!$hasCreatedAt) {
                     $table->timestamp('created_at')->nullable();
                 }
-                if ($needUpdatedAt) {
+                if (!$hasUpdatedAt) {
                     $table->timestamp('updated_at')->nullable();
                 }
             });
         }
 
-        // Try to add index on is_system (skip if it already exists)
+        // Try to add index on is_system (ignore if it already exists)
         try {
             if ($schema->hasColumn('labels', 'is_system')) {
                 $schema->table('labels', function ($table) {
@@ -38,12 +46,12 @@ return new class {
                 });
             }
         } catch (Throwable $e) {
-            // ignore if index already exists
+            // ignore
         }
     }
 
     public function down(): void
     {
-        // No down-migration for a patch
+        // No down-migration for patch
     }
 };
