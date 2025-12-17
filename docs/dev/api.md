@@ -771,7 +771,7 @@ This document provides a complete reference for all REST API endpoints in CI-Inb
       "name": "Important",
       "color": "#FF5733",
       "display_order": 10,
-      "is_system_label": false
+      "is_system": false
     }
   ],
   "total": 15

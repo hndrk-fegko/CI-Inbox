@@ -58,7 +58,7 @@ try {
     // Alle Labels löschen (außer die, die wir gleich neu erstellen)
     $existingLabels = $labelRepository->getAll();
     foreach ($existingLabels as $label) {
-        if (!$label->is_system_label) {
+        if (!$label->is_system) {
             $labelRepository->delete($label->id);
         }
     }

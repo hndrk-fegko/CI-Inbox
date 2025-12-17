@@ -68,7 +68,7 @@ class LabelManager implements LabelManagerInterface
         $labelId = $this->repository->create([
             'name' => $name,
             'color' => $color,
-            'is_system_label' => $isSystemLabel,
+            'is_system' => $isSystemLabel,
             'display_order' => $displayOrder
         ]);
         
@@ -96,11 +96,11 @@ class LabelManager implements LabelManagerInterface
         }
         
         // System-Labels: Nur display_order änderbar
-        if ($label->is_system_label) {
+        if ($label->is_system) {
             if (isset($data['name']) && $data['name'] !== $label->name) {
                 throw LabelException::cannotModifySystemLabel($label->name);
             }
-            if (isset($data['is_system_label']) && $data['is_system_label'] !== $label->is_system_label) {
+            if (isset($data['is_system']) && $data['is_system'] !== $label->is_system) {
                 throw LabelException::cannotModifySystemLabel($label->name);
             }
         }
@@ -146,7 +146,7 @@ class LabelManager implements LabelManagerInterface
         }
         
         // System-Labels können nicht gelöscht werden
-        if ($label->is_system_label) {
+        if ($label->is_system) {
             throw LabelException::cannotDeleteSystemLabel($label->name);
         }
         

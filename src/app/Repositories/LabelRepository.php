@@ -59,7 +59,7 @@ class LabelRepository
         $query = Label::query();
         
         if ($systemOnly !== null) {
-            $query->where('is_system_label', $systemOnly);
+            $query->where('is_system', $systemOnly);
         }
         
         $labels = $query->orderBy('display_order', 'asc')
@@ -92,7 +92,7 @@ class LabelRepository
     /**
      * Neues Label erstellen
      * 
-     * @param array $data ['name', 'color', 'is_system_label', 'display_order']
+     * @param array $data ['name', 'color', 'is_system', 'display_order']
      * @return int Label-ID
      */
     public function create(array $data): int
@@ -101,14 +101,14 @@ class LabelRepository
             $label = Label::create([
                 'name' => $data['name'],
                 'color' => $data['color'] ?? null,
-                'is_system_label' => $data['is_system_label'] ?? false,
+                'is_system' => $data['is_system'] ?? false,
                 'display_order' => $data['display_order'] ?? 0
             ]);
             
             $this->logger->info('[SUCCESS] Label created', [
                 'label_id' => $label->id,
                 'name' => $data['name'],
-                'is_system_label' => $data['is_system_label'] ?? false
+                'is_system' => $data['is_system'] ?? false
             ]);
             
             return $label->id;

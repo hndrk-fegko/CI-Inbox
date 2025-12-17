@@ -310,12 +310,12 @@ CREATE TABLE labels (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     color VARCHAR(7),                    -- Hex-Farbe: #FF5733
-    is_system_label BOOLEAN DEFAULT FALSE,
+    is_system BOOLEAN DEFAULT FALSE,
     display_order INT DEFAULT 0,
     created_at DATETIME,
     updated_at DATETIME,
     UNIQUE KEY idx_name (name),
-    INDEX idx_system_label (is_system_label)
+    INDEX idx_system_label (is_system)
 );
 ```
 
@@ -624,13 +624,13 @@ foreach ($urgentThreads as $thread) {
 - **Vorteil:** Modul ist komplett standalone, keine Abhängigkeit zu anderen Modulen außer Logger
 
 ### Database Schema
-- **Problem:** `is_system_label` Spalte fehlte in labels-Tabelle (Migration unvollständig)
-- **Lösung:** `ALTER TABLE labels ADD COLUMN is_system_label BOOLEAN DEFAULT FALSE`
+- **Problem:** `is_system` Spalte fehlte in labels-Tabelle (Migration unvollständig)
+- **Lösung:** `ALTER TABLE labels ADD COLUMN is_system BOOLEAN DEFAULT FALSE`
 - **Lesson:** Database-Schema immer vor Test-Runs validieren
 
 ### Eloquent Model Fillable
-- **Problem:** `is_system_label` wurde nicht gespeichert trotz korrektem Repository-Code
-- **Lösung:** `is_system_label` zu `$fillable` Array im Label-Model hinzufügen
+- **Problem:** `is_system` wurde nicht gespeichert trotz korrektem Repository-Code
+- **Lösung:** `is_system` zu `$fillable` Array im Label-Model hinzufügen
 - **Lesson:** Eloquent Mass Assignment Protection prüfen bei neuen Feldern
 
 ### Composer Autoloader
@@ -658,7 +658,7 @@ foreach ($urgentThreads as $thread) {
 - Integration Test erstellt
 
 **17. November 2025 12:00 - Debugging & Fixes**
-- Database-Schema korrigiert (is_system_label)
+- Database-Schema korrigiert (is_system)
 - Model Fillable erweitert
 - Autoloader aktualisiert
 
@@ -674,5 +674,5 @@ foreach ($urgentThreads as $thread) {
 
 - Label-Hierarchie (z.B. "Projekte/Alpha/Sprint-1") optional für spätere Version
 - Label-Farben müssen UI-kompatibel sein (Hex-Format)
-- System-Labels sind immutable (Name & is_system_label)
+- System-Labels sind immutable (Name & is_system)
 - Pivot-Tabelle `thread_labels` hat keine Timestamps (einfacher)

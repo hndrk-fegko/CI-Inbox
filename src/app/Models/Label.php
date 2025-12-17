@@ -14,12 +14,12 @@ class Label extends BaseModel
     protected $fillable = [
         'name',
         'color',
-        'is_system_label',
+        'is_system',
         'display_order',
     ];
 
     protected $casts = [
-        'is_system_label' => 'boolean',
+        'is_system' => 'boolean',
         'display_order' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',

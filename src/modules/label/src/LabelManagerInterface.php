@@ -74,7 +74,7 @@ interface LabelManagerInterface
      * Holt alle Labels eines Threads
      * 
      * @param int $threadId Thread-ID
-     * @return array<object> Labels mit Properties: id, name, color, is_system_label
+     * @return array<object> Labels mit Properties: id, name, color, is_system
      */
     public function getThreadLabels(int $threadId): array;
     

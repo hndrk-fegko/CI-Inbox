@@ -306,7 +306,7 @@ class LabelService
     {
         $label = $this->getLabelByName($name);
         
-        if ($label && $label->is_system_label) {
+        if ($label && $label->is_system) {
             return $label->id;
         }
         
@@ -331,7 +331,7 @@ class LabelService
                 'label_name' => $label->name,
                 'thread_count' => $label->thread_count ?? 0,
                 'color' => $label->color,
-                'is_system' => $label->is_system_label
+                'is_system' => $label->is_system
             ];
         }
         
