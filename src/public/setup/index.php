@@ -24,9 +24,33 @@ error_reporting(E_ALL);
 if (function_exists('opcache_invalidate')) {
     @opcache_invalidate(__FILE__, true);
 }
+if (function_exists('opcache_reset')) {
+    // Try full reset to evict stale cached copy
+    @opcache_reset();
+}
 
-// Remove stray debug fragment
-// ...existing code...
+// GLOBAL: swallow only open_basedir warnings anywhere in this script
+$__globalOpenBasedirHandler = set_error_handler(function ($errno, $errstr) {
+    if ($errno === E_WARNING && strpos($errstr, 'open_basedir restriction in effect') !== false) {
+        return true; // swallow those warnings
+    }
+    return false; // let others pass
+});
+
+// DEBUG: show lines around 53 to verify live code version
+if (isset($_GET['__show_line53'])) {
+    header('Content-Type: text/plain; charset=utf-8');
+    $lines = @file(__FILE__);
+    if ($lines) {
+        for ($i = 48; $i <= 58; $i++) {
+            $ln = $i + 1;
+            echo sprintf('%4d: %s', $ln, $lines[$i] ?? '');
+        }
+    } else {
+        echo "Cannot read file lines.";
+    }
+    exit;
+}
 
 // Check if vendor exists BEFORE trying to load it
 $vendorAutoload = __DIR__ . '/../../../vendor/autoload.php';
