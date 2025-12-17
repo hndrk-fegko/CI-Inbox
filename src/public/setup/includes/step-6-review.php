@@ -8,7 +8,7 @@
 declare(strict_types=1);
 
 use Illuminate\Database\Capsule\Manager as Capsule;
-use CiInbox\Modules\Encryption\EncryptionService;
+use CiInbox\Modules\Encryption\SetupEncryptionService;
 
 /**
  * Handle Step 6 form submission (starts installation)
@@ -20,12 +20,12 @@ function handleStep6Submit(array $sessionData): void
     $projectRoot = getProjectRoot();
     
     try {
-        // Initialize EncryptionService (required for password encryption)
-        $encryptionService = new EncryptionService();
-        
-        // STEP 1: Generate encryption key FIRST (before any DB operations)
-        $encryptionKey = bin2hex(random_bytes(32)); // 64 hex chars = 32 bytes
+        // STEP 1: Generate encryption key FIRST
+        $encryptionKey = SetupEncryptionService::generateKey();
         $sessionData['encryption_key'] = $encryptionKey;
+        
+        // Initialize SetupEncryptionService with the generated key
+        $encryptionService = new SetupEncryptionService($encryptionKey);
         
         // STEP 2: Database connection
         $dsn = "mysql:host={$sessionData['db_host']};port={$sessionData['db_port']};charset=utf8mb4";
