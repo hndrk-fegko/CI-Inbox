@@ -34,42 +34,104 @@ if (!$vendorExists && isset($_GET['action']) && $_GET['action'] === 'auto_instal
     // Must be defined HERE because functions.php can't be loaded without vendor/
     function getPhpExecutableEarly(): string
     {
-        // Vermeide file_exists() wegen open_basedir Restriktionen
-        // Nutze stattdessen 'which' bzw. 'where' (Shell-Tools)
+        $os = strtoupper(substr(PHP_OS, 0, 3));
         
-        if (strtoupper(substr(PHP_OS, 0, 3)) !== 'WIN') {
-            // Linux/Unix: Nutze 'which' statt file_exists()
+        // =========================================================================
+        // STRATEGY 1: Nutze PHP_EXECUTABLE (eingebaute Konstante)
+        // =========================================================================
+        if (defined('PHP_EXECUTABLE') && !empty(PHP_EXECUTABLE)) {
+            return escapeshellarg(PHP_EXECUTABLE);
+        }
+        
+        // =========================================================================
+        // STRATEGY 2: Linux/Unix - Shell-basierte Suche (kein file_exists!)
+        // =========================================================================
+        if ($os !== 'WIN') {
+            // Versuche 'which' ohne file_exists() zu verwenden
             $whichPhp = @shell_exec('which php 2>/dev/null');
             if (!empty(trim($whichPhp))) {
                 return escapeshellarg(trim($whichPhp));
             }
             
-            // Fallback auf vollständigen Pfad (Plesk-Standard)
-            return escapeshellarg('/opt/plesk/php/8.2/bin/php');
+            // Fallback: Direkte PATH-Durchsuche (ohne file_exists!)
+            $paths = explode(':', getenv('PATH') ?: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin');
+            $commonNames = ['php', 'php8.2', 'php8.1', 'php8.0', 'php7.4'];
+            
+            foreach ($paths as $path) {
+                $path = trim($path);
+                if (empty($path)) continue;
+                
+                foreach ($commonNames as $phpName) {
+                    $fullPath = rtrim($path, '/') . '/' . $phpName;
+                    // Prüfe mit is_executable statt file_exists (respektiert open_basedir nicht!)
+                    if (@is_executable($fullPath)) {
+                        return escapeshellarg($fullPath);
+                    }
+                }
+            }
+            
+            // Fallback: Plesk-Standards ohne zu prüfen (vertraue dem Server)
+            $plesk_paths = [
+                '/opt/plesk/php/8.2/bin/php',
+                '/opt/plesk/php/8.1/bin/php',
+                '/opt/plesk/php/8.0/bin/php',
+                '/usr/local/bin/php',
+                '/usr/bin/php',
+            ];
+            
+            foreach ($plesk_paths as $path) {
+                // Keine Prüfung - vertraue einfach darauf
+                $testExec = @shell_exec(escapeshellarg($path) . ' -v 2>/dev/null');
+                if (!empty($testExec)) {
+                    return escapeshellarg($path);
+                }
+            }
+            
+            // Ultimate Fallback
+            return 'php';
         }
         
-        // Windows: Originaler Code bleibt erhalten
-        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-            $possiblePaths = [
+        // =========================================================================
+        // STRATEGY 3: Windows - Registry + direkte Pfade
+        // =========================================================================
+        if ($os === 'WIN') {
+            // PHP_EXECUTABLE ist unter Windows sehr zuverlässig
+            if (defined('PHP_EXECUTABLE')) {
+                return escapeshellarg(PHP_EXECUTABLE);
+            }
+            
+            // Windows PATH durchsuchen
+            $paths = explode(';', getenv('PATH') ?: 'C:\\xampp\\php;C:\\XAMPP\\php');
+            
+            foreach ($paths as $path) {
+                $path = trim($path, '\\ ');
+                $phpExe = $path . '\\php.exe';
+                
+                // is_executable funktioniert auch unter Windows
+                if (@is_executable($phpExe)) {
+                    return escapeshellarg($phpExe);
+                }
+            }
+            
+            // Fallback: Bekannte XAMPP-Pfade testen (mit is_executable!)
+            $xamppPaths = [
                 'C:\\xampp\\php\\php.exe',
                 'C:\\XAMPP\\php\\php.exe',
                 'D:\\xampp\\php\\php.exe',
                 'C:\\Program Files\\XAMPP\\php\\php.exe',
-                'C:\\Program Files (x86)\\XAMPP\\php\\php.exe',
             ];
             
-            foreach ($possiblePaths as $path) {
-                if (file_exists($path)) {
+            foreach ($xamppPaths as $path) {
+                if (@is_executable($path)) {
                     return escapeshellarg($path);
                 }
             }
         }
         
-        // Fallback if no specific OS logic matches.
+        // =========================================================================
+        // ULTIMATE FALLBACK: Vertraue darauf, dass PHP in PATH ist
+        // =========================================================================
         return 'php';
-        //debug log to console
-        echo "--- Fallback PHP Executable Path ---\n";
-        echo 'php' . "\n";
     }
     
     function installComposerDependenciesVendorMissing(): array
