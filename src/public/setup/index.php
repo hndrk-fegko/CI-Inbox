@@ -367,8 +367,38 @@ composer install --no-dev --optimize-autoloader</pre>
     </html>
     <?php
 } else {
-    // Vendor vorhanden: zur App weiterleiten (anpassbar)
+    // Vendor vorhanden: Setup-Wizard laden (nicht zu / umleiten)
     require_once $vendorAutoload;
-    header('Location: /');
-    exit;
+    
+    // Jetzt kann der Setup-Wizard starten
+    // Hier kommt die normale Setup-Logik
+    // (z.B. require 'setup-wizard.php' oder inline HTML)
+    
+    // TEMPORARY: Zeige erfolgreiche Vendor-Installation
+    ?>
+    <!DOCTYPE html>
+    <html lang="de">
+    <head>
+        <meta charset="UTF-8">
+        <title>✅ Setup - Schritt 1</title>
+        <link rel="stylesheet" href="setup.css">
+    </head>
+    <body>
+        <div class="container">
+            <div class="header header-success">
+                <h1>✅ CI-Inbox Setup</h1>
+                <p>Dependencies erfolgreich installiert</p>
+            </div>
+            <div class="content">
+                <p>Setup-Wizard wird geladen...</p>
+                <script>
+                    // Redirect to actual setup page (z.B. step 1)
+                    window.location.href = '/setup/wizard.php';
+                </script>
+            </div>
+        </div>
+    </body>
+    </html>
+    <?php
 }
+?>
