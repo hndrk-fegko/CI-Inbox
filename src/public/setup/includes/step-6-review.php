@@ -59,16 +59,23 @@ function handleStep6Submit(array $sessionData): void
 
         // Disable foreign key checks for the duration of migrations
         $pdo->exec("SET FOREIGN_KEY_CHECKS=0;");
+        $capsule->getConnection()->getPdo()->exec("SET FOREIGN_KEY_CHECKS=0;");
         
-        foreach ($migrations as $migration) {
-            $migrationInstance = require $migration;
-            if (is_object($migrationInstance) && method_exists($migrationInstance, 'up')) {
-                $migrationInstance->up();
+        try {
+            foreach ($migrations as $migration) {
+                $migrationInstance = require $migration;
+                if (is_object($migrationInstance) && method_exists($migrationInstance, 'up')) {
+                    $migrationInstance->up();
+                } elseif (is_callable($migrationInstance)) {
+                    // For migrations that return a closure
+                    $migrationInstance();
+                }
             }
+        } finally {
+            // Re-enable foreign key checks after migrations
+            $pdo->exec("SET FOREIGN_KEY_CHECKS=1;");
+            $capsule->getConnection()->getPdo()->exec("SET FOREIGN_KEY_CHECKS=1;");
         }
-
-        // Re-enable foreign key checks
-        $pdo->exec("SET FOREIGN_KEY_CHECKS=1;");
         
         // Create admin user
         $passwordHash = password_hash($sessionData['admin_password'], PASSWORD_BCRYPT);
