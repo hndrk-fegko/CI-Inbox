@@ -138,6 +138,7 @@ if (!$vendorExists && isset($_GET['action']) && $_GET['action'] === 'auto_instal
         $version_marker = '(cim-setup-patch-2)';
         $rootDir = __DIR__ . '/../../..//';
         $logFile = $rootDir . 'logs/composer-install.log';
+        $os = strtoupper(substr(PHP_OS, 0, 3));
 
         // Check if shell execution is disabled
         $disabledFunctions = array_map('trim', explode(',', (string)ini_get('disable_functions')));
@@ -174,7 +175,18 @@ if (!$vendorExists && isset($_GET['action']) && $_GET['action'] === 'auto_instal
         $phpExec = getPhpExecutableEarly();
         $escapedRootDir = escapeshellarg($rootDir);
 
-        $command = "cd {$escapedRootDir} && {$phpExec} " . escapeshellarg($composerPath)
+        // Ensure HOME/COMPOSER_HOME for Composer (Plesk/open_basedir safe)
+        $envPrefix = '';
+        if ($os !== 'WIN') {
+            $home = getenv('HOME') ?: '/tmp';
+            $composerHome = $home . '/.composer';
+            if (!is_dir($composerHome)) {
+                @mkdir($composerHome, 0700, true);
+            }
+            $envPrefix = 'HOME=' . escapeshellarg($home) . ' COMPOSER_HOME=' . escapeshellarg($composerHome) . ' ';
+        }
+
+        $command = "{$envPrefix}cd {$escapedRootDir} && {$phpExec} " . escapeshellarg($composerPath)
                  . " install --no-dev --optimize-autoloader --no-interaction 2>&1";
 
         $output = [];
