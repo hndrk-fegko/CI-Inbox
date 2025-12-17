@@ -389,7 +389,7 @@ function normalizeSessionData(array $sessionData): array
         $normalized['admin_name'] = $sessionData['admin']['name'] ?? '';
         $normalized['admin_password'] = $sessionData['admin']['password'] ?? '';
         $normalized['enable_admin_imap'] = $sessionData['admin']['create_personal_imap'] ?? false;
-        $normalized['admin_imap_password'] = $sessionData['admin']['imap_password'] ?? '';
+        $normalized['admin_imap_password_encrypted'] = $sessionData['admin']['imap_password'] ?? '';
         $normalized['admin_imap_host'] = $sessionData['admin']['imap_host'] ?? '';
         $normalized['admin_imap_port'] = $sessionData['admin']['imap_port'] ?? '993';
         $normalized['admin_imap_username'] = $sessionData['admin']['email'] ?? '';
@@ -401,7 +401,7 @@ function normalizeSessionData(array $sessionData): array
         $normalized['imap_host'] = $sessionData['imap']['host'] ?? '';
         $normalized['imap_port'] = $sessionData['imap']['port'] ?? '993';
         $normalized['imap_username'] = $sessionData['imap']['user'] ?? '';
-        $normalized['imap_password'] = $sessionData['imap']['pass'] ?? '';
+        $normalized['imap_password_encrypted'] = $sessionData['imap']['pass'] ?? '';
         $normalized['imap_email'] = $sessionData['imap']['user'] ?? '';
         $normalized['imap_encryption'] = ($sessionData['imap']['ssl'] ?? true) ? 'ssl' : 'tls';
     }
