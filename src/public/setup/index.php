@@ -73,90 +73,76 @@ if (!$vendorExists && isset($_GET['action']) && $_GET['action'] === 'auto_instal
     function getPhpExecutableEarly(): string
     {
         $os = strtoupper(substr(PHP_OS, 0, 3));
-
-        // FAST PATH: try php from PATH and skip all other checks if it works
         $marker = 'CI_INBOX_OK_' . mt_rand(1000, 9999);
-        $redir  = ($os === 'WIN') ? '2>nul' : '2>/dev/null';
-        $cmd    = 'php -r "echo \'' . $marker . '\';" ' . $redir;
-        $out    = [];
-        $rc     = 0;
+        $redir = ($os === 'WIN') ? '2>nul' : '2>/dev/null';
+
+        // Primary Method: Check if 'php' is in the system's PATH. This is the most reliable.
+        $cmd = 'php -r "echo \'' . $marker . '\';" ' . $redir;
+        $out = [];
+        $rc = 0;
         @exec($cmd, $out, $rc);
         if ($rc === 0 && strpos(implode('', $out), $marker) !== false) {
-            return 'php'; // works via PATH -> done
-        }
-
-        // Strategy 1: built-in executable constants
-        if (defined('PHP_BINARY') && PHP_BINARY) {
-            return escapeshellarg(PHP_BINARY);
-        }
-        if (defined('PHP_EXECUTABLE') && PHP_EXECUTABLE) {
-            return escapeshellarg(PHP_EXECUTABLE);
-        }
-
-        // Strategy 2: Linux/Unix (no file_exists!)
-        if ($os !== 'WIN') {
-            $whichPhp = @shell_exec('which php 2>/dev/null');
-            if (!empty(trim($whichPhp))) {
-                return escapeshellarg(trim($whichPhp));
-            }
-
-            $paths = explode(':', getenv('PATH') ?: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin');
-            $common = ['php', 'php8.2', 'php8.1', 'php8.0', 'php7.4'];
-            foreach ($paths as $p) {
-                $p = trim($p);
-                if ($p === '') continue;
-                foreach ($common as $name) {
-                    $full = rtrim($p, '/') . '/' . $name;
-                    if (@is_executable($full)) {
-                        return escapeshellarg($full);
-                    }
-                }
-            }
-
-            // Try common absolute paths by executing them (no file_exists)
-            foreach (['/opt/plesk/php/8.2/bin/php','/opt/plesk/php/8.1/bin/php','/opt/plesk/php/8.0/bin/php','/usr/local/bin/php','/usr/bin/php'] as $p) {
-                $test = @shell_exec(escapeshellarg($p) . ' -v 2>/dev/null');
-                if (!empty($test)) {
-                    return escapeshellarg($p);
-                }
-            }
-
             return 'php';
         }
 
-        // Strategy 3: Windows
-        if ($os === 'WIN') {
-            if (defined('PHP_BINARY') && PHP_BINARY) {
+        // Secondary Method: Check PHP_BINARY constant if available.
+        if (defined('PHP_BINARY') && PHP_BINARY) {
+            $cmd = escapeshellarg(PHP_BINARY) . ' -r "echo \'' . $marker . '\';" ' . $redir;
+            @exec($cmd, $out, $rc);
+            if ($rc === 0 && strpos(implode('', $out), $marker) !== false) {
                 return escapeshellarg(PHP_BINARY);
             }
-            $paths = explode(';', getenv('PATH') ?: 'C:\\xampp\\php;C:\\XAMPP\\php');
-            foreach ($paths as $p) {
-                $p = rtrim(trim($p), '\\');
-                if ($p === '') continue;
-                $exe = $p . '\\php.exe';
-                if (@is_executable($exe)) {
-                    return escapeshellarg($exe);
-                }
-            }
-            foreach (['C:\\xampp\\php\\php.exe','C:\\XAMPP\\php\\php.exe','D:\\xampp\\php\\php.exe','C:\\Program Files\\XAMPP\\php\\php.exe'] as $p) {
-                if (@is_executable($p)) {
-                    return escapeshellarg($p);
-                }
+        }
+        
+        // Tertiary Method: Check known common paths by trying to execute them.
+        // This avoids any file system checks like file_exists() or is_executable() which trigger open_basedir.
+        $paths_to_check = [];
+        if ($os !== 'WIN') {
+            // Common paths for Plesk and standard Linux distributions.
+            $paths_to_check = [
+                '/opt/plesk/php/8.2/bin/php',
+                '/opt/plesk/php/8.1/bin/php',
+                '/opt/plesk/php/8.0/bin/php',
+                '/usr/local/bin/php',
+                '/usr/bin/php',
+                '/usr/bin/php8.2',
+                '/usr/bin/php8.1',
+                '/usr/bin/php8.0',
+            ];
+        } else {
+            // Common paths for Windows environments like XAMPP.
+            $paths_to_check = [
+                'C:\\xampp\\php\\php.exe',
+                'C:\\XAMPP\\php\\php.exe',
+                'D:\\xampp\\php\\php.exe',
+                'C:\\Program Files\\XAMPP\\php\\php.exe'
+            ];
+        }
+        
+        foreach ($paths_to_check as $path) {
+            $cmd = escapeshellarg($path) . ' -r "echo \'' . $marker . '\';" ' . $redir;
+            $out = [];
+            $rc = 0;
+            @exec($cmd, $out, $rc);
+            if ($rc === 0 && strpos(implode('', $out), $marker) !== false) {
+                return escapeshellarg($path);
             }
         }
 
+        // Final fallback if all else fails.
         return 'php';
     }
 
     function installComposerDependenciesVendorMissing(): array
     {
+        $version_marker = '(cim-setup-patch-2)';
         $rootDir = __DIR__ . '/../../..//';
         $logFile = $rootDir . 'logs/composer-install.log';
 
         // Check if shell execution is disabled
         $disabledFunctions = array_map('trim', explode(',', (string)ini_get('disable_functions')));
         if (in_array('exec', $disabledFunctions, true) || in_array('shell_exec', $disabledFunctions, true)) {
-            return ['success' => false, 'message' => 'PHP exec() und shell_exec() sind deaktiviert.'];
+            return ['success' => false, 'message' => "PHP exec() und shell_exec() sind deaktiviert. {$version_marker}"];
         }
 
         // Ensure logs directory exists
@@ -181,7 +167,7 @@ if (!$vendorExists && isset($_GET['action']) && $_GET['action'] === 'auto_instal
         }
 
         if (!$composerPath) {
-            return ['success' => false, 'message' => 'Composer konnte nicht gefunden werden (weder composer.phar noch ein globaler Composer).'];
+            return ['success' => false, 'message' => "Composer konnte nicht gefunden werden (weder composer.phar noch ein globaler Composer). {$version_marker}"];
         }
 
         // Always execute composer with our detected PHP binary
@@ -196,7 +182,7 @@ if (!$vendorExists && isset($_GET['action']) && $_GET['action'] === 'auto_instal
         @exec($command, $output, $returnVar);
 
         // Log
-        $logContent  = "=== Composer Install Log ===\n";
+        $logContent  = "=== Composer Install Log {$version_marker} ===\n";
         $logContent .= "Date: " . date('Y-m-d H:i:s') . "\n";
         $logContent .= "Command: {$command}\n";
         $logContent .= "Return Code: {$returnVar}\n";
@@ -205,9 +191,9 @@ if (!$vendorExists && isset($_GET['action']) && $_GET['action'] === 'auto_instal
 
         // Success?
         if ($returnVar === 0 && is_dir($rootDir . 'vendor') && file_exists($rootDir . 'vendor/autoload.php')) {
-            return ['success' => true, 'message' => 'Dependencies erfolgreich installiert!'];
+            return ['success' => true, 'message' => "Dependencies erfolgreich installiert! {$version_marker}"];
         }
-        return ['success' => false, 'message' => 'Installation fehlgeschlagen. Siehe logs/composer-install.log für Details.'];
+        return ['success' => false, 'message' => "Installation fehlgeschlagen {$version_marker}. Siehe logs/composer-install.log für Details."];
     }
 
     $installResult = installComposerDependenciesVendorMissing();
