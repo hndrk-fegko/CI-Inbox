@@ -93,70 +93,56 @@ function handleStep6Submit(array $sessionData): void
         
         // K3: Store admin IMAP if enabled
         if (!empty($sessionData['enable_admin_imap'])) {
-            $encKey = $sessionData['encryption_key'];
-            $encIv = openssl_random_pseudo_bytes(16);
-            $encPassword = openssl_encrypt(
-                $sessionData['admin_imap_password'],
-                'AES-256-CBC',
-                hex2bin($encKey),
-                0,
-                $encIv
-            );
+            $adminImapPassword = $sessionData['admin_imap_password_encrypted'] ?? null;
             
-            $stmt = $pdo->prepare("INSERT INTO imap_accounts 
-                (user_id, email, imap_host, imap_port, imap_username, imap_password_encrypted, imap_encryption, 
-                 smtp_host, smtp_port, smtp_username, smtp_password, smtp_encryption, encryption_iv, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, '', 0, '', '', 'tls', ?, NOW(), NOW())");
+            // Validate password is not null/empty before encryption
+            if (empty($adminImapPassword)) {
+                throw new Exception('Admin IMAP password is required but was not provided.');
+            }
+            
+            $encryptedAdminImapPassword = $encryptionService->encrypt($adminImapPassword);
+            
+            $stmt = $pdo->prepare("
+                INSERT INTO imap_accounts (
+                    user_id, email, imap_host, imap_port, imap_username,
+                    imap_password_encrypted, imap_encryption, is_default, is_active, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, NOW(), NOW())
+            ");
             $stmt->execute([
                 $userId,
                 $sessionData['admin_email'],
                 $sessionData['admin_imap_host'],
                 $sessionData['admin_imap_port'],
-                $sessionData['admin_imap_username'],
-                $encPassword,
-                $sessionData['admin_imap_encryption'],
-                bin2hex($encIv)
+                $sessionData['admin_imap_username'] ?? $sessionData['admin_email'],
+                $encryptedAdminImapPassword,
+                $sessionData['admin_imap_encryption'] ?? 'ssl',
             ]);
         }
         
-        // K5: Store shared IMAP with user_id=NULL
-        $encKey = $sessionData['encryption_key'];
-        $imapIv = openssl_random_pseudo_bytes(16);
-        $smtpIv = openssl_random_pseudo_bytes(16);
-        
-        $encImapPassword = openssl_encrypt(
-            $sessionData['imap_password'],
-            'AES-256-CBC',
-            hex2bin($encKey),
-            0,
-            $imapIv
-        );
-        
-        $encSmtpPassword = openssl_encrypt(
-            $sessionData['smtp_password'],
-            'AES-256-CBC',
-            hex2bin($encKey),
-            0,
-            $smtpIv
-        );
-        
-        $stmt = $pdo->prepare("INSERT INTO imap_accounts 
-            (user_id, email, imap_host, imap_port, imap_username, imap_password, imap_encryption,
-             smtp_host, smtp_port, smtp_username, smtp_password, smtp_encryption, encryption_iv, created_at, updated_at)
-            VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())");
+        // Create default IMAP account (system-wide)
+        $imapPassword = $sessionData['imap_password_encrypted'] ?? null;
+
+        // Validate password is not null/empty before encryption
+        if (empty($imapPassword)) {
+            throw new Exception('IMAP password is required but was not provided.');
+        }
+
+        $encryptedImapPassword = $encryptionService->encrypt($imapPassword);
+
+        $stmt = $pdo->prepare("
+            INSERT INTO imap_accounts (
+                user_id, email, imap_host, imap_port, imap_username,
+                imap_password_encrypted, imap_encryption, is_default, is_active, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, NOW(), NOW())
+        ");
         $stmt->execute([
+            $userId,
             $sessionData['imap_email'],
             $sessionData['imap_host'],
             $sessionData['imap_port'],
-            $sessionData['imap_username'],
-            $encImapPassword,
-            $sessionData['imap_encryption'],
-            $sessionData['smtp_host'],
-            $sessionData['smtp_port'],
-            $sessionData['smtp_username'],
-            $encSmtpPassword,
-            $sessionData['smtp_encryption'],
-            bin2hex($imapIv)
+            $sessionData['imap_username'] ?? $sessionData['imap_email'],
+            $encryptedImapPassword,
+            $sessionData['imap_encryption'] ?? 'ssl',
         ]);
         
         // Create system labels
