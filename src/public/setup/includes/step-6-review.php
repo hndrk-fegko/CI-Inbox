@@ -81,7 +81,7 @@ function handleStep6Submit(array $sessionData): void
         $passwordHash = password_hash($sessionData['admin_password'], PASSWORD_BCRYPT);
         $avatarColor = '#' . substr(md5($sessionData['admin_email']), 0, 6);
         
-        $stmt = $pdo->prepare("INSERT INTO users (name, email, password, role, avatar_color, created_at, updated_at) 
+        $stmt = $pdo->prepare("INSERT INTO users (name, email, password_hash, role, avatar_color, created_at, updated_at) 
                               VALUES (?, ?, ?, 'admin', ?, NOW(), NOW())");
         $stmt->execute([
             $sessionData['admin_name'],
