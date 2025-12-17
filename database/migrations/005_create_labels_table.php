@@ -6,17 +6,32 @@
  * Stores custom labels/tags for organizing threads.
  */
 
+declare(strict_types=1);
+
 use Illuminate\Database\Capsule\Manager as Capsule;
 
-Capsule::schema()->dropIfExists('labels');
+return new class {
+    public function up(): void
+    {
+        if (Capsule::schema()->hasTable('labels')) {
+            return; // table already exists
+        }
 
-Capsule::schema()->create('labels', function ($table) {
-    $table->id();
-    $table->string('name', 100);
-    $table->string('color', 7)->default('#3B82F6'); // Hex color code
-    $table->integer('display_order')->default(0);
-    $table->timestamps();
-    
-    $table->unique('name');
-    $table->index('display_order');
-});
+        Capsule::schema()->create('labels', function ($table) {
+            $table->id();
+            $table->string('name', 255);
+            $table->string('color', 7)->default('#808080'); // HEX color
+            $table->text('description')->nullable();
+            $table->boolean('is_system')->default(false); // Add this column
+            $table->timestamps();
+
+            $table->unique('name');
+            $table->index('is_system');
+        });
+    }
+
+    public function down(): void
+    {
+        Capsule::schema()->dropIfExists('labels');
+    }
+};

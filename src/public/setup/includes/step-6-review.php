@@ -157,10 +157,17 @@ function handleStep6Submit(array $sessionData): void
             ['name' => 'Done', 'color' => '#10b981', 'is_system' => 1]
         ];
         
+        $stmt = $pdo->prepare("
+            INSERT INTO labels (name, color, is_system, created_at, updated_at) 
+            VALUES (?, ?, ?, NOW(), NOW())
+        ");
+        
         foreach ($labels as $label) {
-            $stmt = $pdo->prepare("INSERT INTO labels (name, color, is_system, created_at, updated_at) 
-                                  VALUES (?, ?, ?, NOW(), NOW())");
-            $stmt->execute([$label['name'], $label['color'], $label['is_system']]);
+            $stmt->execute([
+                $label['name'],
+                $label['color'],
+                $label['is_system']
+            ]);
         }
         
         // Seed system settings
