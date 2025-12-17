@@ -22,7 +22,7 @@ return new class {
             $table->string('name', 255);
             $table->string('color', 7)->default('#808080'); // HEX color
             $table->text('description')->nullable();
-            $table->boolean('is_system')->default(false); // Add this column
+            $table->boolean('is_system')->default(false);
             $table->timestamps();
 
             $table->unique('name');
