@@ -183,6 +183,12 @@ if (!$vendorExists && isset($_GET['action']) && $_GET['action'] === 'auto_instal
             if (!is_dir($composerHome)) {
                 @mkdir($composerHome, 0700, true);
             }
+            @putenv('HOME=' . $home);
+            @putenv('COMPOSER_HOME=' . $composerHome);
+            $_ENV['HOME'] = $home;
+            $_ENV['COMPOSER_HOME'] = $composerHome;
+            $_SERVER['HOME'] = $home;
+            $_SERVER['COMPOSER_HOME'] = $composerHome;
             $envPrefix = 'HOME=' . escapeshellarg($home) . ' COMPOSER_HOME=' . escapeshellarg($composerHome) . ' ';
         }
 
