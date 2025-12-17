@@ -41,10 +41,15 @@ if (!$vendorExists && isset($_GET['action']) && $_GET['action'] === 'auto_instal
         if (strtoupper(substr(PHP_OS, 0, 3)) !== 'WIN') {
             // This path is derived from the user's error logs and is the most likely to succeed.
             return escapeshellarg('/opt/plesk/php/8.2/bin/php');
+            //debug log to console
+            echo "--- Detected PHP Executable Path ---\n";
+            echo escapeshellarg('/opt/plesk/php/8.2/bin/php') . "\n";
         }
         
         // For Windows, the original logic is likely fine as open_basedir is less of an issue.
         if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            // debug log to console
+            echo "--- Detected PHP Executable Path (Windows) ---\n";
             $possiblePaths = [
                 'C:\\xampp\\php\\php.exe',
                 'C:\\XAMPP\\php\\php.exe',
@@ -56,12 +61,18 @@ if (!$vendorExists && isset($_GET['action']) && $_GET['action'] === 'auto_instal
             foreach ($possiblePaths as $path) {
                 if (file_exists($path)) {
                     return escapeshellarg($path);
+                    //debug log to console
+                    echo "--- path ". $possiblePaths ." returnes ---\n";
+                    echo escapeshellarg($path) . "\n";
                 }
             }
         }
         
         // Fallback if no specific OS logic matches.
         return 'php';
+        //debug log to console
+        echo "--- Fallback PHP Executable Path ---\n";
+        echo 'php' . "\n";
     }
     
     function installComposerDependenciesVendorMissing(): array
