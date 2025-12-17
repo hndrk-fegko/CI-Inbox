@@ -305,8 +305,41 @@ composer install --no-dev --optimize-autoloader</pre>
                 console.log("--- Raw Server Response ---");
                 console.log(responseText);
                 console.log("---------------------------");
-                const result = JSON.parse(responseText);
-                
                 overlay.classList.remove('active'); // Hide loading overlay
-                
-                if
+
+                if (response.ok) {
+                    try {
+                        const result = JSON.parse(responseText);
+                        if (result.success) {
+                            status.innerHTML = '<div class="alert alert-success">✅ Dependencies erfolgreich installiert. Seite wird neu geladen…</div>';
+                            setTimeout(() => window.location.reload(), 1500);
+                            return;
+                        } else {
+                            status.innerHTML = `<div class="alert alert-error">❌ ${result.message}<br><a href="/logs/composer-install.log" target="_blank">logs/composer-install.log öffnen</a></div>`;
+                        }
+                    } catch (e) {
+                        status.innerHTML = `<div class="alert alert-error">❌ Unerwartete Antwort (kein JSON).<br><pre>${responseText.replace(/</g,'&lt;')}</pre></div>`;
+                    }
+                } else {
+                    status.innerHTML = `<div class="alert alert-error">❌ HTTP-Fehler: ${response.status}</div>`;
+                }
+
+                btn.disabled = false;
+                btn.textContent = 'Dependencies jetzt installieren';
+            } catch (err) {
+                overlay.classList.remove('active');
+                status.innerHTML = `<div class="alert alert-error">❌ Netzwerk-/Serverfehler: ${err}</div>`;
+                btn.disabled = false;
+                btn.textContent = 'Dependencies jetzt installieren';
+            }
+        });
+        </script>
+    </body>
+    </html>
+    <?php
+} else {
+    // Vendor vorhanden: zur App weiterleiten (anpassbar)
+    require_once $vendorAutoload;
+    header('Location: /');
+    exit;
+}
