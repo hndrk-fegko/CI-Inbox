@@ -310,7 +310,8 @@ composer install --no-dev --optimize-autoloader</pre>
             status.innerHTML = '<div class="alert alert-info">⏳ Installation läuft...</div>';
             
             try {
-                const response = await fetch('?action=auto_install_vendor');
+                // Request auto-installation, including cache-busting
+                const response = await fetch('?action=auto_install_vendor&_=' + Date.now());
                 const responseText = await response.text();
                 console.log("--- Raw Server Response ---");
                 console.log(responseText);
