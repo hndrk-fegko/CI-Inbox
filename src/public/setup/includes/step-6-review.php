@@ -8,6 +8,7 @@
 declare(strict_types=1);
 
 use Illuminate\Database\Capsule\Manager as Capsule;
+use CiInbox\Modules\Encryption\EncryptionService;
 
 /**
  * Handle Step 6 form submission (starts installation)
@@ -19,6 +20,9 @@ function handleStep6Submit(array $sessionData): void
     $projectRoot = getProjectRoot();
     
     try {
+        // Initialize EncryptionService (required for password encryption)
+        $encryptionService = new EncryptionService();
+        
         // STEP 1: Generate encryption key FIRST (before any DB operations)
         $encryptionKey = bin2hex(random_bytes(32)); // 64 hex chars = 32 bytes
         $sessionData['encryption_key'] = $encryptionKey;
@@ -89,7 +93,7 @@ function handleStep6Submit(array $sessionData): void
             $passwordHash,
             $avatarColor
         ]);
-        $userId = (int)$pdo->lastInsertId();
+        $adminId = (int)$pdo->lastInsertId();
         
         // K3: Store admin IMAP if enabled
         if (!empty($sessionData['enable_admin_imap'])) {
@@ -109,7 +113,7 @@ function handleStep6Submit(array $sessionData): void
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, NOW(), NOW())
             ");
             $stmt->execute([
-                $userId,
+                $adminId,
                 $sessionData['admin_email'],
                 $sessionData['admin_imap_host'],
                 $sessionData['admin_imap_port'],
@@ -136,7 +140,7 @@ function handleStep6Submit(array $sessionData): void
             ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, NOW(), NOW())
         ");
         $stmt->execute([
-            $userId,
+            $adminId,
             $sessionData['imap_email'],
             $sessionData['imap_host'],
             $sessionData['imap_port'],
@@ -160,7 +164,7 @@ function handleStep6Submit(array $sessionData): void
         }
         
         // Seed system settings
-        $stmt = $pdo->prepare("INSERT INTO system_settings (`key`, value, created_at, updated_at) VALUES (?, ?, NOW(), NOW())");
+        $stmt = $pdo->prepare("INSERT INTO system_settings (`setting_key`, `setting_value`, created_at, updated_at) VALUES (?, ?, NOW(), NOW())");
         $stmt->execute(['app_name', 'CI-Inbox']);
         $stmt->execute(['threads_per_page', '25']);
         $stmt->execute(['email_retention_days', '0']);
@@ -171,10 +175,7 @@ function handleStep6Submit(array $sessionData): void
         }
         
         // STEP 5: Generate and write .env file as LAST step (atomic installation marker)
-        // This prevents race conditions where .env exists but DB is incomplete
         $envContent = generateEnvFile($sessionData);
-        
-        // Replace empty ENCRYPTION_KEY with generated key
         $envContent = str_replace('ENCRYPTION_KEY=', "ENCRYPTION_KEY={$encryptionKey}", $envContent);
         
         // Write .env atomically
@@ -186,20 +187,17 @@ function handleStep6Submit(array $sessionData): void
             throw new Exception('Fehler beim Schreiben der .env-Datei (Schreibrechte prüfen)');
         }
         
-        // Atomic rename
         if (!rename($tempFile, $envPath)) {
             @unlink($tempFile);
             throw new Exception('Fehler beim Finalisieren der .env-Datei');
         }
         
-        // Set secure permissions
         @chmod($envPath, 0600);
         
         updateSessionStep(7);
         redirectToStep(7);
         
     } catch (Exception $e) {
-        // Rollback: Delete .env if it was written (allows setup restart)
         $envPath = $projectRoot . '/.env';
         if (file_exists($envPath)) {
             @unlink($envPath);
