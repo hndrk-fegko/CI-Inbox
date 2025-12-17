@@ -7,6 +7,11 @@ use Illuminate\Database\Capsule\Manager as Capsule;
 return new class {
     public function up(): void
     {
+        // Skip if table already exists
+        if (Capsule::schema()->hasTable('internal_notes')) {
+            return;
+        }
+
         Capsule::schema()->create('internal_notes', function ($table) {
             $table->id();
             $table->foreignId('thread_id')->constrained('threads')->onDelete('cascade');
@@ -14,14 +19,8 @@ return new class {
             $table->text('content');
             $table->enum('type', ['user', 'system'])->default('user');
             $table->timestamps();
-            
-            $table->index('thread_id');
-            $table->index('created_at');
-        });
-    }
 
-    public function down(): void
-    {
-        Capsule::schema()->dropIfExists('internal_notes');
+            $table->index(['thread_id', 'user_id']);
+        });
     }
 };
