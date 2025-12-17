@@ -104,7 +104,7 @@ function handleStep6Submit(array $sessionData): void
             );
             
             $stmt = $pdo->prepare("INSERT INTO imap_accounts 
-                (user_id, email, imap_host, imap_port, imap_username, imap_password, imap_encryption, 
+                (user_id, email, imap_host, imap_port, imap_username, imap_password_encrypted, imap_encryption, 
                  smtp_host, smtp_port, smtp_username, smtp_password, smtp_encryption, encryption_iv, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, '', 0, '', '', 'tls', ?, NOW(), NOW())");
             $stmt->execute([
