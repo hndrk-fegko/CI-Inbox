@@ -20,6 +20,14 @@ ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
 error_reporting(E_ALL);
 
+// Force OPcache to reload this script (avoid stale code on Plesk)
+if (function_exists('opcache_invalidate')) {
+    @opcache_invalidate(__FILE__, true);
+}
+
+// Remove stray debug fragment
+// ...existing code...
+
 // Check if vendor exists BEFORE trying to load it
 $vendorAutoload = __DIR__ . '/../../../vendor/autoload.php';
 $vendorExists = file_exists($vendorAutoload);
@@ -27,182 +35,166 @@ $vendorExists = file_exists($vendorAutoload);
 // ============================================================================
 // VENDOR AUTO-INSTALL HANDLER (Must be defined before vendor check)
 // ============================================================================
-
 if (!$vendorExists && isset($_GET['action']) && $_GET['action'] === 'auto_install_vendor') {
-    
-    // Helper function: Get PHP executable (XAMPP-aware)
-    // Must be defined HERE because functions.php can't be loaded without vendor/
+
+    // Temporarily suppress open_basedir warnings to keep JSON clean
+    $__prevHandler = set_error_handler(function ($errno, $errstr) {
+        if ($errno === E_WARNING && strpos($errstr, 'open_basedir restriction in effect') !== false) {
+            return true; // swallow
+        }
+        return false; // let others pass
+    });
+
+    // Helper function: Get PHP executable (PATH fast-path first)
     function getPhpExecutableEarly(): string
     {
         $os = strtoupper(substr(PHP_OS, 0, 3));
-        
-        // =========================================================================
-        // STRATEGY 1: Nutze PHP_EXECUTABLE (eingebaute Konstante)
-        // =========================================================================
-        if (defined('PHP_EXECUTABLE') && !empty(PHP_EXECUTABLE)) {
+
+        // FAST PATH: try php from PATH and skip all other checks if it works
+        $marker = 'CI_INBOX_OK_' . mt_rand(1000, 9999);
+        $redir  = ($os === 'WIN') ? '2>nul' : '2>/dev/null';
+        $cmd    = 'php -r "echo \'' . $marker . '\';" ' . $redir;
+        $out    = [];
+        $rc     = 0;
+        @exec($cmd, $out, $rc);
+        if ($rc === 0 && strpos(implode('', $out), $marker) !== false) {
+            return 'php'; // works via PATH -> done
+        }
+
+        // Strategy 1: built-in executable constants
+        if (defined('PHP_BINARY') && PHP_BINARY) {
+            return escapeshellarg(PHP_BINARY);
+        }
+        if (defined('PHP_EXECUTABLE') && PHP_EXECUTABLE) {
             return escapeshellarg(PHP_EXECUTABLE);
         }
-        
-        // =========================================================================
-        // STRATEGY 2: Linux/Unix - Shell-basierte Suche (kein file_exists!)
-        // =========================================================================
+
+        // Strategy 2: Linux/Unix (no file_exists!)
         if ($os !== 'WIN') {
-            // Versuche 'which' ohne file_exists() zu verwenden
             $whichPhp = @shell_exec('which php 2>/dev/null');
             if (!empty(trim($whichPhp))) {
                 return escapeshellarg(trim($whichPhp));
             }
-            
-            // Fallback: Direkte PATH-Durchsuche (ohne file_exists!)
+
             $paths = explode(':', getenv('PATH') ?: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin');
-            $commonNames = ['php', 'php8.2', 'php8.1', 'php8.0', 'php7.4'];
-            
-            foreach ($paths as $path) {
-                $path = trim($path);
-                if (empty($path)) continue;
-                
-                foreach ($commonNames as $phpName) {
-                    $fullPath = rtrim($path, '/') . '/' . $phpName;
-                    // Prüfe mit is_executable statt file_exists (respektiert open_basedir nicht!)
-                    if (@is_executable($fullPath)) {
-                        return escapeshellarg($fullPath);
+            $common = ['php', 'php8.2', 'php8.1', 'php8.0', 'php7.4'];
+            foreach ($paths as $p) {
+                $p = trim($p);
+                if ($p === '') continue;
+                foreach ($common as $name) {
+                    $full = rtrim($p, '/') . '/' . $name;
+                    if (@is_executable($full)) {
+                        return escapeshellarg($full);
                     }
                 }
             }
-            
-            // Fallback: Plesk-Standards ohne zu prüfen (vertraue dem Server)
-            $plesk_paths = [
-                '/opt/plesk/php/8.2/bin/php',
-                '/opt/plesk/php/8.1/bin/php',
-                '/opt/plesk/php/8.0/bin/php',
-                '/usr/local/bin/php',
-                '/usr/bin/php',
-            ];
-            
-            foreach ($plesk_paths as $path) {
-                // Keine Prüfung - vertraue einfach darauf
-                $testExec = @shell_exec(escapeshellarg($path) . ' -v 2>/dev/null');
-                if (!empty($testExec)) {
-                    return escapeshellarg($path);
+
+            // Try common absolute paths by executing them (no file_exists)
+            foreach (['/opt/plesk/php/8.2/bin/php','/opt/plesk/php/8.1/bin/php','/opt/plesk/php/8.0/bin/php','/usr/local/bin/php','/usr/bin/php'] as $p) {
+                $test = @shell_exec(escapeshellarg($p) . ' -v 2>/dev/null');
+                if (!empty($test)) {
+                    return escapeshellarg($p);
                 }
             }
-            
-            // Ultimate Fallback
+
             return 'php';
         }
-        
-        // =========================================================================
-        // STRATEGY 3: Windows - Registry + direkte Pfade
-        // =========================================================================
+
+        // Strategy 3: Windows
         if ($os === 'WIN') {
-            // PHP_EXECUTABLE ist unter Windows sehr zuverlässig
-            if (defined('PHP_EXECUTABLE')) {
-                return escapeshellarg(PHP_EXECUTABLE);
+            if (defined('PHP_BINARY') && PHP_BINARY) {
+                return escapeshellarg(PHP_BINARY);
             }
-            
-            // Windows PATH durchsuchen
             $paths = explode(';', getenv('PATH') ?: 'C:\\xampp\\php;C:\\XAMPP\\php');
-            
-            foreach ($paths as $path) {
-                $path = trim($path, '\\ ');
-                $phpExe = $path . '\\php.exe';
-                
-                // is_executable funktioniert auch unter Windows
-                if (@is_executable($phpExe)) {
-                    return escapeshellarg($phpExe);
+            foreach ($paths as $p) {
+                $p = rtrim(trim($p), '\\');
+                if ($p === '') continue;
+                $exe = $p . '\\php.exe';
+                if (@is_executable($exe)) {
+                    return escapeshellarg($exe);
                 }
             }
-            
-            // Fallback: Bekannte XAMPP-Pfade testen (mit is_executable!)
-            $xamppPaths = [
-                'C:\\xampp\\php\\php.exe',
-                'C:\\XAMPP\\php\\php.exe',
-                'D:\\xampp\\php\\php.exe',
-                'C:\\Program Files\\XAMPP\\php\\php.exe',
-            ];
-            
-            foreach ($xamppPaths as $path) {
-                if (@is_executable($path)) {
-                    return escapeshellarg($path);
+            foreach (['C:\\xampp\\php\\php.exe','C:\\XAMPP\\php\\php.exe','D:\\xampp\\php\\php.exe','C:\\Program Files\\XAMPP\\php\\php.exe'] as $p) {
+                if (@is_executable($p)) {
+                    return escapeshellarg($p);
                 }
             }
         }
-        
-        // =========================================================================
-        // ULTIMATE FALLBACK: Vertraue darauf, dass PHP in PATH ist
-        // =========================================================================
+
         return 'php';
     }
-    
+
     function installComposerDependenciesVendorMissing(): array
     {
-        $rootDir = __DIR__ . '/../../../';
+        $rootDir = __DIR__ . '/../../..//';
         $logFile = $rootDir . 'logs/composer-install.log';
-        
+
         // Check if shell execution is disabled
-        $disabledFunctions = explode(',', ini_get('disable_functions'));
-        $disabledFunctions = array_map('trim', $disabledFunctions);
-        if (in_array('exec', $disabledFunctions) || in_array('shell_exec', $disabledFunctions)) {
+        $disabledFunctions = array_map('trim', explode(',', (string)ini_get('disable_functions')));
+        if (in_array('exec', $disabledFunctions, true) || in_array('shell_exec', $disabledFunctions, true)) {
             return ['success' => false, 'message' => 'PHP exec() und shell_exec() sind deaktiviert.'];
         }
-        
+
         // Ensure logs directory exists
         if (!is_dir($rootDir . 'logs')) {
             @mkdir($rootDir . 'logs', 0755, true);
         }
-        
-        // Find a path to a composer executable (local .phar or global command)
+
+        // Find composer (prefer local phar)
         $composerPath = null;
         if (file_exists($rootDir . 'composer.phar')) {
             $composerPath = $rootDir . 'composer.phar';
         } else {
-            // Use shell_exec to find composer in the system's PATH
             $whichComposer = @shell_exec('which composer 2>/dev/null');
             if (!empty($whichComposer)) {
                 $composerPath = trim($whichComposer);
             } else {
-                // Fallback for Windows
                 $whereComposer = @shell_exec('where composer 2>nul');
                 if (!empty($whereComposer)) {
                     $composerPath = trim($whereComposer);
                 }
             }
         }
-        
+
         if (!$composerPath) {
             return ['success' => false, 'message' => 'Composer konnte nicht gefunden werden (weder composer.phar noch ein globaler Composer).'];
         }
-        
-        // Get the reliable PHP executable path
+
+        // Always execute composer with our detected PHP binary
         $phpExec = getPhpExecutableEarly();
         $escapedRootDir = escapeshellarg($rootDir);
-        
-        // Always execute composer with our detected PHP binary for reliability
-        $command = "cd {$escapedRootDir} && " .
-                   "{$phpExec} " . escapeshellarg($composerPath) .
-                   " install --no-dev --optimize-autoloader --no-interaction 2>&1";
+
+        $command = "cd {$escapedRootDir} && {$phpExec} " . escapeshellarg($composerPath)
+                 . " install --no-dev --optimize-autoloader --no-interaction 2>&1";
 
         $output = [];
         $returnVar = 0;
         @exec($command, $output, $returnVar);
-        
-        // Log the execution details
-        $logContent = "=== Composer Install Log ===\n";
+
+        // Log
+        $logContent  = "=== Composer Install Log ===\n";
         $logContent .= "Date: " . date('Y-m-d H:i:s') . "\n";
         $logContent .= "Command: {$command}\n";
         $logContent .= "Return Code: {$returnVar}\n";
-        $logContent .= "Output:\n" . implode("\n", $output);
-        file_put_contents($logFile, $logContent);
-        
-        // Check if installation was successful
+        $logContent .= "Output:\n" . implode("\n", $output) . "\n";
+        @file_put_contents($logFile, $logContent);
+
+        // Success?
         if ($returnVar === 0 && is_dir($rootDir . 'vendor') && file_exists($rootDir . 'vendor/autoload.php')) {
             return ['success' => true, 'message' => 'Dependencies erfolgreich installiert!'];
-        } else {
-            return ['success' => false, 'message' => 'Installation fehlgeschlagen. Siehe logs/composer-install.log für Details.'];
         }
+        return ['success' => false, 'message' => 'Installation fehlgeschlagen. Siehe logs/composer-install.log für Details.'];
     }
-    
+
     $installResult = installComposerDependenciesVendorMissing();
+
+    // Restore error handler before responding
+    if ($__prevHandler !== null) {
+        set_error_handler($__prevHandler);
+    } else {
+        restore_error_handler();
+    }
+
     header('Content-Type: application/json');
     echo json_encode($installResult);
     exit;
@@ -317,211 +309,4 @@ composer install --no-dev --optimize-autoloader</pre>
                 
                 overlay.classList.remove('active'); // Hide loading overlay
                 
-                if (result.success) {
-                    status.innerHTML = '<div class="alert alert-success">✅ ' + result.message + '</div>';
-                    setTimeout(() => window.location.reload(), 2000);
-                } else {
-                    status.innerHTML = '<div class="alert alert-error">❌ ' + result.message + '</div>';
-                    btn.disabled = false;
-                    btn.textContent = 'Erneut versuchen';
-                }
-            } catch (error) {
-                overlay.classList.remove('active'); // Hide loading overlay
-                status.innerHTML = '<div class="alert alert-error">❌ Fehler: ' + error.message + '</div>';
-                btn.disabled = false;
-                btn.textContent = 'Erneut versuchen';
-            }
-        });
-        </script>
-    </body>
-    </html>
-    <?php
-    exit;
-}
-
-// ============================================================================
-// LOAD DEPENDENCIES
-// ============================================================================
-
-require_once $vendorAutoload;
-require_once __DIR__ . '/includes/functions.php';
-require_once __DIR__ . '/includes/ajax-handlers.php';
-require_once __DIR__ . '/includes/step-1-hosting.php';
-require_once __DIR__ . '/includes/step-2-requirements.php';
-require_once __DIR__ . '/includes/step-3-database.php';
-require_once __DIR__ . '/includes/step-4-admin.php';
-require_once __DIR__ . '/includes/step-5-imap-smtp.php';
-require_once __DIR__ . '/includes/step-6-review.php';
-require_once __DIR__ . '/includes/step-7-complete.php';
-
-// ============================================================================
-// SESSION NORMALIZATION
-// ============================================================================
-
-/**
- * Normalize nested session structure to flat structure
- * Converts: ['db' => ['host' => 'x']] to ['db_host' => 'x']
- * 
- * @param array $sessionData Raw session data
- * @return array Normalized flat structure
- */
-function normalizeSessionData(array $sessionData): array
-{
-    $normalized = $sessionData;
-    
-    // Database fields (from step 3)
-    if (isset($sessionData['db']) && is_array($sessionData['db'])) {
-        $normalized['db_host'] = $sessionData['db']['host'] ?? '';
-        $normalized['db_name'] = $sessionData['db']['name'] ?? '';
-        $normalized['db_user'] = $sessionData['db']['user'] ?? '';
-        $normalized['db_password'] = $sessionData['db']['pass'] ?? '';
-        $normalized['db_port'] = $sessionData['db']['port'] ?? 3306;
-        $normalized['db_exists'] = $sessionData['db']['exists'] ?? false;
-    }
-    
-    // Admin fields (from step 4)
-    if (isset($sessionData['admin']) && is_array($sessionData['admin'])) {
-        $normalized['admin_email'] = $sessionData['admin']['email'] ?? '';
-        $normalized['admin_name'] = $sessionData['admin']['name'] ?? '';
-        $normalized['admin_password'] = $sessionData['admin']['password'] ?? '';
-        $normalized['enable_admin_imap'] = $sessionData['admin']['create_personal_imap'] ?? false;
-        $normalized['admin_imap_password'] = $sessionData['admin']['imap_password'] ?? '';
-        $normalized['admin_imap_host'] = $sessionData['admin']['imap_host'] ?? '';
-        $normalized['admin_imap_port'] = $sessionData['admin']['imap_port'] ?? '993';
-        $normalized['admin_imap_username'] = $sessionData['admin']['email'] ?? '';
-        $normalized['admin_imap_encryption'] = ($sessionData['admin']['imap_ssl'] ?? true) ? 'ssl' : 'tls';
-    }
-    
-    // IMAP fields (from step 5)
-    if (isset($sessionData['imap']) && is_array($sessionData['imap'])) {
-        $normalized['imap_host'] = $sessionData['imap']['host'] ?? '';
-        $normalized['imap_port'] = $sessionData['imap']['port'] ?? '993';
-        $normalized['imap_username'] = $sessionData['imap']['user'] ?? '';
-        $normalized['imap_password'] = $sessionData['imap']['pass'] ?? '';
-        $normalized['imap_email'] = $sessionData['imap']['user'] ?? '';
-        $normalized['imap_encryption'] = ($sessionData['imap']['ssl'] ?? true) ? 'ssl' : 'tls';
-    }
-    
-    // SMTP fields (from step 5)
-    if (isset($sessionData['smtp']) && is_array($sessionData['smtp'])) {
-        $normalized['smtp_host'] = $sessionData['smtp']['host'] ?? '';
-        $normalized['smtp_port'] = $sessionData['smtp']['port'] ?? '587';
-        $normalized['smtp_username'] = $sessionData['smtp']['user'] ?? '';
-        $normalized['smtp_password'] = $sessionData['smtp']['pass'] ?? '';
-        $normalized['smtp_encryption'] = ($sessionData['smtp']['ssl'] ?? true) ? 'tls' : 'none';
-        $normalized['smtp_from_email'] = $sessionData['smtp']['from_email'] ?? '';
-        $normalized['smtp_from_name'] = $sessionData['smtp']['from_name'] ?? 'CI-Inbox';
-    }
-    
-    return $normalized;
-}
-
-// ============================================================================
-// SESSION & ROUTING
-// ============================================================================
-
-$sessionData = initSession();
-$currentStep = isset($_GET['step']) ? (int)$_GET['step'] : $sessionData['step'];
-$currentStep = max(1, min(7, $currentStep));
-
-// Normalize session data for steps that need flat structure (step 6)
-$normalizedSessionData = normalizeSessionData($sessionData['data']);
-
-// ============================================================================
-// AJAX HANDLER
-// ============================================================================
-
-if (isset($_GET['ajax'])) {
-    handleAjaxRequest($_GET['ajax']);
-    exit;
-}
-
-// ============================================================================
-// POST ROUTING (Form Submissions)
-// ============================================================================
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    try {
-        switch ($currentStep) {
-            case 1:
-                handleStep1Submit();
-                break;
-            case 2:
-                handleStep2Submit();
-                break;
-            case 3:
-                handleStep3Submit($_POST);
-                break;
-            case 4:
-                handleStep4Submit($_POST);
-                break;
-            case 5:
-                handleStep5Submit($_POST);
-                break;
-            case 6:
-                handleStep6Submit($normalizedSessionData);
-                break;
-            default:
-                redirectToStep(1);
-        }
-    } catch (Exception $e) {
-        $error = $e->getMessage();
-    }
-}
-
-// ============================================================================
-// PREPARE VIEW DATA
-// ============================================================================
-
-$requirements = checkRequirements();
-$allRequirementsMet = !in_array(false, array_column($requirements, 'met'));
-
-$hostingChecks = checkHostingEnvironment();
-$criticalIssues = array_filter($hostingChecks, fn($check) => $check['status'] === 'error' && $check['critical']);
-$hostingReady = empty($criticalIssues);
-
-$steps = [
-    1 => 'Hosting-Check',
-    2 => 'Anforderungen',
-    3 => 'Datenbank',
-    4 => 'Administrator',
-    5 => 'E-Mail',
-    6 => 'Installation',
-    7 => 'Fertig'
-];
-
-// ============================================================================
-// RENDER VIEW
-// ============================================================================
-
-echo renderHeader($currentStep, $steps);
-
-if (isset($error)) {
-    echo '<div class="alert alert-error">❌ ' . htmlspecialchars($error) . '</div>';
-}
-
-switch ($currentStep) {
-    case 1:
-        renderStep1Form($hostingChecks, $hostingReady);
-        break;
-    case 2:
-        renderStep2Form($requirements, $allRequirementsMet);
-        break;
-    case 3:
-        renderStep3Form($sessionData);
-        break;
-    case 4:
-        renderStep4Form($sessionData);
-        break;
-    case 5:
-        renderStep5Form($sessionData);
-        break;
-    case 6:
-        renderStep6Form($normalizedSessionData);
-        break;
-    case 7:
-        renderStep7($sessionData);
-        break;
-}
-
-echo renderFooter();
+                if
